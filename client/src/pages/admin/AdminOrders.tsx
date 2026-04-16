@@ -450,7 +450,7 @@ export default function AdminOrders() {
   const [returnDialogOpen, setReturnDialogOpen] = useState(false);
   const [returnForm, setReturnForm] = useState({ condition: "sellable", reason: "", notes: "" });
 
-  const { data: orders = [], isLoading } = useQuery<Order[]>({ queryKey: ["/api/orders"] });
+  const { data: orders = [], isLoading } = useQuery<Order[]>({ queryKey: ["/api/orders"], refetchInterval: 30000 });
 
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>

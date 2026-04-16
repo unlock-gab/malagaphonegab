@@ -78,7 +78,7 @@ function PanelHeader({ title, href, linkLabel }: { title: string; href: string; 
 
 export default function AdminDashboard() {
   const { t, dir } = useAdminLang();
-  const { data: stats, isLoading } = useQuery<DashboardStats>({ queryKey: ["/api/dashboard"] });
+  const { data: stats, isLoading } = useQuery<DashboardStats>({ queryKey: ["/api/dashboard"], refetchInterval: 30000 });
   const hasChart = (stats?.monthlyRevenue?.length ?? 0) > 0;
 
   const MOVEMENT_LABELS: Record<string, { label: string; color: string; icon: any }> = {

@@ -274,7 +274,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const { data: orderCounts = {} } = useQuery<Record<string, number>>({
     queryKey: ["/api/orders/counts"],
-    refetchInterval: 30000,
+    refetchInterval: 15000,
     enabled: !!user && user.role === "admin",
   });
 

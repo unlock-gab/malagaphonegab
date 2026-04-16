@@ -487,11 +487,11 @@ export const RETURN_CONDITIONS = [
 ];
 
 export const EXPENSE_TYPES = [
-  { key: "general",   label: "عام" },
-  { key: "rent",      label: "إيجار" },
-  { key: "salary",    label: "رواتب" },
-  { key: "shipping",  label: "شحن" },
-  { key: "marketing", label: "تسويق" },
-  { key: "utilities", label: "خدمات" },
-  { key: "other",     label: "أخرى" },
+  { key: "general",   fr: "Général",    ar: "عام" },
+  { key: "rent",      fr: "Loyer",      ar: "إيجار" },
+  { key: "salary",    fr: "Salaires",   ar: "رواتب" },
+  { key: "shipping",  fr: "Livraison",  ar: "شحن" },
+  { key: "marketing", fr: "Marketing",  ar: "تسويق" },
+  { key: "utilities", fr: "Services",   ar: "خدمات" },
+  { key: "other",     fr: "Autre",      ar: "أخرى" },
 ];

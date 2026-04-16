@@ -32,7 +32,7 @@ const EXPENSE_TYPE_COLORS: Record<string, string> = {
 function ExpenseForm({ initial, onSave, onCancel, loading }: {
   initial?: Partial<Expense>; onSave: (d: any) => void; onCancel: () => void; loading: boolean;
 }) {
-  const { t, dir } = useAdminLang();
+  const { t, dir, lang } = useAdminLang();
   const [form, setForm] = useState({
     title: initial?.title ?? "",
     amount: initial?.amount?.toString() ?? "",
@@ -63,7 +63,7 @@ function ExpenseForm({ initial, onSave, onCancel, loading }: {
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-white border-gray-200 shadow-lg">
-              {EXPENSE_TYPES.map(et => <SelectItem key={et.key} value={et.key} className="text-gray-800">{et.label}</SelectItem>)}
+              {EXPENSE_TYPES.map(et => <SelectItem key={et.key} value={et.key} className="text-gray-800">{lang === "ar" ? et.ar : et.fr}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -92,7 +92,7 @@ function ExpenseForm({ initial, onSave, onCancel, loading }: {
 
 export default function AdminExpenses() {
   const { toast } = useToast();
-  const { t, dir } = useAdminLang();
+  const { t, dir, lang } = useAdminLang();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Expense | null>(null);
   const [search, setSearch] = useState("");
@@ -100,21 +100,30 @@ export default function AdminExpenses() {
   const { data: expenses = [], isLoading } = useQuery<Expense[]>({ queryKey: ["/api/expenses"] });
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/expenses", data),
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/expenses", data);
+      return res.json();
+    },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/expenses"] }); setOpen(false); toast({ title: t("success") }); },
-    onError: () => toast({ title: t("failed"), variant: "destructive" }),
+    onError: (e: any) => toast({ title: t("failed"), description: e?.message, variant: "destructive" }),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => apiRequest("PATCH", `/api/expenses/${id}`, data),
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const res = await apiRequest("PATCH", `/api/expenses/${id}`, data);
+      return res.json();
+    },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/expenses"] }); setOpen(false); setEditing(null); toast({ title: t("success") }); },
-    onError: () => toast({ title: t("failed"), variant: "destructive" }),
+    onError: (e: any) => toast({ title: t("failed"), description: e?.message, variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiRequest("DELETE", `/api/expenses/${id}`),
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("DELETE", `/api/expenses/${id}`);
+      return res.json();
+    },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/expenses"] }); toast({ title: t("success") }); },
-    onError: () => toast({ title: t("failed"), variant: "destructive" }),
+    onError: (e: any) => toast({ title: t("failed"), description: e?.message, variant: "destructive" }),
   });
 
   const handleSave = (data: any) => editing ? updateMutation.mutate({ id: editing.id, data }) : createMutation.mutate(data);
@@ -123,7 +132,11 @@ export default function AdminExpenses() {
   const filtered = expenses.filter(e => e.title.toLowerCase().includes(search.toLowerCase()));
   const totalAmount = filtered.reduce((sum, e) => sum + parseFloat(e.amount as string || "0"), 0);
 
-  const getTypeLabel = (key: string) => EXPENSE_TYPES.find(et => et.key === key)?.label ?? key;
+  const getTypeLabel = (key: string) => {
+    const et = EXPENSE_TYPES.find(e => e.key === key);
+    if (!et) return key;
+    return lang === "ar" ? et.ar : et.fr;
+  };
   const getTypeCls = (key: string) => EXPENSE_TYPE_COLORS[key] ?? EXPENSE_TYPE_COLORS.general;
 
   return (

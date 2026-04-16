@@ -120,43 +120,17 @@ export default function Home() {
               </motion.div>
             </div>
 
-            {/* Phone mockup */}
-            <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.7, delay: 0.15 }}
-              className="hidden lg:flex justify-center items-center relative">
-              <div className="relative">
-                {/* Glow halo */}
-                <div className="absolute inset-0 bg-blue-500/20 rounded-full blur-3xl scale-125" />
-                {/* Phone body */}
-                <motion.div animate={{ y: [-8, 8, -8] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-                  className="relative w-56 h-[440px] bg-gradient-to-b from-[#1c2030] to-[#111420] rounded-[3rem] border border-white/10 shadow-2xl flex flex-col items-center overflow-hidden">
-                  {/* Notch */}
-                  <div className="absolute top-5 w-20 h-4 bg-black rounded-full z-10" />
-                  {/* Screen content */}
-                  <div className="flex-1 w-full flex items-center justify-center mt-12">
-                    <div className="w-32 h-32 bg-blue-600/20 rounded-3xl flex items-center justify-center">
-                      <Smartphone className="w-16 h-16 text-blue-400" />
-                    </div>
-                  </div>
-                  {/* Bottom bar */}
-                  <div className="mb-6 w-20 h-1 bg-gray-600 rounded-full" />
-                </motion.div>
-                {/* Floating chips */}
-                <motion.div animate={{ y: [0, -6, 0] }} transition={{ duration: 3.5, repeat: Infinity }}
-                  className="absolute -right-14 top-14 bg-white rounded-2xl shadow-xl px-3 py-2.5 flex items-center gap-2">
-                  <div className="w-8 h-8 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  </div>
-                  <div><p className="text-xs font-bold text-gray-800 leading-none">ضمان أصلي</p><p className="text-[10px] text-gray-400 mt-0.5">لجميع المنتجات</p></div>
-                </motion.div>
-                <motion.div animate={{ y: [0, 6, 0] }} transition={{ duration: 4, repeat: Infinity }}
-                  className="absolute -left-12 bottom-20 bg-white rounded-2xl shadow-xl px-3 py-2.5 flex items-center gap-2">
-                  <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Truck className="w-4 h-4 text-blue-600" />
-                  </div>
-                  <div><p className="text-xs font-bold text-gray-800 leading-none">توصيل سريع</p><p className="text-[10px] text-gray-400 mt-0.5">58 ولاية</p></div>
-                </motion.div>
-              </div>
-            </motion.div>
+            {/* Hero Banner Image */}
+            {storeSettings.heroBannerImage ? (
+              <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.7, delay: 0.15 }}
+                className="hidden lg:flex justify-center items-center">
+                <img
+                  src={storeSettings.heroBannerImage}
+                  alt="banner"
+                  className="w-full max-h-[520px] object-contain rounded-2xl"
+                />
+              </motion.div>
+            ) : null}
           </div>
         </div>
       </section>

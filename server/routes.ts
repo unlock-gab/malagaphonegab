@@ -684,6 +684,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const ALLOWED = [
       "facebookPixelId", "tiktokPixelId", "googleSheetsWebhookUrl", "deliveryPrices",
       "storeName", "storeAddress", "storePhone", "storeEmail", "storeDescription", "storeLogo",
+      "heroBannerImage",
       "whatsappNumber", "whatsappDefaultMessage", "facebookUrl", "instagramUrl", "tiktokUrl",
       "orderPrefix", "invoicePrefix", "defaultOrderNote",
       "defaultDeliveryFee", "defaultShippingCompany",

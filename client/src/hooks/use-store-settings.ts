@@ -26,6 +26,7 @@ export interface StoreSettings {
   posAutoPrint?: string;
   facebookPixelId?: string;
   tiktokPixelId?: string;
+  heroBannerImage?: string;
 }
 
 export function useStoreSettings() {

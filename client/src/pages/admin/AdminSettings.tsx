@@ -6,6 +6,7 @@ import {
   TableProperties, Store, Phone, MessageCircle, Package,
   Truck, FileText, ShoppingBag, Lock, Globe, Instagram,
   Mail, MapPin, ChevronLeft, Shield, RefreshCw,
+  Upload, X, ImageIcon,
 } from "lucide-react";
 import { SiFacebook, SiTiktok, SiGooglesheets, SiWhatsapp } from "react-icons/si";
 import { useToast } from "@/hooks/use-toast";
@@ -31,7 +32,7 @@ const TABS = [
 
 // ─── Keys per tab ─────────────────────────────────────────────────────────────
 const TAB_KEYS: Record<string, string[]> = {
-  general:      ["storeName", "storeAddress", "storePhone", "storeEmail", "storeDescription"],
+  general:      ["storeName", "storeAddress", "storePhone", "storeEmail", "storeDescription", "heroBannerImage"],
   contact:      ["whatsappNumber", "whatsappDefaultMessage", "facebookUrl", "instagramUrl", "tiktokUrl"],
   orders:       ["orderPrefix", "invoicePrefix", "defaultOrderNote"],
   delivery:     ["defaultDeliveryFee", "defaultShippingCompany"],
@@ -110,6 +111,59 @@ function SaveBar({ onSave, isPending, saved }: { onSave: () => void; isPending: 
           : saved ? <><CheckCircle className="w-4 h-4" />تم الحفظ!</>
           : <><Save className="w-4 h-4" />حفظ التغييرات</>}
       </Button>
+    </div>
+  );
+}
+
+// ─── Banner Upload Component ──────────────────────────────────────────────────
+function BannerUpload({ value, onChange }: { value: string; onChange: (url: string) => void }) {
+  const { toast } = useToast();
+  const [uploading, setUploading] = useState(false);
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("فشل الرفع");
+      const data = await res.json();
+      onChange(data.url);
+      toast({ title: "تم رفع الصورة بنجاح" });
+    } catch {
+      toast({ title: "فشل رفع الصورة", variant: "destructive" });
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      {value ? (
+        <div className="relative rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
+          <img src={value} alt="banner" className="w-full max-h-52 object-contain" />
+          <button
+            onClick={() => onChange("")}
+            className="absolute top-2 left-2 w-7 h-7 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow transition-colors"
+            data-testid="button-remove-banner"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ) : (
+        <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 flex flex-col items-center gap-2 bg-gray-50 text-gray-400">
+          <ImageIcon className="w-8 h-8" />
+          <p className="text-sm">لا توجد صورة بانر حالياً</p>
+        </div>
+      )}
+      <label className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold cursor-pointer transition-all w-full ${uploading ? "bg-gray-100 text-gray-400 cursor-wait" : "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"}`}
+        data-testid="button-upload-banner">
+        {uploading ? <><Loader2 className="w-4 h-4 animate-spin" />جاري الرفع...</> : <><Upload className="w-4 h-4" />رفع صورة البانر</>}
+        <input type="file" accept="image/*" className="hidden" onChange={handleFile} disabled={uploading} />
+      </label>
     </div>
   );
 }
@@ -245,6 +299,10 @@ export default function AdminSettings() {
                       rows={3} placeholder="متجر متخصص في بيع الهواتف الذكية والإكسسوارات..."
                       className="w-full bg-gray-50 border border-gray-200 text-gray-900 placeholder:text-gray-400 px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100 resize-none" />
                   </Field>
+                </SectionCard>
+                <SectionCard title="صورة البانر الرئيسي" icon={<ImageIcon className="w-4 h-4" />}>
+                  <p className="text-xs text-gray-500">تظهر هذه الصورة في القسم الرئيسي من الصفحة الرئيسية. الأبعاد المثلى: 800×600 أو 16:9.</p>
+                  <BannerUpload value={val("heroBannerImage")} onChange={set("heroBannerImage")} />
                 </SectionCard>
                 <SaveBar onSave={() => saveMutation.mutate("general")} isPending={saveMutation.isPending} saved={savedTab === "general"} />
               </>

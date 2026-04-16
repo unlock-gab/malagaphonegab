@@ -64,11 +64,11 @@ export default function Home() {
     <div className="min-h-screen bg-white" dir="rtl">
 
       {/* ── HERO ── */}
-      <section className="relative overflow-hidden bg-[#0d1117] pt-16">
+      <section className="relative overflow-hidden bg-white pt-16 border-b border-gray-100">
         {/* Subtle geometric light */}
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 right-0 w-[700px] h-[700px] bg-blue-600/10 rounded-full blur-3xl -translate-y-1/3 translate-x-1/4" />
-          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-indigo-600/10 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4" />
+          <div className="absolute top-0 right-0 w-[700px] h-[700px] bg-blue-500/5 rounded-full blur-3xl -translate-y-1/3 translate-x-1/4" />
+          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-indigo-500/5 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4" />
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -76,21 +76,21 @@ export default function Home() {
             {/* Text */}
             <div>
               <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-                className="inline-flex items-center gap-2 bg-blue-500/15 border border-blue-500/25 rounded-full px-4 py-1.5 mb-6">
-                <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
-                <span className="text-blue-300 text-sm font-medium">أكبر متجر هواتف في الجزائر</span>
+                className="inline-flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-full px-4 py-1.5 mb-6">
+                <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                <span className="text-blue-600 text-sm font-medium">أكبر متجر هواتف في الجزائر</span>
               </motion.div>
 
               <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }}
-                className="text-5xl sm:text-6xl lg:text-6xl font-black text-white leading-[1.1] mb-5 tracking-tight">
+                className="text-5xl sm:text-6xl lg:text-6xl font-black text-gray-900 leading-[1.1] mb-5 tracking-tight">
                 هاتفك المثالي<br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-l from-blue-400 to-cyan-300">
+                <span className="text-transparent bg-clip-text bg-gradient-to-l from-blue-600 to-blue-400">
                   بأفضل سعر
                 </span>
               </motion.h1>
 
               <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}
-                className="text-gray-400 text-lg leading-relaxed mb-8 max-w-lg">
+                className="text-gray-500 text-lg leading-relaxed mb-8 max-w-lg">
                 هواتف جديدة ومستعملة معتمدة، إكسسوارات أصلية. الدفع عند الاستلام لكل ولايات الجزائر.
               </motion.p>
 
@@ -113,8 +113,8 @@ export default function Home() {
                 className="flex flex-wrap gap-8">
                 {[{ n: "+500", l: "منتج" }, { n: "+2K", l: "عميل" }, { n: "58", l: "ولاية" }].map((s, i) => (
                   <div key={i}>
-                    <p className="text-2xl font-black text-white">{s.n}</p>
-                    <p className="text-gray-500 text-xs mt-0.5">{s.l}</p>
+                    <p className="text-2xl font-black text-gray-900">{s.n}</p>
+                    <p className="text-gray-400 text-xs mt-0.5">{s.l}</p>
                   </div>
                 ))}
               </motion.div>
@@ -238,23 +238,19 @@ export default function Home() {
       {/* ── USED PHONES ── */}
       {usedPhones.length > 0 && (
         <Appear>
-          <section className="py-14 bg-[#0d1117] relative overflow-hidden">
-            <div className="absolute inset-0 pointer-events-none">
-              <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/8 rounded-full blur-3xl" />
-              <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-600/8 rounded-full blur-3xl" />
-            </div>
+          <section className="py-14 bg-gray-50 border-y border-gray-100 relative overflow-hidden">
             <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex items-end justify-between mb-7">
                 <div>
-                  <div className="inline-flex items-center gap-2 bg-blue-500/15 border border-blue-500/20 rounded-full px-3 py-1 mb-3">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                    <span className="text-blue-300 text-xs font-semibold">فحص 30 نقطة ✓</span>
+                  <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-full px-3 py-1 mb-3">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                    <span className="text-blue-600 text-xs font-semibold">فحص 30 نقطة ✓</span>
                   </div>
-                  <h2 className="text-2xl sm:text-[1.75rem] font-black text-white leading-tight">📱 هواتف مستعملة</h2>
+                  <h2 className="text-2xl sm:text-[1.75rem] font-black text-gray-900 leading-tight">📱 هواتف مستعملة</h2>
                   <p className="text-gray-500 mt-1 text-sm">مفحوصة ومعتمدة — سعر منافس وبطارية حقيقية</p>
                 </div>
                 <Link href="/products?condition=used">
-                  <span className="hidden sm:flex items-center gap-1 text-blue-400 hover:text-blue-300 font-semibold text-sm cursor-pointer transition-colors">
+                  <span className="hidden sm:flex items-center gap-1 text-blue-600 hover:text-blue-500 font-semibold text-sm cursor-pointer transition-colors">
                     عرض الكل <ChevronLeft className="w-4 h-4" />
                   </span>
                 </Link>
@@ -271,10 +267,10 @@ export default function Home() {
                   { icon: Battery,      t: "صحة البطارية معلنة",      d: "نعلن بصدق عن النسبة الحقيقية" },
                   { icon: Shield,       t: "ضمان بعد البيع",          d: "خدمة ما بعد البيع مضمونة" },
                 ].map((f, i) => (
-                  <div key={i} className="flex items-center gap-3 bg-white/5 rounded-2xl p-4 border border-white/5">
-                    <f.icon className="w-5 h-5 text-blue-400 shrink-0" />
+                  <div key={i} className="flex items-center gap-3 bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+                    <f.icon className="w-5 h-5 text-blue-600 shrink-0" />
                     <div>
-                      <p className="text-white text-sm font-bold">{f.t}</p>
+                      <p className="text-gray-800 text-sm font-bold">{f.t}</p>
                       <p className="text-gray-500 text-xs mt-0.5">{f.d}</p>
                     </div>
                   </div>

@@ -645,10 +645,10 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
           className="bg-white border-gray-200 text-gray-900 placeholder:text-gray-400 resize-none text-sm" rows={2} />
       </div>
 
-      <DialogFooter className="gap-2">
+      <DialogFooter className="gap-2 flex-wrap">
         <Button variant="outline" onClick={onCancel} className="border-gray-200 text-gray-600 hover:bg-gray-50 text-sm">إلغاء</Button>
         <Button onClick={() => onSave({
-            ...form,
+            ...form, status: "pending",
             supplierId: form.supplierId || null,
             supplierName: form.supplierName || suppliers.find(s => s.id === form.supplierId)?.name || "",
             subtotal: subtotal.toFixed(2), extraCosts: extraCosts.toFixed(2), total: total.toFixed(2),
@@ -656,8 +656,21 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
             items: items.map(i => ({ ...i, unitCost: i.unitCost.toFixed(2), total: i.total.toFixed(2) })),
           })}
           disabled={loading || !form.supplierName || items.length === 0}
-          className="bg-blue-600 hover:bg-blue-700 text-white text-sm shadow-sm" data-testid="button-save-purchase">
-          {loading ? <><Loader2 className="w-4 h-4 animate-spin ml-2" />جاري الحفظ...</> : "حفظ الشراء"}
+          variant="outline"
+          className="border-gray-200 text-gray-600 hover:bg-gray-50 text-sm" data-testid="button-save-purchase-pending">
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "حفظ معلق"}
+        </Button>
+        <Button onClick={() => onSave({
+            ...form, status: "completed",
+            supplierId: form.supplierId || null,
+            supplierName: form.supplierName || suppliers.find(s => s.id === form.supplierId)?.name || "",
+            subtotal: subtotal.toFixed(2), extraCosts: extraCosts.toFixed(2), total: total.toFixed(2),
+            purchaseDate: new Date(form.purchaseDate),
+            items: items.map(i => ({ ...i, unitCost: i.unitCost.toFixed(2), total: i.total.toFixed(2) })),
+          })}
+          disabled={loading || !form.supplierName || items.length === 0}
+          className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm shadow-sm" data-testid="button-save-purchase-complete">
+          {loading ? <><Loader2 className="w-4 h-4 animate-spin ml-2" />جاري الحفظ...</> : <><Check className="w-4 h-4 ml-2" />حفظ وإتمام ← يضيف للمخزون</>}
         </Button>
       </DialogFooter>
     </div>
@@ -820,7 +833,10 @@ export default function AdminPurchases() {
       queryClient.invalidateQueries({ queryKey: ["/api/purchases"] });
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       queryClient.invalidateQueries({ queryKey: ["/api/inventory/movements"] });
-      setOpen(false); toast({ title: "تم إنشاء الشراء" });
+      queryClient.invalidateQueries({ queryKey: ["/api/phone-units"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      setOpen(false);
+      toast({ title: "✓ تم حفظ الشراء" });
     },
     onError: (e: any) => toast({ title: "فشل إنشاء الشراء", description: e.message, variant: "destructive" }),
   });
@@ -831,8 +847,10 @@ export default function AdminPurchases() {
       queryClient.invalidateQueries({ queryKey: ["/api/purchases"] });
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       queryClient.invalidateQueries({ queryKey: ["/api/inventory/movements"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/phone-units"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
       setViewPurchase(null);
-      toast({ title: "تم تحديث الحالة" });
+      toast({ title: "✓ تم الإتمام وتحديث المخزون" });
     },
     onError: () => toast({ title: "فشل التحديث", variant: "destructive" }),
   });

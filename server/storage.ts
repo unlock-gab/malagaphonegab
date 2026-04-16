@@ -402,17 +402,42 @@ export class DatabaseStorage implements IStorage {
       await db.insert(purchaseItems).values(enrichedItems);
 
       if (shouldApplyStock) {
-        for (const item of items) {
-          if (item.productId) {
-            await this.adjustStock(
-              item.productId,
-              item.quantity,
-              "purchase_in",
-              "purchase",
-              id,
-              `استلام شراء: ${p.supplierName}`,
-            );
+        for (const item of enrichedItems) {
+          if (!item.productId) continue;
+          const imeis: string[] = (item.imeis as any) ?? [];
+          if (imeis.length > 0) {
+            const product = await this.getProduct(item.productId);
+            const isPhone = product?.productType === "phone" || product?.productType === "tablet";
+            if (isPhone) {
+              for (const imei of imeis) {
+                const trimmed = imei.trim();
+                if (!trimmed) continue;
+                const dup = await this.getPhoneUnitByImei(trimmed);
+                if (!dup) {
+                  await this.createPhoneUnit({
+                    productId: item.productId,
+                    imei: trimmed,
+                    purchaseId: id,
+                    supplierName: p.supplierName ?? null,
+                    purchaseCost: item.unitCost,
+                    status: "available",
+                    condition: product?.condition ?? "used_good",
+                    batteryHealth: null, soldOrderId: null, notes: null,
+                  });
+                }
+              }
+              await this.syncPhoneStock(item.productId);
+              continue;
+            }
           }
+          await this.adjustStock(
+            item.productId,
+            item.quantity,
+            "purchase_in",
+            "purchase",
+            id,
+            `استلام شراء: ${p.supplierName}`,
+          );
         }
       }
     }

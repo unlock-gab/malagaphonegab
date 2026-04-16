@@ -60,7 +60,9 @@ function ExpenseForm({ initial, onSave, onCancel, loading }: {
           <Label className="text-gray-600 text-sm font-semibold">{t("expense_type_field")}</Label>
           <Select value={form.expenseType} onValueChange={v => set("expenseType", v)}>
             <SelectTrigger className="bg-white border-gray-200 text-gray-900" data-testid="select-expense-type">
-              <SelectValue />
+              <SelectValue>
+                {EXPENSE_TYPES.find(et => et.key === form.expenseType)?.[lang === "ar" ? "ar" : "fr"] ?? ""}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent className="bg-white border-gray-200 shadow-lg">
               {EXPENSE_TYPES.map(et => <SelectItem key={et.key} value={et.key} className="text-gray-800">{lang === "ar" ? et.ar : et.fr}</SelectItem>)}
@@ -100,28 +102,19 @@ export default function AdminExpenses() {
   const { data: expenses = [], isLoading } = useQuery<Expense[]>({ queryKey: ["/api/expenses"] });
 
   const createMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const res = await apiRequest("POST", "/api/expenses", data);
-      return res.json();
-    },
+    mutationFn: (data: any) => apiRequest("POST", "/api/expenses", data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/expenses"] }); setOpen(false); toast({ title: t("success") }); },
     onError: (e: any) => toast({ title: t("failed"), description: e?.message, variant: "destructive" }),
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      const res = await apiRequest("PATCH", `/api/expenses/${id}`, data);
-      return res.json();
-    },
+    mutationFn: ({ id, data }: { id: string; data: any }) => apiRequest("PATCH", `/api/expenses/${id}`, data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/expenses"] }); setOpen(false); setEditing(null); toast({ title: t("success") }); },
     onError: (e: any) => toast({ title: t("failed"), description: e?.message, variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await apiRequest("DELETE", `/api/expenses/${id}`);
-      return res.json();
-    },
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/expenses/${id}`),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/expenses"] }); toast({ title: t("success") }); },
     onError: (e: any) => toast({ title: t("failed"), description: e?.message, variant: "destructive" }),
   });

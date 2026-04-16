@@ -2,6 +2,13 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
+    if (res.status === 401) {
+      const currentPath = window.location.pathname;
+      if (currentPath.startsWith("/admin") && !currentPath.startsWith("/admin/login")) {
+        window.location.href = "/admin/login";
+        return;
+      }
+    }
     const text = (await res.text()) || res.statusText;
     throw new Error(`${res.status}: ${text}`);
   }

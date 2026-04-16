@@ -1,12 +1,13 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
-import createMemoryStore from "memorystore";
+import connectPgSimple from "connect-pg-simple";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import fs from "fs";
 import path from "path";
 import { execSync } from "child_process";
+import pg from "pg";
 
 // Auto-setup git credentials on startup (development only — never write token to disk in production)
 if (process.env.NODE_ENV !== "production") {
@@ -20,7 +21,8 @@ if (process.env.NODE_ENV !== "production") {
   } catch { /* ignore credential setup errors */ }
 }
 
-const MemoryStore = createMemoryStore(session);
+const PgStore = connectPgSimple(session);
+const pgPool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 
 const app = express();
 app.set("trust proxy", 1);
@@ -82,14 +84,14 @@ if (!sessionSecret && process.env.NODE_ENV === "production") {
 }
 
 app.use(session({
-  store: new MemoryStore({ checkPeriod: 86400000 }),
+  store: new PgStore({ pool: pgPool, createTableIfMissing: true }),
   secret: sessionSecret || "dev-only-secret-not-for-production",
   resave: false,
   saveUninitialized: false,
   cookie: {
     secure: process.env.NODE_ENV === "production",
     httpOnly: true,
-    maxAge: 7 * 24 * 60 * 60 * 1000,
+    maxAge: 30 * 24 * 60 * 60 * 1000,
   },
 }));
 

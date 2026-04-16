@@ -59,6 +59,7 @@ export default function Home() {
   const usedPhones = published.filter(p => p.condition !== "new").slice(0, 4);
   const offers     = published.filter(p => p.originalPrice && parseFloat(p.originalPrice as string) > parseFloat(p.price as string)).slice(0, 4);
   const accessories = published.filter(p => p.productType === "accessory").slice(0, 4);
+  const allProducts = published;
 
   return (
     <div className="min-h-screen bg-white" dir="rtl">
@@ -75,6 +76,18 @@ export default function Home() {
             />
           </motion.div>
         </section>
+      )}
+
+      {/* ── ALL PRODUCTS ── */}
+      {allProducts.length > 0 && (
+        <Appear className="py-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <SectionHead title="🛍️ جميع المنتجات" sub={`${allProducts.length} منتج متوفر`} href="/products" />
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {allProducts.map((p, i) => <ProductCard key={p.id} product={p} index={i} />)}
+            </div>
+          </div>
+        </Appear>
       )}
 
       {/* ── FEATURED ── */}

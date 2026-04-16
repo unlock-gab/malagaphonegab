@@ -188,12 +188,17 @@ function QuickAddProductDialog({ onCreated, onClose }: {
   );
 }
 
-function ProductSearchPicker({ products, onSelect, onAddNew }: {
-  products: Product[]; onSelect: (productId: string) => void; onAddNew: () => void;
+function ProductSearchPicker({ products, onSelect, onAddNew, selectedName }: {
+  products: Product[]; onSelect: (productId: string) => void; onAddNew: () => void; selectedName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const ref = useRef<HTMLDivElement>(null);
+
+  // Sync displayed text when external selection changes (e.g. QuickAdd)
+  useEffect(() => {
+    if (selectedName !== undefined) setSearch(selectedName);
+  }, [selectedName]);
 
   const filtered = search.trim()
     ? products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
@@ -491,6 +496,7 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
           <ProductSearchPicker
             key={pickerKey}
             products={products}
+            selectedName={newItem.productName}
             onSelect={id => {
               const prod = products.find(p => p.id === id);
               setNewItem(i => ({ ...i, productId: id, productName: prod?.name ?? "", productType: prod?.productType ?? "" }));

@@ -1,6 +1,6 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
-import { storage, hashPassword } from "./storage";
+import { storage, hashPassword, verifyPassword } from "./storage";
 import { insertProductSchema, insertOrderSchema } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
@@ -20,12 +20,15 @@ async function getJimp() {
 const UPLOADS_DIR = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
+const ALLOWED_IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif"]);
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 20 * 1024 * 1024 },
+  limits: { fileSize: 10 * 1024 * 1024, files: 5 },
   fileFilter: (_req, file, cb) => {
-    if (file.mimetype.startsWith("image/")) cb(null, true);
-    else cb(new Error("الملف يجب أن يكون صورة"));
+    if (!file.mimetype.startsWith("image/")) return cb(new Error("الملف يجب أن يكون صورة"));
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!ALLOWED_IMAGE_EXTENSIONS.has(ext)) return cb(new Error("نوع الملف غير مدعوم"));
+    cb(null, true);
   },
 });
 
@@ -83,7 +86,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   // ==================== IMAGE UPLOAD ====================
 
-  app.post("/api/upload", requireAuth, upload.single("image"), async (req, res) => {
+  app.post("/api/upload", requireAuth, rateLimit(30, 10 * 60 * 1000, req => `upload:${req.session.userId}`), upload.single("image"), async (req, res) => {
     if (!req.file) return res.status(400).json({ message: "لم يتم رفع أي صورة" });
     try {
       const url = await saveCompressedImage(req.file.buffer);
@@ -93,7 +96,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  app.post("/api/upload/multiple", requireAuth, upload.array("images", 10), async (req, res) => {
+  app.post("/api/upload/multiple", requireAuth, rateLimit(10, 10 * 60 * 1000, req => `upload_multi:${req.session.userId}`), upload.array("images", 5), async (req, res) => {
     if (!req.files || (req.files as Express.Multer.File[]).length === 0) return res.status(400).json({ message: "لم يتم رفع أي صور" });
     try {
       const urls = await Promise.all((req.files as Express.Multer.File[]).map(f => saveCompressedImage(f.buffer)));
@@ -108,9 +111,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/auth/login", rateLimit(10, 15 * 60 * 1000, req => `login:${getClientIp(req)}`), async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password || typeof username !== "string" || typeof password !== "string") return res.status(400).json({ message: "اسم المستخدم وكلمة المرور مطلوبان" });
-    if (username.length > 50 || password.length > 100) return res.status(400).json({ message: "بيانات غير صحيحة" });
+    if (username.length > 50 || password.length > 200) return res.status(400).json({ message: "بيانات غير صحيحة" });
     const user = await storage.getUserByUsername(username.toLowerCase().trim());
-    if (!user || user.password !== hashPassword(password)) return res.status(401).json({ message: "اسم المستخدم أو كلمة المرور غير صحيحة" });
+    if (!user || !verifyPassword(password, user.password)) return res.status(401).json({ message: "اسم المستخدم أو كلمة المرور غير صحيحة" });
+    // Auto-upgrade legacy SHA-256 hashes to scrypt on successful login
+    if (!user.password.startsWith("v2:")) {
+      const upgraded = hashPassword(password);
+      await storage.updateUser(user.id, { password: upgraded });
+    }
     req.session.userId = user.id;
     req.session.role = user.role as "admin" | "confirmateur";
     req.session.username = user.username;
@@ -672,7 +680,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json(settings);
   });
 
-  app.patch("/api/settings", requireAdmin, async (req, res) => {
+  app.patch("/api/settings", requireAdmin, rateLimit(30, 60 * 1000, req => `settings:${req.session.userId}`), async (req, res) => {
     const ALLOWED = [
       "facebookPixelId", "tiktokPixelId", "googleSheetsWebhookUrl", "deliveryPrices",
       "storeName", "storeAddress", "storePhone", "storeEmail", "storeDescription", "storeLogo",
@@ -689,16 +697,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json(await storage.updateSettings(sanitized));
   });
 
-  app.post("/api/admin/change-password", requireAdmin, async (req, res) => {
+  app.post("/api/admin/change-password", requireAdmin, rateLimit(5, 15 * 60 * 1000, req => `chpwd:${req.session.userId}`), async (req, res) => {
     const { currentPassword, newPassword, confirmPassword } = req.body;
     if (!currentPassword || !newPassword || !confirmPassword)
       return res.status(400).json({ message: "جميع الحقول مطلوبة" });
-    if (newPassword.length < 6)
-      return res.status(400).json({ message: "كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل" });
+    if (typeof newPassword !== "string" || newPassword.length < 8)
+      return res.status(400).json({ message: "كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل" });
+    if (newPassword.length > 200)
+      return res.status(400).json({ message: "كلمة المرور طويلة جداً" });
     if (newPassword !== confirmPassword)
       return res.status(400).json({ message: "كلمة المرور الجديدة وتأكيدها غير متطابقتين" });
     const user = await storage.getUserById(req.session.userId!);
-    if (!user || user.password !== hashPassword(currentPassword))
+    if (!user || !verifyPassword(currentPassword, user.password))
       return res.status(401).json({ message: "كلمة المرور الحالية غير صحيحة" });
     await storage.updateUser(user.id, { password: hashPassword(newPassword) });
     res.json({ message: "تم تغيير كلمة المرور بنجاح" });

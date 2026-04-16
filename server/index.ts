@@ -8,15 +8,17 @@ import fs from "fs";
 import path from "path";
 import { execSync } from "child_process";
 
-// Auto-setup git credentials on startup
-try {
-  const gitToken = process.env.GITHUB_PERSONAL_ACCESS_TOKEN;
-  const gitUsername = process.env.GIT_USERNAME || "unlock-gab";
-  if (gitToken) {
-    fs.writeFileSync(`${process.env.HOME || "/home/runner"}/.git-credentials`, `https://${gitUsername}:${gitToken}@github.com\n`, { mode: 0o600 });
-    execSync("git config --global credential.helper store", { stdio: "ignore" });
-  }
-} catch { /* ignore credential setup errors */ }
+// Auto-setup git credentials on startup (development only — never write token to disk in production)
+if (process.env.NODE_ENV !== "production") {
+  try {
+    const gitToken = process.env.GITHUB_PERSONAL_ACCESS_TOKEN;
+    const gitUsername = process.env.GIT_USERNAME || "unlock-gab";
+    if (gitToken) {
+      fs.writeFileSync(`${process.env.HOME || "/home/runner"}/.git-credentials`, `https://${gitUsername}:${gitToken}@github.com\n`, { mode: 0o600 });
+      execSync("git config --global credential.helper store", { stdio: "ignore" });
+    }
+  } catch { /* ignore credential setup errors */ }
+}
 
 const MemoryStore = createMemoryStore(session);
 
@@ -45,19 +47,34 @@ app.use((_req, res, next) => {
   res.setHeader("X-XSS-Protection", "1; mode=block");
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
   res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  res.setHeader(
+    "Content-Security-Policy",
+    [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://connect.facebook.net https://www.googletagmanager.com https://analytics.tiktok.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com",
+      "img-src 'self' data: blob: https:",
+      "connect-src 'self' https:",
+      "frame-src 'none'",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+    ].join("; ")
+  );
   next();
 });
 
 app.use(
   express.json({
-    limit: "50mb",
+    limit: "10mb",
     verify: (req, _res, buf) => {
       req.rawBody = buf;
     },
   }),
 );
 
-app.use(express.urlencoded({ extended: false, limit: "50mb" }));
+app.use(express.urlencoded({ extended: false, limit: "10mb" }));
 
 const sessionSecret = process.env.SESSION_SECRET;
 if (!sessionSecret && process.env.NODE_ENV === "production") {

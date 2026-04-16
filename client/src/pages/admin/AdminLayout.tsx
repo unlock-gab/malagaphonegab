@@ -122,17 +122,25 @@ function OrdersSubmenu({ counts, location, navigate, onClose }: {
   );
 }
 
+function safeHref(href: string): string {
+  if (typeof href !== "string") return "#";
+  const lower = href.toLowerCase().trim();
+  if (lower.startsWith("javascript:") || lower.startsWith("data:")) return "#";
+  return href;
+}
+
 const renderNavItem = (item: { icon: any; label: string; href: string }, location: string, onClose?: () => void) => {
-  const active = item.href === "/admin" ? location === "/admin" : location.startsWith(item.href);
+  const safe = safeHref(item.href);
+  const active = safe === "/admin" ? location === "/admin" : location.startsWith(safe);
   return (
-    <Link key={item.href} href={item.href}>
+    <Link key={safe} href={safe}>
       <div onClick={onClose}
         className={`flex items-center gap-2.5 px-3 py-2 rounded-lg mb-0.5 cursor-pointer transition-all text-sm group ${
           active
             ? "bg-blue-50 text-blue-700 font-semibold"
             : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
         }`}
-        data-testid={`nav-admin-${item.href.split("/").pop()}`}
+        data-testid={`nav-admin-${safe.split("/").pop()}`}
       >
         <item.icon className={`w-4 h-4 flex-shrink-0 transition-colors ${active ? "text-blue-600" : "text-gray-400 group-hover:text-gray-600"}`} />
         <span className="flex-1">{item.label}</span>

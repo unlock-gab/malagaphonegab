@@ -12,3 +12,4 @@ uploads/*
 attached_assets/
 .cache/
 .local/
+data.json

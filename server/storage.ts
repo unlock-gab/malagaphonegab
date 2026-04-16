@@ -22,12 +22,40 @@ import {
   blockedIps, abandonedCarts, appSettings, deliveryCompanies, productVariants,
   afterSaleRecords, phoneUnits,
 } from "@shared/schema";
-import { randomUUID, createHash } from "crypto";
+import { randomUUID, createHash, scryptSync, randomBytes, timingSafeEqual } from "crypto";
 import { db } from "./db";
 import { eq, getTableColumns, desc, sql, and, lt, gte, lte, ilike } from "drizzle-orm";
 
-export function hashPassword(password: string): string {
+// ── Legacy SHA-256 hash (kept for backward-compat migration only) ─────────────
+function legacyHash(password: string): string {
   return createHash("sha256").update(password + "nova_store_salt_2026").digest("hex");
+}
+
+// ── Modern scrypt hash: "v2:<16-byte-hex-salt>:<64-byte-hex-key>" ────────────
+export function hashPassword(password: string): string {
+  const salt = randomBytes(16).toString("hex");
+  const key  = scryptSync(password, salt, 64).toString("hex");
+  return `v2:${salt}:${key}`;
+}
+
+// ── Verify password (supports both v2-scrypt and legacy SHA-256) ─────────────
+export function verifyPassword(input: string, stored: string): boolean {
+  try {
+    if (stored.startsWith("v2:")) {
+      const [, salt, keyHex] = stored.split(":");
+      const derived = scryptSync(input, salt, 64);
+      const stored64 = Buffer.from(keyHex, "hex");
+      if (derived.length !== stored64.length) return false;
+      return timingSafeEqual(derived, stored64);
+    }
+    // Legacy: constant-time compare of SHA-256 hashes
+    const a = Buffer.from(legacyHash(input), "hex");
+    const b = Buffer.from(stored, "hex");
+    if (a.length !== b.length) return false;
+    return timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
 }
 
 export interface IStorage {

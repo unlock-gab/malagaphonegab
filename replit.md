@@ -50,6 +50,7 @@
 | `/admin/profit` | الأرباح - **Detailed records table** (orderId, revenue, cost, expenses, netProfit, partnerShare, ownerShare) + totals row |
 | `/admin/reports` | تقرير المنتجات - أكثر المنتجات مبيعاً، هامش الربح، فلتر تاريخ |
 | `/admin/customers` | الزبائن - قائمة مجمّعة من الطلبات، سجل الطلبات، واتساب |
+| `/admin/pos` | **نقطة البيع POS** - بحث سريع بالاسم/SKU/IMEI، PhoneUnitPicker للهواتف، سلة شراء، دفع فوري، طباعة فاتورة (source=pos) |
 | `/admin/delivery` | أسعار التوصيل |
 | `/admin/settings` | الإعدادات |
 

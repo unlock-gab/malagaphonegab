@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Package, ShoppingCart, ChevronDown,
   Menu, Bell, Settings, Truck, Users, LogOut, Loader2,
   ShoppingBag, Building2, Tags, Star, Smartphone,
-  TrendingUp, Boxes, Home, Receipt, ChevronRight, BarChart3, Shield,
+  TrendingUp, Boxes, Home, Receipt, ChevronRight, BarChart3, Shield, Zap,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -145,8 +145,23 @@ const renderNavItem = (item: { icon: any; label: string; href: string }, locatio
 function NavContent({ location, orderCounts, navigate, onClose }: {
   location: string; orderCounts: Record<string, number>; navigate: (to: string) => void; onClose?: () => void;
 }) {
+  const isPOS = location === "/admin/pos";
   return (
     <div className="space-y-5">
+      {/* POS Quick Button */}
+      <Link href="/admin/pos">
+        <div onClick={onClose}
+          className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl cursor-pointer transition-all text-sm font-black shadow-sm border ${
+            isPOS
+              ? "bg-emerald-600 text-white border-emerald-600 shadow-emerald-200"
+              : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300"
+          }`}
+          data-testid="nav-admin-pos">
+          <Zap className="w-4 h-4 flex-shrink-0" />
+          <span className="flex-1">نقطة البيع POS</span>
+        </div>
+      </Link>
+
       {navSections.map((section, si) => (
         <div key={si}>
           <div className="text-gray-400 text-[9px] font-bold uppercase tracking-[0.12em] mb-1.5 px-3">
@@ -236,9 +251,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (!user || user.role !== "admin") return null;
 
-  const currentLabel = location.startsWith("/admin/orders")
-    ? "الطلبات"
-    : navSections.flatMap(s => s.items).find(n => n.href === location)?.label || "لوحة التحكم";
+  const currentLabel = location === "/admin/pos"
+    ? "نقطة البيع POS"
+    : location.startsWith("/admin/orders")
+      ? "الطلبات"
+      : navSections.flatMap(s => s.items).find(n => n.href === location)?.label || "لوحة التحكم";
 
   const handleLogout = async () => { await logout(); navigate("/admin/login"); };
 

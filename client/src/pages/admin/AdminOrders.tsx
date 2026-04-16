@@ -58,6 +58,11 @@ const PAYMENT_STATUS_MAP: Record<string, { label: string; cls: string }> = {
 };
 
 function SourceBadge({ source }: { source?: string | null }) {
+  if (source === "pos") return (
+    <span className="inline-flex items-center gap-1 text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 font-semibold">
+      ⚡ POS
+    </span>
+  );
   if (source === "whatsapp") return (
     <span className="inline-flex items-center gap-1 text-[10px] text-green-600 bg-green-50 px-1.5 py-0.5 rounded border border-green-200">
       <MessageCircle className="w-3 h-3" /> واتساب
@@ -76,6 +81,7 @@ const RETURN_STATUSES = ["returned_by_delivery", "delivery_failed", "customer_re
 
 const ORDER_SOURCES = [
   { value: "admin",     label: "يدوي" },
+  { value: "pos",       label: "⚡ POS" },
   { value: "phone",     label: "هاتف" },
   { value: "whatsapp",  label: "واتساب" },
   { value: "walk_in",   label: "حضوري" },

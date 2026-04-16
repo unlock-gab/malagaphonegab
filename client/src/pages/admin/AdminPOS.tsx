@@ -223,10 +223,11 @@ export default function AdminPOS() {
   };
 
   const handleProductClick = (product: Product) => {
-    if (PHONE_TYPES.has(product.productType ?? "")) {
-      // Show phone unit picker
+    if (PHONE_TYPES.has(product.productType ?? "") && hasImeiTracking(product)) {
+      // Show IMEI picker only for phones with IMEI units registered
       setPickerProduct(product);
     } else {
+      // Accessories OR phones without IMEI tracking → regular stock
       addAccessoryToCart(product);
     }
   };
@@ -308,9 +309,14 @@ export default function AdminPOS() {
     ? allPhoneUnits.filter(u => u.productId === pickerProduct.id)
     : [];
 
+  // ── IMEI tracking detection ───────────────────────────────────────────────
+  // A product "has IMEI tracking" only if at least one phone unit is registered for it
+  const hasImeiTracking = (product: Product) =>
+    allPhoneUnits.some(u => u.productId === product.id);
+
   // ── Product availability badge ────────────────────────────────────────────
   const getAvailableCount = (product: Product) => {
-    if (PHONE_TYPES.has(product.productType ?? "")) {
+    if (PHONE_TYPES.has(product.productType ?? "") && hasImeiTracking(product)) {
       return allPhoneUnits.filter(u => u.productId === product.id && u.status === "available").length;
     }
     return product.stock;
@@ -418,7 +424,11 @@ export default function AdminPOS() {
                         <p className={`text-[10px] font-semibold mt-1 ${
                           outOfStock ? "text-red-500" : available <= 2 ? "text-amber-500" : "text-emerald-600"
                         }`}>
-                          {outOfStock ? "نفد" : `${available} متاح${isPhone ? " وحدة" : ""}`}
+                          {outOfStock
+                            ? "نفد"
+                            : isPhone && hasImeiTracking(product)
+                              ? `${available} وحدة متاحة`
+                              : `${available} في المخزون`}
                         </p>
                       </button>
                     );

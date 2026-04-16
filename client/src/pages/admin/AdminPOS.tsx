@@ -262,7 +262,7 @@ export default function AdminPOS() {
           ))
         );
       })
-    : products.filter(p => p.published && getAvailableCount(p) > 0).slice(0, 32);
+    : products.filter(p => p.published).slice(0, 50);
 
   const handleImeiSearch = useCallback((q: string) => {
     const trimmed = q.trim();

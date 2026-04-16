@@ -77,6 +77,30 @@ export default function Home() {
         </section>
       )}
 
+      {/* ── CATEGORIES ── */}
+      <Appear className="py-14 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <SectionHead title="تسوق حسب الفئة" sub="اختر الفئة التي تبحث عنها" />
+        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+          {categories.slice(0, 8).map((cat, i) => {
+            const Icon = CAT_ICONS[cat.icon] ?? Smartphone;
+            return (
+              <Link key={cat.id} href={`/products?category=${cat.slug}`}>
+                <motion.div whileHover={{ y: -5, scale: 1.04 }} whileTap={{ scale: 0.97 }}
+                  className="group cursor-pointer text-center">
+                  <div className="aspect-square rounded-2xl flex items-center justify-center mb-2 border border-gray-100 group-hover:border-blue-200 group-hover:shadow-md transition-all"
+                    style={{ background: `linear-gradient(135deg, ${cat.color}15, ${cat.color}25)` }}>
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm" style={{ background: cat.color }}>
+                      <Icon className="w-5 h-5 text-white" />
+                    </div>
+                  </div>
+                  <p className="text-xs font-semibold text-gray-700 group-hover:text-blue-600 transition-colors leading-tight">{cat.name}</p>
+                </motion.div>
+              </Link>
+            );
+          })}
+        </div>
+      </Appear>
+
       {/* ── TRUST BAR ── */}
       <div className="bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -102,30 +126,6 @@ export default function Home() {
           </div>
         </div>
       </div>
-
-      {/* ── CATEGORIES ── */}
-      <Appear className="py-14 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <SectionHead title="تسوق حسب الفئة" sub="اختر الفئة التي تبحث عنها" />
-        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-          {categories.slice(0, 8).map((cat, i) => {
-            const Icon = CAT_ICONS[cat.icon] ?? Smartphone;
-            return (
-              <Link key={cat.id} href={`/products?category=${cat.slug}`}>
-                <motion.div whileHover={{ y: -5, scale: 1.04 }} whileTap={{ scale: 0.97 }}
-                  className="group cursor-pointer text-center">
-                  <div className="aspect-square rounded-2xl flex items-center justify-center mb-2 border border-gray-100 group-hover:border-blue-200 group-hover:shadow-md transition-all"
-                    style={{ background: `linear-gradient(135deg, ${cat.color}15, ${cat.color}25)` }}>
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm" style={{ background: cat.color }}>
-                      <Icon className="w-5 h-5 text-white" />
-                    </div>
-                  </div>
-                  <p className="text-xs font-semibold text-gray-700 group-hover:text-blue-600 transition-colors leading-tight">{cat.name}</p>
-                </motion.div>
-              </Link>
-            );
-          })}
-        </div>
-      </Appear>
 
       {/* ── FEATURED ── */}
       {featured.length > 0 && (

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
-  Plus, ShoppingBag, Trash2, Check, X, Building2, Calendar, Search, ChevronRight, Loader2, PackagePlus,
+  Plus, ShoppingBag, Trash2, Check, X, Building2, Calendar, Search, ChevronRight, Loader2, PackagePlus, Smartphone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,16 +55,21 @@ const CONDITIONS = [
 ];
 
 function QuickAddProductDialog({ onCreated, onClose }: {
-  onCreated: (p: Product) => void; onClose: () => void;
+  onCreated: (p: Product, imeis: string[]) => void; onClose: () => void;
 }) {
   const { toast } = useToast();
-  const [form, setForm] = useState({ name: "", productType: "phone", condition: "new", price: "", costPrice: "", stock: "0" });
+  const [form, setForm] = useState({ name: "", productType: "phone", condition: "new", price: "", costPrice: "" });
   const setF = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
+  const [imeiText, setImeiText] = useState("");
   const [saving, setSaving] = useState(false);
   const inputCls = "bg-white border-gray-200 text-gray-900 text-sm placeholder:text-gray-400 focus-visible:ring-blue-400";
 
+  const needsImei = form.productType === "phone" || form.productType === "tablet";
+  const imeiList = imeiText.split("\n").map(s => s.trim()).filter(Boolean);
+  const imeiMissing = needsImei && imeiList.length === 0;
+
   const handleSave = async () => {
-    if (!form.name || !form.price) return;
+    if (!form.name || !form.price || imeiMissing) return;
     setSaving(true);
     try {
       const res = await apiRequest("POST", "/api/products", {
@@ -73,14 +78,14 @@ function QuickAddProductDialog({ onCreated, onClose }: {
         condition: form.condition,
         price: parseFloat(form.price) || 0,
         costPrice: parseFloat(form.costPrice) || 0,
-        stock: parseInt(form.stock) || 0,
+        stock: 0,
         published: true, featured: false,
         images: [], image: "",
       });
       const newProd: Product = await res.json();
       await queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       toast({ title: `✓ تمت إضافة ${newProd.name}` });
-      onCreated(newProd);
+      onCreated(newProd, needsImei ? imeiList : []);
     } catch {
       toast({ title: "فشل إنشاء المنتج", variant: "destructive" });
     } finally {
@@ -105,7 +110,7 @@ function QuickAddProductDialog({ onCreated, onClose }: {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-gray-600 text-xs font-semibold mb-1.5 block">النوع</Label>
-              <Select value={form.productType} onValueChange={v => setF("productType", v)}>
+              <Select value={form.productType} onValueChange={v => { setF("productType", v); setImeiText(""); }}>
                 <SelectTrigger className={inputCls}><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-white border-gray-200 shadow-lg">
                   {PRODUCT_TYPES.map(t => <SelectItem key={t.value} value={t.value} className="text-gray-800 text-sm">{t.label}</SelectItem>)}
@@ -132,12 +137,48 @@ function QuickAddProductDialog({ onCreated, onClose }: {
               <Input type="number" value={form.costPrice} onChange={e => setF("costPrice", e.target.value)} className={inputCls} placeholder="0" />
             </div>
           </div>
+
+          {/* IMEI — إجباري للهواتف والتابلتات */}
+          {needsImei && (
+            <div>
+              <Label className="text-xs font-semibold mb-1.5 flex items-center gap-1.5 text-orange-600">
+                <Smartphone className="w-3.5 h-3.5" />
+                رقم IMEI * <span className="text-[10px] text-gray-400 font-normal">(سطر واحد لكل IMEI)</span>
+              </Label>
+              <textarea
+                value={imeiText}
+                onChange={e => setImeiText(e.target.value)}
+                rows={Math.max(2, imeiList.length + 1)}
+                placeholder={"358000000000001\n358000000000002"}
+                className={`w-full rounded-md border text-sm font-mono px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+                  imeiMissing && imeiText !== ""
+                    ? "border-red-400 bg-red-50"
+                    : imeiList.length > 0
+                    ? "border-green-400 bg-green-50"
+                    : "border-orange-300 bg-orange-50"
+                }`}
+                data-testid="input-quick-product-imei"
+              />
+              <div className="flex items-center justify-between mt-1">
+                {imeiList.length > 0 ? (
+                  <span className="text-[10px] text-green-600 font-semibold">✓ {imeiList.length} IMEI مُدخل</span>
+                ) : (
+                  <span className="text-[10px] text-orange-500">أدخل رقم IMEI واحد على الأقل</span>
+                )}
+              </div>
+            </div>
+          )}
+
           <p className="text-[10px] text-gray-400">المخزون يُضاف تلقائياً عند اكتمال الشراء.</p>
         </div>
         <DialogFooter className="gap-2 border-t border-gray-100 pt-3">
           <Button variant="outline" onClick={onClose} className="border-gray-200 text-gray-600 text-sm">إلغاء</Button>
-          <Button onClick={handleSave} disabled={saving || !form.name || !form.price}
-            className="bg-blue-600 hover:bg-blue-700 text-white text-sm shadow-sm">
+          <Button
+            onClick={handleSave}
+            disabled={saving || !form.name || !form.price || imeiMissing}
+            className="bg-blue-600 hover:bg-blue-700 text-white text-sm shadow-sm disabled:opacity-50"
+            data-testid="btn-quick-product-save"
+          >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "إضافة للمخزون"}
           </Button>
         </DialogFooter>
@@ -312,9 +353,15 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
       {showAddProduct && (
         <QuickAddProductDialog
           onClose={() => setShowAddProduct(false)}
-          onCreated={prod => {
+          onCreated={(prod, imeis) => {
             setProducts(prev => [...prev, prod]);
-            setNewItem(i => ({ ...i, productId: prod.id, productName: prod.name }));
+            setNewItem(i => ({
+              ...i,
+              productId: prod.id,
+              productName: prod.name,
+              productType: prod.productType ?? "",
+            }));
+            if (imeis && imeis.length > 0) setNewItemImeiText(imeis.join("\n"));
             setShowAddProduct(false);
           }}
         />

@@ -1,0 +1,769 @@
+import type { Express, Request, Response, NextFunction } from "express";
+import { createServer, type Server } from "http";
+import { storage, hashPassword } from "./storage";
+import { insertProductSchema, insertOrderSchema } from "@shared/schema";
+import { z } from "zod";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import crypto from "crypto";
+
+let _Jimp: any = null;
+async function getJimp() {
+  if (!_Jimp) {
+    const mod = await import("jimp");
+    _Jimp = (mod as any).default ?? mod;
+  }
+  return _Jimp;
+}
+
+const UPLOADS_DIR = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) cb(null, true);
+    else cb(new Error("الملف يجب أن يكون صورة"));
+  },
+});
+
+async function saveCompressedImage(buffer: Buffer): Promise<string> {
+  const filename = `${Date.now()}-${crypto.randomBytes(6).toString("hex")}.jpg`;
+  const filepath = path.join(UPLOADS_DIR, filename);
+  const Jimp = await getJimp();
+  const img = await Jimp.read(buffer);
+  if (img.getWidth() > 1200 || img.getHeight() > 1200) {
+    img.scaleToFit(1200, 1200);
+  }
+  img.quality(82);
+  await img.writeAsync(filepath);
+  return `/uploads/${filename}`;
+}
+
+function requireAuth(req: Request, res: Response, next: NextFunction) {
+  if (!req.session.userId) return res.status(401).json({ message: "غير مصرح" });
+  next();
+}
+
+function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  if (!req.session.userId || req.session.role !== "admin") return res.status(403).json({ message: "ممنوع - أدمن فقط" });
+  next();
+}
+
+const ALLOWED_ORDER_STATUSES = ["new", "confirmed", "preparing", "shipped", "with_delivery",
+  "delivered", "returned_by_delivery", "delivery_failed", "customer_refused", "cancelled",
+  "pending", "processing", "dispatched", "in_delivery", "returned"];
+
+const isBase64 = (s: string) => typeof s === "string" && s.startsWith("data:");
+
+function getClientIp(req: Request): string {
+  return req.ip || req.socket.remoteAddress || "unknown";
+}
+
+const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
+function rateLimit(maxRequests: number, windowMs: number, keyFn?: (req: Request) => string) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const key = keyFn ? keyFn(req) : getClientIp(req);
+    const now = Date.now();
+    const entry = rateLimitStore.get(key);
+    if (!entry || now > entry.resetAt) {
+      rateLimitStore.set(key, { count: 1, resetAt: now + windowMs });
+      return next();
+    }
+    entry.count++;
+    if (entry.count > maxRequests) return res.status(429).json({ message: "طلبات كثيرة جداً، حاول مرة أخرى لاحقاً." });
+    next();
+  };
+}
+setInterval(() => { const now = Date.now(); for (const [k, e] of rateLimitStore.entries()) if (now > e.resetAt) rateLimitStore.delete(k); }, 60_000);
+
+export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
+
+  // ==================== IMAGE UPLOAD ====================
+
+  app.post("/api/upload", requireAuth, upload.single("image"), async (req, res) => {
+    if (!req.file) return res.status(400).json({ message: "لم يتم رفع أي صورة" });
+    try {
+      const url = await saveCompressedImage(req.file.buffer);
+      res.json({ url });
+    } catch (e: any) {
+      res.status(500).json({ message: "فشل معالجة الصورة" });
+    }
+  });
+
+  app.post("/api/upload/multiple", requireAuth, upload.array("images", 10), async (req, res) => {
+    if (!req.files || (req.files as Express.Multer.File[]).length === 0) return res.status(400).json({ message: "لم يتم رفع أي صور" });
+    try {
+      const urls = await Promise.all((req.files as Express.Multer.File[]).map(f => saveCompressedImage(f.buffer)));
+      res.json({ urls });
+    } catch (e: any) {
+      res.status(500).json({ message: "فشل معالجة الصور" });
+    }
+  });
+
+  // ==================== AUTH ====================
+
+  app.post("/api/auth/login", rateLimit(10, 15 * 60 * 1000, req => `login:${getClientIp(req)}`), async (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password || typeof username !== "string" || typeof password !== "string") return res.status(400).json({ message: "اسم المستخدم وكلمة المرور مطلوبان" });
+    if (username.length > 50 || password.length > 100) return res.status(400).json({ message: "بيانات غير صحيحة" });
+    const user = await storage.getUserByUsername(username.toLowerCase().trim());
+    if (!user || user.password !== hashPassword(password)) return res.status(401).json({ message: "اسم المستخدم أو كلمة المرور غير صحيحة" });
+    req.session.userId = user.id;
+    req.session.role = user.role as "admin" | "confirmateur";
+    req.session.username = user.username;
+    req.session.name = user.name;
+    res.json({ id: user.id, username: user.username, role: user.role, name: user.name });
+  });
+
+  app.post("/api/auth/logout", (req, res) => { req.session.destroy(() => {}); res.json({ message: "تم تسجيل الخروج" }); });
+
+  app.get("/api/auth/me", async (req, res) => {
+    if (!req.session.userId) return res.status(401).json({ message: "غير مسجل" });
+    const user = await storage.getUserById(req.session.userId);
+    if (!user) return res.status(401).json({ message: "المستخدم غير موجود" });
+    res.json({ id: user.id, username: user.username, role: user.role, name: user.name });
+  });
+
+  // ==================== DASHBOARD ====================
+
+  app.get("/api/dashboard", requireAdmin, async (_req, res) => {
+    try {
+      const stats = await storage.getDashboardStats();
+      res.json(stats);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/stats", requireAdmin, async (_req, res) => {
+    const prods = await storage.getProducts();
+    const ords = await storage.getOrders();
+    const totalRevenue = ords.reduce((s, o) => s + parseFloat(o.total as string || "0"), 0);
+    const confirmateurs = await storage.getConfirmateurs();
+    res.json({ totalProducts: prods.length, totalOrders: ords.length, totalRevenue, pendingOrders: ords.filter(o => o.status === "new").length, deliveredOrders: ords.filter(o => o.status === "delivered").length, totalConfirmateurs: confirmateurs.length });
+  });
+
+  // ==================== CATEGORIES ====================
+
+  app.get("/api/categories", async (_req, res) => {
+    res.json(await storage.getCategories());
+  });
+
+  app.post("/api/categories", requireAdmin, async (req, res) => {
+    try {
+      const cat = await storage.createCategory(req.body);
+      res.status(201).json(cat);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  app.patch("/api/categories/:id", requireAdmin, async (req, res) => {
+    const cat = await storage.updateCategory(req.params.id, req.body);
+    if (!cat) return res.status(404).json({ message: "الفئة غير موجودة" });
+    res.json(cat);
+  });
+
+  app.delete("/api/categories/:id", requireAdmin, async (req, res) => {
+    const ok = await storage.deleteCategory(req.params.id);
+    if (!ok) return res.status(404).json({ message: "الفئة غير موجودة" });
+    res.json({ message: "تم الحذف" });
+  });
+
+  // ==================== BRANDS ====================
+
+  app.get("/api/brands", async (_req, res) => {
+    res.json(await storage.getBrands());
+  });
+
+  app.post("/api/brands", requireAdmin, async (req, res) => {
+    try {
+      const brand = await storage.createBrand(req.body);
+      res.status(201).json(brand);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  app.patch("/api/brands/:id", requireAdmin, async (req, res) => {
+    const brand = await storage.updateBrand(req.params.id, req.body);
+    if (!brand) return res.status(404).json({ message: "الماركة غير موجودة" });
+    res.json(brand);
+  });
+
+  app.delete("/api/brands/:id", requireAdmin, async (req, res) => {
+    const ok = await storage.deleteBrand(req.params.id);
+    if (!ok) return res.status(404).json({ message: "الماركة غير موجودة" });
+    res.json({ message: "تم الحذف" });
+  });
+
+  // ==================== PRODUCTS ====================
+
+  app.get("/api/products", async (req, res) => {
+    const { category, featured, search, published } = req.query;
+    let prods = await storage.getProducts();
+    if (featured === "true") prods = prods.filter(p => p.featured);
+    if (published === "true") prods = prods.filter(p => p.published);
+    if (category && category !== "all") prods = prods.filter(p => p.category === category || p.categoryId === category);
+    if (search) {
+      const q = (search as string).toLowerCase();
+      prods = prods.filter(p => p.name.toLowerCase().includes(q) || (p.description ?? "").toLowerCase().includes(q) || (p.sku ?? "").toLowerCase().includes(q));
+    }
+    res.json(prods.map(p => ({
+      ...p,
+      image: isBase64(p.image) ? `/api/products/${p.id}/image` : p.image,
+    })));
+  });
+
+  app.get("/api/products/low-stock", requireAdmin, async (_req, res) => {
+    res.json(await storage.getLowStockProducts());
+  });
+
+  function serveImage(src: string | null | undefined, res: any) {
+    try {
+      if (!src) return res.status(404).end();
+      if (src.startsWith("data:")) {
+        const comma = src.indexOf(",");
+        if (comma === -1) return res.status(500).end();
+        const mime = src.substring(0, comma).match(/:(.*?);/)?.[1] || "image/jpeg";
+        const buf = Buffer.from(src.substring(comma + 1), "base64");
+        res.setHeader("Content-Type", mime).setHeader("Cache-Control", "public, max-age=86400").end(buf);
+      } else {
+        res.setHeader("Cache-Control", "public, max-age=86400").redirect(302, src);
+      }
+    } catch { res.status(500).end(); }
+  }
+
+  app.get("/api/products/:id/image", async (req, res) => {
+    try {
+      const product = await storage.getProduct(req.params.id);
+      if (!product) return res.status(404).end();
+      const idx = parseInt(req.query.idx as string);
+      let src = product.image;
+      if (!isNaN(idx) && Array.isArray(product.images)) src = product.images[idx] ?? product.image;
+      serveImage(src, res);
+    } catch { res.status(500).end(); }
+  });
+
+  app.get("/api/products/:id", async (req, res) => {
+    const product = await storage.getProduct(req.params.id);
+    if (!product) return res.status(404).json({ message: "المنتج غير موجود" });
+    res.json(product);
+  });
+
+  app.post("/api/products", requireAdmin, async (req, res) => {
+    try {
+      const product = await storage.createProduct(req.body);
+      res.status(201).json(product);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  app.patch("/api/products/:id", requireAdmin, async (req, res) => {
+    const product = await storage.updateProduct(req.params.id, req.body);
+    if (!product) return res.status(404).json({ message: "المنتج غير موجود" });
+    res.json(product);
+  });
+
+  app.delete("/api/products/:id", requireAdmin, async (req, res) => {
+    const ok = await storage.deleteProduct(req.params.id);
+    if (!ok) return res.status(404).json({ message: "المنتج غير موجود" });
+    res.json({ message: "تم الحذف بنجاح" });
+  });
+
+  // ==================== SUPPLIERS ====================
+
+  app.get("/api/suppliers", requireAdmin, async (_req, res) => {
+    res.json(await storage.getSuppliers());
+  });
+
+  app.post("/api/suppliers", requireAdmin, async (req, res) => {
+    try {
+      const s = await storage.createSupplier(req.body);
+      res.status(201).json(s);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  app.patch("/api/suppliers/:id", requireAdmin, async (req, res) => {
+    const s = await storage.updateSupplier(req.params.id, req.body);
+    if (!s) return res.status(404).json({ message: "المورد غير موجود" });
+    res.json(s);
+  });
+
+  app.delete("/api/suppliers/:id", requireAdmin, async (req, res) => {
+    const ok = await storage.deleteSupplier(req.params.id);
+    if (!ok) return res.status(404).json({ message: "المورد غير موجود" });
+    res.json({ message: "تم الحذف" });
+  });
+
+  // ==================== PURCHASES ====================
+
+  app.get("/api/purchases", requireAdmin, async (_req, res) => {
+    res.json(await storage.getPurchases());
+  });
+
+  app.get("/api/purchases/:id", requireAdmin, async (req, res) => {
+    const p = await storage.getPurchase(req.params.id);
+    if (!p) return res.status(404).json({ message: "الشراء غير موجود" });
+    const items = await storage.getPurchaseItems(req.params.id);
+    res.json({ ...p, items });
+  });
+
+  app.post("/api/purchases", requireAdmin, async (req, res) => {
+    try {
+      const { items = [], ...purchaseData } = req.body;
+      // Drizzle requires a real Date object for timestamp columns, not a JSON string
+      if (purchaseData.purchaseDate) {
+        purchaseData.purchaseDate = new Date(purchaseData.purchaseDate);
+        if (isNaN(purchaseData.purchaseDate.getTime())) purchaseData.purchaseDate = new Date();
+      }
+      const purchase = await storage.createPurchase(purchaseData, items);
+      res.status(201).json(purchase);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  app.patch("/api/purchases/:id/status", requireAdmin, async (req, res) => {
+    const { status } = req.body;
+    if (!status) return res.status(400).json({ message: "الحالة مطلوبة" });
+    const p = await storage.updatePurchaseStatus(req.params.id, status);
+    if (!p) return res.status(404).json({ message: "الشراء غير موجود" });
+    res.json(p);
+  });
+
+  app.delete("/api/purchases/:id", requireAdmin, async (req, res) => {
+    const ok = await storage.deletePurchase(req.params.id);
+    if (!ok) return res.status(404).json({ message: "الشراء غير موجود" });
+    res.json({ message: "تم الحذف" });
+  });
+
+  // ==================== INVENTORY ====================
+
+  app.get("/api/inventory/movements", requireAdmin, async (_req, res) => {
+    res.json(await storage.getInventoryMovements());
+  });
+
+  app.post("/api/inventory/adjust", requireAdmin, async (req, res) => {
+    try {
+      const { productId, quantity, type, notes } = req.body;
+      if (!productId || quantity === undefined || !type) return res.status(400).json({ message: "بيانات ناقصة" });
+      const movType = type === "in" ? "manual_adjustment" : type === "out" ? "damaged_out" : type;
+      await storage.adjustStock(productId, parseInt(quantity), movType, "manual_adjustment", undefined, notes);
+      res.json({ message: "تم تعديل المخزون" });
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  // ==================== ORDERS ====================
+
+  app.get("/api/orders", requireAuth, async (req, res) => {
+    if (req.session.role === "confirmateur") return res.json(await storage.getOrdersByConfirmateur(req.session.userId!));
+    res.json(await storage.getOrders());
+  });
+
+  app.get("/api/orders/counts", requireAdmin, async (_req, res) => {
+    res.json(await storage.getOrderCounts());
+  });
+
+  app.get("/api/orders/:id", requireAuth, async (req, res) => {
+    const order = await storage.getOrder(req.params.id);
+    if (!order) return res.status(404).json({ message: "الطلب غير موجود" });
+    if (req.session.role === "confirmateur" && order.assignedTo !== req.session.userId) return res.status(403).json({ message: "غير مصرح" });
+    const items = await storage.getOrderItems(req.params.id);
+    res.json({ ...order, items });
+  });
+
+  app.post("/api/orders", rateLimit(5, 10 * 60 * 1000), async (req, res) => {
+    try {
+      const ip = getClientIp(req);
+      const blocked = await storage.isIpBlocked(ip);
+      if (blocked) return res.status(403).json({ message: "تعذر إتمام الطلب." });
+      const { items, ...orderData } = req.body;
+      const order = await storage.createOrder({ ...orderData, ip }, items);
+      res.status(201).json(order);
+    } catch (e: any) { res.status(400).json({ message: "بيانات غير صحيحة" }); }
+  });
+
+  app.post("/api/admin/orders", requireAdmin, async (req, res) => {
+    try {
+      const { items = [], ...orderData } = req.body;
+      const initialStatus = orderData.status ?? "new";
+      // Create the order with status "new" first, then use updateOrderStatus to trigger
+      // all business logic (stock deduction, profit snapshot) correctly
+      const order = await storage.createOrder({ ...orderData, source: orderData.source ?? "admin", status: "new" }, items);
+      // If a specific initial status was requested, transition through updateOrderStatus
+      // so stock deduction and other business rules fire properly
+      if (initialStatus !== "new") {
+        const updated = await storage.updateOrderStatus(order.id, initialStatus);
+        return res.status(201).json(updated ?? order);
+      }
+      res.status(201).json(order);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  app.patch("/api/orders/:id/status", requireAuth, async (req, res) => {
+    const { status } = req.body;
+    if (!status || !ALLOWED_ORDER_STATUSES.includes(status)) return res.status(400).json({ message: "حالة غير صالحة" });
+    if (req.session.role === "confirmateur") {
+      const order = await storage.getOrder(req.params.id);
+      if (!order || order.assignedTo !== req.session.userId) return res.status(403).json({ message: "غير مصرح" });
+    }
+    const order = await storage.updateOrderStatus(req.params.id, status);
+    if (!order) return res.status(404).json({ message: "الطلب غير موجود" });
+    res.json(order);
+  });
+
+  app.patch("/api/orders/:id", requireAuth, async (req, res) => {
+    const order = await storage.getOrder(req.params.id);
+    if (!order) return res.status(404).json({ message: "الطلب غير موجود" });
+    if (req.session.role === "confirmateur" && order.assignedTo !== req.session.userId) return res.status(403).json({ message: "غير مصرح" });
+
+    // Fix 4: If status is being changed, always route through the central business logic function
+    // This guarantees stock deduction, profit snapshots, and return logic are never bypassed
+    if (req.body.status !== undefined) {
+      const newStatus = req.body.status;
+      if (!ALLOWED_ORDER_STATUSES.includes(newStatus)) return res.status(400).json({ message: "حالة غير صالحة" });
+      // Apply any non-status field updates first
+      const nonStatusFields = ["customerName", "customerPhone", "wilaya", "commune", "address", "deliveryType", "deliveryPrice", "subtotal", "total", "paymentMethod", "paymentStatus", "notes"];
+      const fieldUpdates: any = {};
+      for (const key of nonStatusFields) { if (req.body[key] !== undefined) fieldUpdates[key] = req.body[key]; }
+      if (Object.keys(fieldUpdates).length > 0) await storage.updateOrder(req.params.id, fieldUpdates);
+      // Then apply status change via the central function
+      const updated = await storage.updateOrderStatus(req.params.id, newStatus);
+      if (!updated) return res.status(404).json({ message: "الطلب غير موجود" });
+      return res.json(updated);
+    }
+
+    const allowed = ["customerName", "customerPhone", "wilaya", "commune", "address", "deliveryType", "deliveryPrice", "subtotal", "total", "paymentMethod", "paymentStatus", "notes"];
+    const updates: any = {};
+    for (const key of allowed) { if (req.body[key] !== undefined) updates[key] = req.body[key]; }
+    const updated = await storage.updateOrder(req.params.id, updates);
+    if (!updated) return res.status(404).json({ message: "الطلب غير موجود" });
+    res.json(updated);
+  });
+
+  app.patch("/api/orders/:id/assign", requireAdmin, async (req, res) => {
+    const { confirmateurId } = req.body;
+    if (!confirmateurId) return res.status(400).json({ message: "معرف المؤكد مطلوب" });
+    const confirmateur = await storage.getUserById(confirmateurId);
+    if (!confirmateur || confirmateur.role !== "confirmateur") return res.status(400).json({ message: "المؤكد غير موجود" });
+    const order = await storage.assignOrder(req.params.id, confirmateurId, confirmateur.name);
+    if (!order) return res.status(404).json({ message: "الطلب غير موجود" });
+    res.json(order);
+  });
+
+  app.delete("/api/orders/:id", requireAdmin, async (req, res) => {
+    const ok = await storage.deleteOrder(req.params.id);
+    if (!ok) return res.status(404).json({ message: "الطلب غير موجود" });
+    res.json({ success: true });
+  });
+
+  // ==================== DELIVERY RETURNS ====================
+
+  app.post("/api/orders/:id/return", requireAdmin, async (req, res) => {
+    try {
+      const { condition, reason, notes } = req.body;
+      if (!condition || !["sellable", "damaged", "inspection"].includes(condition)) {
+        return res.status(400).json({ message: "حالة المرتجع مطلوبة (sellable/damaged/inspection)" });
+      }
+      if (!reason || !reason.trim()) {
+        return res.status(400).json({ message: "سبب الإرجاع مطلوب" });
+      }
+      const order = await storage.processDeliveryReturn(req.params.id, condition, reason, notes);
+      if (!order) return res.status(404).json({ message: "الطلب غير موجود" });
+      res.json(order);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  // ==================== AFTER-SALE RECORDS ====================
+
+  app.get("/api/after-sale", requireAdmin, async (_req, res) => {
+    res.json(await storage.getAfterSaleRecords());
+  });
+
+  app.post("/api/after-sale", requireAdmin, async (req, res) => {
+    try {
+      const record = await storage.createAfterSaleRecord(req.body);
+      res.status(201).json(record);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  app.patch("/api/after-sale/:id", requireAdmin, async (req, res) => {
+    const record = await storage.updateAfterSaleRecord(req.params.id, req.body);
+    if (!record) return res.status(404).json({ message: "السجل غير موجود" });
+    res.json(record);
+  });
+
+  app.delete("/api/after-sale/:id", requireAdmin, async (req, res) => {
+    const ok = await storage.deleteAfterSaleRecord(req.params.id);
+    if (!ok) return res.status(404).json({ message: "السجل غير موجود" });
+    res.json({ success: true });
+  });
+
+  // ==================== PHONE UNITS (IMEI) ====================
+
+  app.get("/api/phone-units", requireAdmin, async (req, res) => {
+    const productId = req.query.productId as string | undefined;
+    res.json(await storage.getPhoneUnits(productId));
+  });
+
+  app.get("/api/phone-units/:id", requireAdmin, async (req, res) => {
+    const unit = await storage.getPhoneUnit(req.params.id);
+    if (!unit) return res.status(404).json({ message: "الوحدة غير موجودة" });
+    res.json(unit);
+  });
+
+  app.get("/api/phone-units/imei/:imei", requireAdmin, async (req, res) => {
+    const unit = await storage.getPhoneUnitByImei(req.params.imei);
+    if (!unit) return res.status(404).json({ message: "IMEI غير موجود" });
+    res.json(unit);
+  });
+
+  app.post("/api/phone-units", requireAdmin, async (req, res) => {
+    try {
+      const unit = await storage.createPhoneUnit(req.body);
+      res.status(201).json(unit);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  app.patch("/api/phone-units/:id", requireAdmin, async (req, res) => {
+    const unit = await storage.updatePhoneUnit(req.params.id, req.body);
+    if (!unit) return res.status(404).json({ message: "الوحدة غير موجودة" });
+    res.json(unit);
+  });
+
+  app.delete("/api/phone-units/:id", requireAdmin, async (req, res) => {
+    const ok = await storage.deletePhoneUnit(req.params.id);
+    if (!ok) return res.status(404).json({ message: "الوحدة غير موجودة" });
+    res.json({ success: true });
+  });
+
+  app.post("/api/phone-units/sync-stock/:productId", requireAdmin, async (req, res) => {
+    await storage.syncPhoneStock(req.params.productId);
+    res.json({ success: true });
+  });
+
+  // ==================== STOCK VALUE ====================
+
+  app.get("/api/inventory/stock-value", requireAdmin, async (_req, res) => {
+    res.json(await storage.getStockValue());
+  });
+
+  // ==================== EXPENSES ====================
+
+  app.get("/api/expenses", requireAdmin, async (_req, res) => {
+    res.json(await storage.getExpenses());
+  });
+
+  app.post("/api/expenses", requireAdmin, async (req, res) => {
+    try {
+      const e = await storage.createExpense(req.body);
+      res.status(201).json(e);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  app.patch("/api/expenses/:id", requireAdmin, async (req, res) => {
+    const e = await storage.updateExpense(req.params.id, req.body);
+    if (!e) return res.status(404).json({ message: "المصروف غير موجود" });
+    res.json(e);
+  });
+
+  app.delete("/api/expenses/:id", requireAdmin, async (req, res) => {
+    const ok = await storage.deleteExpense(req.params.id);
+    if (!ok) return res.status(404).json({ message: "المصروف غير موجود" });
+    res.json({ message: "تم الحذف" });
+  });
+
+  // ==================== PROFIT ====================
+
+  app.get("/api/profit", requireAdmin, async (_req, res) => {
+    res.json(await storage.getProfitRecords());
+  });
+
+  // ==================== CONFIRMATEURS ====================
+
+  app.get("/api/confirmateurs", requireAdmin, async (_req, res) => {
+    const confirmateurs = await storage.getConfirmateurs();
+    const allOrders = await storage.getOrders();
+    const result = confirmateurs.map(u => {
+      const myOrders = allOrders.filter(o => o.assignedTo === u.id);
+      return {
+        id: u.id, username: u.username, name: u.name, role: u.role, createdAt: u.createdAt,
+        stats: {
+          total: myOrders.length,
+          delivered: myOrders.filter(o => o.status === "delivered").length,
+          cancelled: myOrders.filter(o => o.status === "cancelled").length,
+        },
+      };
+    });
+    res.json(result);
+  });
+
+  app.post("/api/confirmateurs", requireAdmin, async (req, res) => {
+    const schema = z.object({ username: z.string().min(3).max(30), password: z.string().min(4).max(100), name: z.string().min(2).max(60) });
+    try {
+      const data = schema.parse(req.body);
+      const lowerUsername = data.username.toLowerCase().trim();
+      const existing = await storage.getUserByUsername(lowerUsername);
+      if (existing) return res.status(400).json({ message: "اسم المستخدم موجود بالفعل" });
+      const user = await storage.createUser({ username: lowerUsername, password: hashPassword(data.password), role: "confirmateur", name: data.name });
+      res.status(201).json({ id: user.id, username: user.username, name: user.name, role: user.role });
+    } catch (e) { res.status(400).json({ message: "بيانات غير صحيحة" }); }
+  });
+
+  app.patch("/api/confirmateurs/:id", requireAdmin, async (req, res) => {
+    const { name, password } = req.body;
+    const updates: any = {};
+    if (name) updates.name = name;
+    if (password) updates.password = hashPassword(password);
+    const user = await storage.updateUser(req.params.id, updates);
+    if (!user) return res.status(404).json({ message: "المستخدم غير موجود" });
+    res.json({ id: user.id, username: user.username, name: user.name, role: user.role });
+  });
+
+  app.delete("/api/confirmateurs/:id", requireAdmin, async (req, res) => {
+    const ok = await storage.deleteUser(req.params.id);
+    if (!ok) return res.status(404).json({ message: "المستخدم غير موجود أو لا يمكن حذفه" });
+    res.json({ message: "تم الحذف" });
+  });
+
+  // ==================== BLOCKED IPs ====================
+
+  app.get("/api/blocked-ips", requireAdmin, async (_req, res) => res.json(await storage.getBlockedIps()));
+
+  app.post("/api/blocked-ips", requireAdmin, async (req, res) => {
+    const { ip, reason } = req.body;
+    if (!ip) return res.status(400).json({ message: "IP مطلوب" });
+    res.status(201).json(await storage.blockIp(ip, reason));
+  });
+
+  app.delete("/api/blocked-ips/:id", requireAdmin, async (req, res) => {
+    const ok = await storage.unblockIp(req.params.id);
+    if (!ok) return res.status(404).json({ message: "IP غير موجود" });
+    res.json({ success: true });
+  });
+
+  // ==================== ABANDONED CARTS ====================
+
+  app.get("/api/abandoned-carts", requireAdmin, async (_req, res) => res.json(await storage.getAbandonedCarts()));
+
+  app.post("/api/abandoned-carts", rateLimit(3, 10 * 60 * 1000), async (req, res) => {
+    try {
+      const ip = getClientIp(req);
+      const { customerPhone, customerName, wilaya, productId, productName, source } = req.body;
+      if (!customerPhone || !productId || !productName) return res.status(400).json({ message: "بيانات ناقصة" });
+      const cart = await storage.createAbandonedCart({ customerPhone, customerName: customerName?.slice(0, 100), wilaya: wilaya?.slice(0, 50), productId: String(productId).slice(0, 50), productName: String(productName).slice(0, 200), source: source || "product", ip });
+      res.status(201).json(cart);
+    } catch { res.status(400).json({ message: "خطأ" }); }
+  });
+
+  app.delete("/api/abandoned-carts/:id", requireAdmin, async (req, res) => {
+    const ok = await storage.deleteAbandonedCart(req.params.id);
+    if (!ok) return res.status(404).json({ message: "غير موجود" });
+    res.json({ success: true });
+  });
+
+  // ==================== SETTINGS ====================
+
+  app.get("/api/settings", async (req, res) => {
+    const settings = await storage.getSettings();
+    if (req.session.role !== "admin") {
+      const { googleSheetsWebhookUrl: _h, ...pub } = settings;
+      return res.json(pub);
+    }
+    res.json(settings);
+  });
+
+  app.patch("/api/settings", requireAdmin, async (req, res) => {
+    const ALLOWED = ["facebookPixelId", "tiktokPixelId", "googleSheetsWebhookUrl", "deliveryPrices", "storeName", "storePhone"];
+    const sanitized: Record<string, string> = {};
+    for (const key of ALLOWED) {
+      if (req.body[key] !== undefined && typeof req.body[key] === "string" && req.body[key].length <= 5000) sanitized[key] = req.body[key];
+    }
+    res.json(await storage.updateSettings(sanitized));
+  });
+
+  // ==================== DELIVERY SHIPPERS ====================
+
+  app.get("/api/shippers", requireAdmin, async (_req, res) => res.json(await storage.getDeliveryCompanies()));
+
+  app.patch("/api/shippers/:slug", requireAdmin, async (req, res) => {
+    const { slug } = req.params;
+    const { enabled, apiKey, apiToken, accountId, storeId, notes } = req.body;
+    const result = await storage.upsertDeliveryCompany(slug, { enabled, apiKey, apiToken, accountId, storeId, notes });
+    res.json(result);
+  });
+
+  // ==================== PRODUCT VARIANTS ====================
+
+  app.get("/api/products/:id/variants", requireAdmin, async (req, res) => {
+    res.json(await storage.getProductVariants(req.params.id));
+  });
+
+  app.post("/api/products/:id/variants", requireAdmin, async (req, res) => {
+    try {
+      const v = await storage.createProductVariant({ ...req.body, productId: req.params.id });
+      res.status(201).json(v);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  app.patch("/api/variants/:id", requireAdmin, async (req, res) => {
+    try {
+      const v = await storage.updateProductVariant(req.params.id, req.body);
+      if (!v) return res.status(404).json({ message: "Variant not found" });
+      res.json(v);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  app.delete("/api/variants/:id", requireAdmin, async (req, res) => {
+    const ok = await storage.deleteProductVariant(req.params.id);
+    if (!ok) return res.status(404).json({ message: "Not found" });
+    res.json({ success: true });
+  });
+
+  // ==================== REPORTS ====================
+
+  app.get("/api/reports/top-products", requireAdmin, async (req, res) => {
+    try {
+      const from = req.query.from ? new Date(req.query.from as string) : undefined;
+      const to = req.query.to ? new Date(req.query.to as string) : undefined;
+      const data = await storage.getTopProductsReport(from, to);
+      res.json(data);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  // ==================== CUSTOMERS ====================
+
+  app.get("/api/customers", requireAdmin, async (_req, res) => {
+    try { res.json(await storage.getCustomers()); }
+    catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.get("/api/customers/:phone/orders", requireAdmin, async (req, res) => {
+    try { res.json(await storage.getCustomerOrders(decodeURIComponent(req.params.phone))); }
+    catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  // ==================== ADMIN MIGRATE IMAGES ====================
+
+  app.post("/api/admin/migrate-images", requireAdmin, async (_req, res) => {
+    try {
+      const prods = await storage.getProducts();
+      let migrated = 0;
+      const migrateField = async (src: string | null | undefined) => {
+        if (!src || !src.startsWith("data:")) return src;
+        try {
+          const comma = src.indexOf(",");
+          return await saveCompressedImage(Buffer.from(src.substring(comma + 1), "base64"));
+        } catch { return src; }
+      };
+      for (const p of prods) {
+        const updates: Record<string, any> = {};
+        const newImage = await migrateField(p.image);
+        if (newImage !== p.image) updates.image = newImage;
+        if (Object.keys(updates).length > 0) { await storage.updateProduct(p.id, updates); migrated++; }
+      }
+      res.json({ success: true, total: prods.length, migrated });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  return httpServer;
+}

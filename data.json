@@ -1,0 +1,485 @@
+{
+  "users": [
+    [
+      "user-admin",
+      {
+        "id": "user-admin",
+        "username": "admin",
+        "password": "7606528e33fca5d6dbb70cf0efb204eb7e62cf1d39658ac1da0c2121fcf3e697",
+        "role": "admin",
+        "name": "المدير",
+        "createdAt": "2026-03-13T00:03:00.569Z"
+      }
+    ],
+    [
+      "user-6965f8aa-541c-4671-97cf-dc84030406b5",
+      {
+        "username": "conf_ali",
+        "password": "188a2198665ea0a772e2a2626b4c4b0dc78a4052b68517abfde3a0e3e1cf68b3",
+        "role": "confirmateur",
+        "name": "علي مؤكد",
+        "id": "user-6965f8aa-541c-4671-97cf-dc84030406b5",
+        "createdAt": "2026-03-13T00:03:41.950Z"
+      }
+    ]
+  ],
+  "orders": [
+    [
+      "ord-1",
+      {
+        "id": "ord-1",
+        "customerName": "أحمد بلقاسم",
+        "customerPhone": "0555123456",
+        "wilaya": "الجزائر",
+        "deliveryType": "home",
+        "deliveryPrice": "400",
+        "productId": "p-1",
+        "productName": "Whey Protein Gold Standard",
+        "productImage": "https://images.unsplash.com/photo-1593095948071-474c5cc2989d?w=500&q=80",
+        "quantity": 1,
+        "price": "7800",
+        "total": "8200",
+        "status": "delivered",
+        "notes": null,
+        "source": "product",
+        "assignedTo": null,
+        "confirmateurName": null,
+        "createdAt": "2026-03-10T00:03:00.569Z"
+      }
+    ],
+    [
+      "ord-2",
+      {
+        "id": "ord-2",
+        "customerName": "سارة بوزيدي",
+        "customerPhone": "0661234567",
+        "wilaya": "وهران",
+        "deliveryType": "desk",
+        "deliveryPrice": "450",
+        "productId": "p-4",
+        "productName": "Omega-3 Fish Oil 1000mg",
+        "productImage": "https://images.unsplash.com/photo-1550572017-edd951b55104?w=500&q=80",
+        "quantity": 2,
+        "price": "2800",
+        "total": "6050",
+        "status": "processing",
+        "notes": "التوصيل صباحاً",
+        "source": "landing",
+        "assignedTo": null,
+        "confirmateurName": null,
+        "createdAt": "2026-03-12T00:03:00.569Z"
+      }
+    ],
+    [
+      "ord-3",
+      {
+        "id": "ord-3",
+        "customerName": "عمر حمزاوي",
+        "customerPhone": "0770111222",
+        "wilaya": "قسنطينة",
+        "deliveryType": "home",
+        "deliveryPrice": "750",
+        "productId": "p-8",
+        "productName": "Fat Burner Thermogenic Pro",
+        "productImage": "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=500&q=80",
+        "quantity": 1,
+        "price": "4800",
+        "total": "5550",
+        "status": "shipped",
+        "notes": null,
+        "source": "landing",
+        "assignedTo": null,
+        "confirmateurName": null,
+        "createdAt": "2026-03-11T00:03:00.569Z"
+      }
+    ]
+  ],
+  "settings": {
+    "deliveryPrices": "{\"أدرار\":{\"home\":1050,\"desk\":900},\"الشلف\":{\"home\":750,\"desk\":450},\"الأغواط\":{\"home\":850,\"desk\":550},\"أم البواقي\":{\"home\":750,\"desk\":450},\"باتنة\":{\"home\":750,\"desk\":450},\"بجاية\":{\"home\":750,\"desk\":450},\"بسكرة\":{\"home\":850,\"desk\":550},\"بشار\":{\"home\":850,\"desk\":650},\"البليدة\":{\"home\":550,\"desk\":400},\"البويرة\":{\"home\":700,\"desk\":450},\"تمنراست\":{\"home\":1350,\"desk\":1050},\"تبسة\":{\"home\":750,\"desk\":500},\"تلمسان\":{\"home\":850,\"desk\":500},\"تيارت\":{\"home\":750,\"desk\":450},\"تيزي وزو\":{\"home\":650,\"desk\":450},\"الجزائر\":{\"home\":400,\"desk\":300},\"الجلفة\":{\"home\":850,\"desk\":500},\"جيجل\":{\"home\":750,\"desk\":450},\"سطيف\":{\"home\":750,\"desk\":450},\"سعيدة\":{\"home\":750,\"desk\":450},\"سكيكدة\":{\"home\":750,\"desk\":450},\"سيدي بلعباس\":{\"home\":750,\"desk\":450},\"عنابة\":{\"home\":750,\"desk\":450},\"قالمة\":{\"home\":750,\"desk\":450},\"قسنطينة\":{\"home\":750,\"desk\":450},\"المدية\":{\"home\":700,\"desk\":450},\"مستغانم\":{\"home\":750,\"desk\":450},\"المسيلة\":{\"home\":750,\"desk\":500},\"معسكر\":{\"home\":750,\"desk\":450},\"ورقلة\":{\"home\":850,\"desk\":600},\"وهران\":{\"home\":650,\"desk\":450},\"البيض\":{\"home\":900,\"desk\":600},\"إليزي\":{\"home\":0,\"desk\":0},\"برج بوعريريج\":{\"home\":750,\"desk\":450},\"بومرداس\":{\"home\":600,\"desk\":450},\"الطارف\":{\"home\":750,\"desk\":450},\"تندوف\":{\"home\":0,\"desk\":0},\"تيسمسيلت\":{\"home\":800,\"desk\":600},\"الوادي\":{\"home\":850,\"desk\":600},\"خنشلة\":{\"home\":750,\"desk\":450},\"سوق أهراس\":{\"home\":750,\"desk\":450},\"تيبازة\":{\"home\":650,\"desk\":450},\"ميلة\":{\"home\":750,\"desk\":450},\"عين الدفلى\":{\"home\":750,\"desk\":450},\"النعامة\":{\"home\":900,\"desk\":600},\"عين تموشنت\":{\"home\":750,\"desk\":450},\"غرداية\":{\"home\":850,\"desk\":550},\"غليزان\":{\"home\":750,\"desk\":450},\"تيميمون\":{\"home\":1050,\"desk\":900},\"برج باجي مختار\":{\"home\":0,\"desk\":0},\"أولاد جلال\":{\"home\":900,\"desk\":550},\"بني عباس\":{\"home\":900,\"desk\":900},\"إن صالح\":{\"home\":1350,\"desk\":0},\"إن قزام\":{\"home\":1350,\"desk\":0},\"تقرت\":{\"home\":850,\"desk\":600},\"جانت\":{\"home\":0,\"desk\":0},\"المغير\":{\"home\":850,\"desk\":0},\"المنيعة\":{\"home\":900,\"desk\":0}}"
+  },
+  "products": [
+    [
+      "p-1",
+      {
+        "id": "p-1",
+        "name": "Whey Protein Gold Standard",
+        "description": "بروتين واي ذهبي المعيار 100%، 24 غرام بروتين لكل حصة. بنكهة الشوكولاتة الفاخرة. الخيار الأول للرياضيين في الجزائر.",
+        "price": "7800",
+        "originalPrice": "9500",
+        "category": "protein",
+        "image": "https://images.unsplash.com/photo-1593095948071-474c5cc2989d?w=500&q=80",
+        "images": [],
+        "rating": "4.9",
+        "reviews": 3241,
+        "stock": 80,
+        "featured": true,
+        "badge": "الأكثر مبيعاً",
+        "tags": [
+          "بروتين",
+          "واي"
+        ],
+        "landingEnabled": true,
+        "landingHook": "24 غرام بروتين لكل حصة - النتائج تظهر في 30 يوماً!",
+        "landingBenefits": [
+          "24g بروتين لكل حصة",
+          "يسرّع الاستشفاء العضلي",
+          "بدون سكر مضاف",
+          "مذاق رائع بالشوكولاتة"
+        ],
+        "createdAt": "2026-03-13T00:03:00.569Z"
+      }
+    ],
+    [
+      "p-2",
+      {
+        "id": "p-2",
+        "name": "BCAA Amino 8:1:1",
+        "description": "أحماض أمينية متفرعة السلسلة بنسبة 8:1:1، تحمي العضلات وتمنع الهدم العضلي خلال التمرين الشديد.",
+        "price": "4200",
+        "originalPrice": "5500",
+        "category": "protein",
+        "image": "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=500&q=80",
+        "images": [],
+        "rating": "4.7",
+        "reviews": 1876,
+        "stock": 100,
+        "featured": true,
+        "badge": "جديد",
+        "tags": [
+          "أمينو",
+          "BCAA"
+        ],
+        "landingEnabled": false,
+        "landingHook": null,
+        "landingBenefits": [],
+        "createdAt": "2026-03-13T00:03:00.569Z"
+      }
+    ],
+    [
+      "p-3",
+      {
+        "id": "p-3",
+        "name": "Creatine Monohydrate Pure",
+        "description": "كرياتين أحادي الهيدرات النقي 100%، يزيد القوة والأداء الرياضي. مُجرَّب علمياً لزيادة الكتلة العضلية.",
+        "price": "3500",
+        "originalPrice": "4500",
+        "category": "protein",
+        "image": "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=500&q=80",
+        "images": [],
+        "rating": "4.8",
+        "reviews": 2100,
+        "stock": 120,
+        "featured": true,
+        "badge": "الأفضل",
+        "tags": [
+          "كرياتين"
+        ],
+        "landingEnabled": false,
+        "landingHook": null,
+        "landingBenefits": [],
+        "createdAt": "2026-03-13T00:03:00.569Z"
+      }
+    ],
+    [
+      "p-4",
+      {
+        "id": "p-4",
+        "name": "Omega-3 Fish Oil 1000mg",
+        "description": "زيت السمك الطبيعي 1000 ملغ EPA وDHA، يدعم صحة القلب والمفاصل ويقلل الالتهابات.",
+        "price": "2800",
+        "originalPrice": "3800",
+        "category": "health",
+        "image": "https://images.unsplash.com/photo-1550572017-edd951b55104?w=500&q=80",
+        "images": [],
+        "rating": "4.6",
+        "reviews": 1543,
+        "stock": 200,
+        "featured": true,
+        "badge": "خصم 26%",
+        "tags": [
+          "أوميغا",
+          "صحة"
+        ],
+        "landingEnabled": true,
+        "landingHook": "قلب أقوى، مفاصل أصح - أوميغا-3 يومياً!",
+        "landingBenefits": [
+          "يحمي صحة القلب",
+          "يقلل الالتهابات",
+          "يدعم صحة المخ والمفاصل",
+          "مصدر طبيعي 100%"
+        ],
+        "createdAt": "2026-03-13T00:03:00.569Z"
+      }
+    ],
+    [
+      "p-5",
+      {
+        "id": "p-5",
+        "name": "Collagen Peptides Premium",
+        "description": "كولاجين ببتيد متميز لصحة البشرة والمفاصل والعظام. مستخلص بالتحلل المائي لأقصى امتصاص.",
+        "price": "5200",
+        "originalPrice": "7000",
+        "category": "health",
+        "image": "https://images.unsplash.com/photo-1556228852-6d35a585d566?w=500&q=80",
+        "images": [],
+        "rating": "4.8",
+        "reviews": 987,
+        "stock": 90,
+        "featured": true,
+        "badge": "طبيعي",
+        "tags": [
+          "كولاجين",
+          "بشرة"
+        ],
+        "landingEnabled": false,
+        "landingHook": null,
+        "landingBenefits": [],
+        "createdAt": "2026-03-13T00:03:00.569Z"
+      }
+    ],
+    [
+      "p-6",
+      {
+        "id": "p-6",
+        "name": "Multivitamin Complex Daily",
+        "description": "مجمع فيتامينات يومي شامل يحتوي على 25 فيتامين ومعدن أساسي. يدعم الطاقة والمناعة والصحة العامة.",
+        "price": "2500",
+        "originalPrice": "3200",
+        "category": "vitamins",
+        "image": "https://images.unsplash.com/photo-1607619662634-3ac55ec0e216?w=500&q=80",
+        "images": [],
+        "rating": "4.7",
+        "reviews": 2876,
+        "stock": 300,
+        "featured": true,
+        "badge": "الأفضل مبيعاً",
+        "tags": [
+          "فيتامينات",
+          "يومي"
+        ],
+        "landingEnabled": false,
+        "landingHook": null,
+        "landingBenefits": [],
+        "createdAt": "2026-03-13T00:03:00.569Z"
+      }
+    ],
+    [
+      "p-7",
+      {
+        "id": "p-7",
+        "name": "Vitamin D3 + K2 5000IU",
+        "description": "فيتامين D3 مع K2 لأقصى امتصاص للكالسيوم. ضروري لصحة العظام والمناعة وتقليل الاكتئاب.",
+        "price": "1900",
+        "originalPrice": "2600",
+        "category": "vitamins",
+        "image": "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=500&q=80",
+        "images": [],
+        "rating": "4.9",
+        "reviews": 1234,
+        "stock": 250,
+        "featured": false,
+        "badge": "ضروري",
+        "tags": [
+          "فيتامين د",
+          "K2"
+        ],
+        "landingEnabled": false,
+        "landingHook": null,
+        "landingBenefits": [],
+        "createdAt": "2026-03-13T00:03:00.569Z"
+      }
+    ],
+    [
+      "p-8",
+      {
+        "id": "p-8",
+        "name": "Fat Burner Thermogenic Pro",
+        "description": "حارق دهون ثيرموجيني قوي بمزيج طبيعي من الكافيين الأخضر والتيروزين والفلفل الحار. يسرّع الحرق ويزيد الطاقة.",
+        "price": "4800",
+        "originalPrice": "6500",
+        "category": "weightloss",
+        "image": "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=500&q=80",
+        "images": [],
+        "rating": "4.5",
+        "reviews": 765,
+        "stock": 60,
+        "featured": true,
+        "badge": "قوي",
+        "tags": [
+          "تخسيس",
+          "حرق"
+        ],
+        "landingEnabled": true,
+        "landingHook": "احرق الدهون الزائدة في 4 أسابيع - مضمون أو مسترد!",
+        "landingBenefits": [
+          "يسرّع الأيض بـ 30%",
+          "يقمع الشهية الزائدة",
+          "طاقة طوال اليوم",
+          "مكونات طبيعية 100%"
+        ],
+        "createdAt": "2026-03-13T00:03:00.569Z"
+      }
+    ],
+    [
+      "p-9",
+      {
+        "id": "p-9",
+        "name": "Pre-Workout Explosive Power",
+        "description": "ما قبل التمرين المتفجر بجرعة تتيلة من الكافيين، البيتا-ألانين، والسيترولين. أداء لا يُقهر في كل تمرين.",
+        "price": "5500",
+        "originalPrice": "7200",
+        "category": "energy",
+        "image": "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=500&q=80",
+        "images": [],
+        "rating": "4.6",
+        "reviews": 543,
+        "stock": 70,
+        "featured": false,
+        "badge": "جديد",
+        "tags": [
+          "طاقة",
+          "pre-workout"
+        ],
+        "landingEnabled": false,
+        "landingHook": null,
+        "landingBenefits": [],
+        "createdAt": "2026-03-13T00:03:00.569Z"
+      }
+    ],
+    [
+      "p-10",
+      {
+        "id": "p-10",
+        "name": "Zinc + Magnesium ZMA Night",
+        "description": "تركيبة ZMA الليلية لتحسين جودة النوم، التعافي العضلي، ورفع مستوى التستوستيرون الطبيعي.",
+        "price": "2200",
+        "originalPrice": "3000",
+        "category": "vitamins",
+        "image": "https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?w=500&q=80",
+        "images": [],
+        "rating": "4.7",
+        "reviews": 892,
+        "stock": 180,
+        "featured": false,
+        "badge": "نوم أفضل",
+        "tags": [
+          "زنك",
+          "مغنيسيوم"
+        ],
+        "landingEnabled": false,
+        "landingHook": null,
+        "landingBenefits": [],
+        "createdAt": "2026-03-13T00:03:00.569Z"
+      }
+    ],
+    [
+      "p-11",
+      {
+        "id": "p-11",
+        "name": "Mass Gainer 3000",
+        "description": "جينر ضخم لزيادة الوزن والكتلة العضلية. 1250 سعرة حرارية لكل حصة مع 50 غرام بروتين. للنحفاء الراغبين في الضخامة.",
+        "price": "8500",
+        "originalPrice": "11000",
+        "category": "protein",
+        "image": "https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=500&q=80",
+        "images": [],
+        "rating": "4.5",
+        "reviews": 432,
+        "stock": 50,
+        "featured": false,
+        "badge": "ضخامة",
+        "tags": [
+          "جينر",
+          "وزن"
+        ],
+        "landingEnabled": false,
+        "landingHook": null,
+        "landingBenefits": [],
+        "createdAt": "2026-03-13T00:03:00.569Z"
+      }
+    ],
+    [
+      "p-12",
+      {
+        "id": "p-12",
+        "name": "L-Carnitine Liquid 3000mg",
+        "description": "كارنيتين سائل 3000 ملغ لنقل الدهون إلى الطاقة. مثالي مع التمرين الهوائي لأقصى حرق للدهون.",
+        "price": "3200",
+        "originalPrice": "4200",
+        "category": "weightloss",
+        "image": "https://images.unsplash.com/photo-1544991875-5dc1b05f1571?w=500&q=80",
+        "images": [],
+        "rating": "4.6",
+        "reviews": 678,
+        "stock": 90,
+        "featured": true,
+        "badge": "حرق فعّال",
+        "tags": [
+          "كارنيتين",
+          "تخسيس"
+        ],
+        "landingEnabled": false,
+        "landingHook": null,
+        "landingBenefits": [],
+        "createdAt": "2026-03-13T00:03:00.569Z"
+      }
+    ]
+  ],
+  "categories": [
+    [
+      "cat-1",
+      {
+        "id": "cat-1",
+        "name": "بروتين وأمينو",
+        "slug": "protein",
+        "icon": "Dumbbell",
+        "color": "#10b981",
+        "description": "بروتين واي، كازيين، BCAA"
+      }
+    ],
+    [
+      "cat-2",
+      {
+        "id": "cat-2",
+        "name": "فيتامينات ومعادن",
+        "slug": "vitamins",
+        "icon": "Sparkles",
+        "color": "#f59e0b",
+        "description": "فيتامينات ومعادن يومية"
+      }
+    ],
+    [
+      "cat-3",
+      {
+        "id": "cat-3",
+        "name": "تخسيس وحرق الدهون",
+        "slug": "weightloss",
+        "icon": "Flame",
+        "color": "#ef4444",
+        "description": "مكملات الحرق والتخسيس"
+      }
+    ],
+    [
+      "cat-4",
+      {
+        "id": "cat-4",
+        "name": "طاقة وأداء",
+        "slug": "energy",
+        "icon": "Zap",
+        "color": "#8b5cf6",
+        "description": "Pre-workout وطاقة رياضية"
+      }
+    ],
+    [
+      "cat-5",
+      {
+        "id": "cat-5",
+        "name": "صحة عامة",
+        "slug": "health",
+        "icon": "Heart",
+        "color": "#ec4899",
+        "description": "كولاجين، أوميغا-3، صحة يومية"
+      }
+    ]
+  ]
+}

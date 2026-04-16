@@ -1,0 +1,4 @@
+#!/bin/sh
+if [ -n "$GITHUB_PERSONAL_ACCESS_TOKEN" ]; then
+  git push https://${GITHUB_PERSONAL_ACCESS_TOKEN}@github.com/unlock-gab/ecom.git main 2>&1
+fi

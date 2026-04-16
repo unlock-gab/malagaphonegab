@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Menu, X, MessageCircle, ChevronDown } from "lucide-react";
+import { Search, Menu, X, MessageCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 const STORE_PHONE = "0555123456";
@@ -22,18 +22,9 @@ const navLinks = [
 
 export default function Navbar() {
   const [location, navigate] = useLocation();
-  const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-
-  useEffect(() => {
-    const update = () => setScrolled(window.scrollY > 30 || window.innerWidth < 1024);
-    update();
-    window.addEventListener("scroll", update);
-    window.addEventListener("resize", update);
-    return () => { window.removeEventListener("scroll", update); window.removeEventListener("resize", update); };
-  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,8 +36,8 @@ export default function Navbar() {
     }
   };
 
-  const bg = scrolled ? "bg-white/98 backdrop-blur-xl shadow-lg shadow-blue-900/6 border-b border-gray-100" : "bg-transparent";
-  const textColor = scrolled ? "text-gray-700" : "text-white";
+  const bg = "bg-white/98 backdrop-blur-xl shadow-sm border-b border-gray-100";
+  const textColor = "text-gray-700";
   const activeColor = "text-blue-600";
 
   return (
@@ -63,7 +54,7 @@ export default function Navbar() {
             {/* Logo */}
             <Link href="/">
               <motion.div whileHover={{ scale: 1.04 }} className="flex items-center gap-2 cursor-pointer">
-                <div className={`h-10 rounded-xl overflow-hidden border transition-all shadow-sm ${scrolled ? "border-gray-200 bg-white" : "border-white/30 bg-white/95"}`} style={{ width: 180 }}>
+                <div className="h-10 rounded-xl overflow-hidden border border-gray-200 bg-white transition-all shadow-sm" style={{ width: 180 }}>
                   <img src="/logo.jpg" alt="MALAGA PHONE" className="w-full h-full object-contain" />
                 </div>
               </motion.div>
@@ -97,7 +88,7 @@ export default function Navbar() {
                 whileHover={{ scale: 1.08 }}
                 whileTap={{ scale: 0.92 }}
                 onClick={() => setSearchOpen(true)}
-                className={`p-2.5 rounded-xl transition-all ${scrolled ? "text-gray-600 hover:bg-blue-50 hover:text-blue-600" : "text-white/80 hover:bg-white/15 hover:text-white"}`}
+                className="p-2.5 rounded-xl transition-all text-gray-600 hover:bg-blue-50 hover:text-blue-600"
                 data-testid="button-search"
               >
                 <Search className="w-5 h-5" />
@@ -113,7 +104,7 @@ export default function Navbar() {
 
               {/* Mobile menu button */}
               <button
-                className={`lg:hidden p-2.5 rounded-xl transition-all ${scrolled ? "text-gray-600 hover:bg-gray-100" : "text-white/80 hover:bg-white/15"}`}
+                className="lg:hidden p-2.5 rounded-xl transition-all text-gray-600 hover:bg-gray-100"
                 onClick={() => setMenuOpen(!menuOpen)}
                 data-testid="button-mobile-menu"
               >

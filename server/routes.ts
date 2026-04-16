@@ -563,15 +563,21 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post("/api/expenses", requireAdmin, async (req, res) => {
     try {
-      const e = await storage.createExpense(req.body);
+      const body = { ...req.body };
+      if (body.expenseDate) body.expenseDate = new Date(body.expenseDate);
+      const e = await storage.createExpense(body);
       res.status(201).json(e);
     } catch (e: any) { res.status(400).json({ message: e.message }); }
   });
 
   app.patch("/api/expenses/:id", requireAdmin, async (req, res) => {
-    const e = await storage.updateExpense(req.params.id, req.body);
-    if (!e) return res.status(404).json({ message: "المصروف غير موجود" });
-    res.json(e);
+    try {
+      const body = { ...req.body };
+      if (body.expenseDate) body.expenseDate = new Date(body.expenseDate);
+      const e = await storage.updateExpense(req.params.id, body);
+      if (!e) return res.status(404).json({ message: "المصروف غير موجود" });
+      res.json(e);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
   });
 
   app.delete("/api/expenses/:id", requireAdmin, async (req, res) => {

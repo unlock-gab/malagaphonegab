@@ -295,6 +295,23 @@ export const deliveryCompanies = pgTable("delivery_companies", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// ===================== INVOICE TEMPLATES =====================
+export const invoiceTemplates = pgTable("invoice_templates", {
+  id: varchar("id").primaryKey(),
+  categoryId: varchar("category_id"),           // null = template par défaut
+  categoryName: varchar("category_name").notNull().default("Défaut"),
+  companyName: text("company_name").notNull().default("MALAGA PHONE"),
+  companyPhone: text("company_phone").notNull().default(""),
+  companyAddress: text("company_address").notNull().default("الجزائر"),
+  headerText: text("header_text").notNull().default(""),
+  footerText: text("footer_text").notNull().default("شكراً لتعاملكم مع MALAGA PHONE"),
+  warrantyText: text("warranty_text").notNull().default(""),
+  termsText: text("terms_text").notNull().default(""),
+  showLogo: boolean("show_logo").notNull().default(true),
+  isDefault: boolean("is_default").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // ===================== INSERT SCHEMAS =====================
 export const insertProductSchema = createInsertSchema(products).omit({ id: true, createdAt: true });
 export const insertOrderSchema = createInsertSchema(orders).omit({ id: true, createdAt: true });
@@ -311,6 +328,7 @@ export const insertAbandonedCartSchema = createInsertSchema(abandonedCarts).omit
 export const insertProductVariantSchema = createInsertSchema(productVariants).omit({ id: true, createdAt: true });
 export const insertAfterSaleSchema = createInsertSchema(afterSaleRecords).omit({ id: true, createdAt: true });
 export const insertPhoneUnitSchema = createInsertSchema(phoneUnits).omit({ id: true, createdAt: true });
+export const insertInvoiceTemplateSchema = createInsertSchema(invoiceTemplates).omit({ id: true, createdAt: true });
 
 // ===================== TYPES =====================
 export type InsertUser = { username: string; password: string; role: string; name: string };
@@ -347,6 +365,8 @@ export type AfterSaleRecord = typeof afterSaleRecords.$inferSelect;
 export type InsertAfterSale = z.infer<typeof insertAfterSaleSchema>;
 export type PhoneUnit = typeof phoneUnits.$inferSelect;
 export type InsertPhoneUnit = z.infer<typeof insertPhoneUnitSchema>;
+export type InvoiceTemplate = typeof invoiceTemplates.$inferSelect;
+export type InsertInvoiceTemplate = z.infer<typeof insertInvoiceTemplateSchema>;
 
 // CartItem type for storefront cart
 export type CartItem = {

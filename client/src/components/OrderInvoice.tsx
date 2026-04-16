@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { Printer, X, Download } from "lucide-react";
+import { Printer, X } from "lucide-react";
 import { useEffect, useRef } from "react";
-import type { Order } from "@shared/schema";
+import type { Order, InvoiceTemplate } from "@shared/schema";
 
 interface OrderItem {
   id: string;
@@ -58,6 +58,27 @@ export default function OrderInvoice({ order, onClose }: InvoiceProps) {
       const res = await fetch(`/api/orders/${order.id}`);
       const data = await res.json();
       return data.items || [];
+    },
+  });
+
+  // Get categoryId from first item's product to load the right invoice template
+  const firstProductId = items[0]?.productId || order.productId || null;
+  const { data: firstProduct } = useQuery<{ id: string; categoryId?: string | null }>({
+    queryKey: ["/api/products", firstProductId],
+    queryFn: async () => {
+      const res = await fetch(`/api/products/${firstProductId}`);
+      return res.ok ? res.json() : null;
+    },
+    enabled: !!firstProductId,
+  });
+
+  const categoryId = firstProduct?.categoryId || null;
+  const { data: invoiceTpl } = useQuery<InvoiceTemplate | null>({
+    queryKey: ["/api/invoice-templates/by-category", categoryId ?? "default"],
+    queryFn: async () => {
+      const key = categoryId ?? "default";
+      const res = await fetch(`/api/invoice-templates/by-category/${key}`);
+      return res.ok ? res.json() : null;
     },
   });
 
@@ -130,11 +151,21 @@ export default function OrderInvoice({ order, onClose }: InvoiceProps) {
           {/* Header */}
           <div className="flex items-start justify-between mb-8 pb-6 border-b-2 border-gray-800">
             <div>
-              <div className="h-14 rounded-xl overflow-hidden border border-gray-200 bg-white mb-2" style={{ width: 200 }}>
-                <img src="/logo.jpg" alt="MALAGA PHONE" className="w-full h-full object-cover" />
-              </div>
-              <p className="text-gray-500 text-sm">Vente & Échange de Smart-Phones</p>
-              <p className="text-gray-500 text-sm">الجزائر</p>
+              {(invoiceTpl?.showLogo !== false) && (
+                <div className="h-14 rounded-xl overflow-hidden border border-gray-200 bg-white mb-2" style={{ width: 200 }}>
+                  <img src="/logo.jpg" alt="MALAGA PHONE" className="w-full h-full object-contain" />
+                </div>
+              )}
+              <p className="font-black text-gray-900 text-base">{invoiceTpl?.companyName || "MALAGA PHONE"}</p>
+              {(invoiceTpl?.headerText || "Vente & Échange de Smart-Phones") && (
+                <p className="text-gray-500 text-sm">{invoiceTpl?.headerText || "Vente & Échange de Smart-Phones"}</p>
+              )}
+              {(invoiceTpl?.companyAddress || "الجزائر") && (
+                <p className="text-gray-500 text-sm">{invoiceTpl?.companyAddress || "الجزائر"}</p>
+              )}
+              {invoiceTpl?.companyPhone && (
+                <p className="text-gray-400 text-sm">{invoiceTpl.companyPhone}</p>
+              )}
             </div>
             <div className="text-left">
               <div className="inline-block bg-gray-900 text-white px-4 py-2 rounded-lg mb-2">
@@ -228,15 +259,33 @@ export default function OrderInvoice({ order, onClose }: InvoiceProps) {
 
           {/* Notes */}
           {order.notes && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
               <p className="text-amber-700 text-xs font-semibold mb-1">ملاحظات:</p>
               <p className="text-amber-800 text-sm">{order.notes}</p>
             </div>
           )}
 
+          {/* Warranty */}
+          {invoiceTpl?.warrantyText && (
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-4">
+              <p className="text-blue-700 text-xs font-semibold mb-1">الضمان</p>
+              <p className="text-blue-800 text-sm">{invoiceTpl.warrantyText}</p>
+            </div>
+          )}
+
+          {/* Terms */}
+          {invoiceTpl?.termsText && (
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4">
+              <p className="text-gray-600 text-xs font-semibold mb-1">الشروط والأحكام</p>
+              <p className="text-gray-500 text-sm">{invoiceTpl.termsText}</p>
+            </div>
+          )}
+
           {/* Footer */}
           <div className="border-t border-gray-200 pt-6 text-center">
-            <p className="text-gray-400 text-xs">شكراً لتعاملكم مع MALAGA PHONE — الجزائر</p>
+            <p className="text-gray-400 text-xs">
+              {invoiceTpl?.footerText || "شكراً لتعاملكم مع MALAGA PHONE — الجزائر"}
+            </p>
             <p className="text-gray-300 text-xs mt-0.5">هذه الفاتورة صادرة إلكترونياً وصالحة بدون توقيع</p>
           </div>
         </div>

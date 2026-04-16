@@ -16,11 +16,12 @@ import {
   type ProductVariant, type InsertProductVariant,
   type AfterSaleRecord, type InsertAfterSale,
   type PhoneUnit, type InsertPhoneUnit,
+  type InvoiceTemplate, type InsertInvoiceTemplate,
   DEFAULT_DELIVERY_PRICES,
   users, products, categories, brands, suppliers, purchases, purchaseItems,
   inventoryMovements, orders, orderItems, expenses, profitRecords,
   blockedIps, abandonedCarts, appSettings, deliveryCompanies, productVariants,
-  afterSaleRecords, phoneUnits,
+  afterSaleRecords, phoneUnits, invoiceTemplates,
 } from "@shared/schema";
 import { randomUUID, createHash, scryptSync, randomBytes, timingSafeEqual } from "crypto";
 import { db } from "./db";
@@ -181,6 +182,14 @@ export interface IStorage {
   updateSettings(settings: Record<string, string>): Promise<Record<string, string>>;
   getDeliveryCompanies(): Promise<DeliveryCompany[]>;
   upsertDeliveryCompany(slug: string, data: Partial<DeliveryCompany>): Promise<DeliveryCompany>;
+
+  // Invoice Templates
+  getInvoiceTemplates(): Promise<InvoiceTemplate[]>;
+  getInvoiceTemplate(id: string): Promise<InvoiceTemplate | undefined>;
+  getInvoiceTemplateByCategoryId(categoryId: string | null): Promise<InvoiceTemplate | undefined>;
+  createInvoiceTemplate(data: InsertInvoiceTemplate): Promise<InvoiceTemplate>;
+  updateInvoiceTemplate(id: string, data: Partial<InsertInvoiceTemplate>): Promise<InvoiceTemplate | undefined>;
+  deleteInvoiceTemplate(id: string): Promise<boolean>;
 }
 
 export interface TopProductRow {
@@ -1466,6 +1475,42 @@ export class DatabaseStorage implements IStorage {
 
     const totalValue = byProduct.reduce((sum, p) => sum + p.value, 0);
     return { totalValue, byProduct };
+  }
+
+  // ============ INVOICE TEMPLATES ============
+
+  async getInvoiceTemplates(): Promise<InvoiceTemplate[]> {
+    return db.select().from(invoiceTemplates).orderBy(invoiceTemplates.isDefault, invoiceTemplates.categoryName);
+  }
+
+  async getInvoiceTemplate(id: string): Promise<InvoiceTemplate | undefined> {
+    const [row] = await db.select().from(invoiceTemplates).where(eq(invoiceTemplates.id, id));
+    return row;
+  }
+
+  async getInvoiceTemplateByCategoryId(categoryId: string | null): Promise<InvoiceTemplate | undefined> {
+    if (categoryId) {
+      const [row] = await db.select().from(invoiceTemplates).where(eq(invoiceTemplates.categoryId, categoryId));
+      if (row) return row;
+    }
+    // Fallback to default template
+    const [def] = await db.select().from(invoiceTemplates).where(eq(invoiceTemplates.isDefault, true));
+    return def;
+  }
+
+  async createInvoiceTemplate(data: InsertInvoiceTemplate): Promise<InvoiceTemplate> {
+    const [row] = await db.insert(invoiceTemplates).values({ ...data, id: randomUUID() }).returning();
+    return row;
+  }
+
+  async updateInvoiceTemplate(id: string, data: Partial<InsertInvoiceTemplate>): Promise<InvoiceTemplate | undefined> {
+    const [row] = await db.update(invoiceTemplates).set(data).where(eq(invoiceTemplates.id, id)).returning();
+    return row;
+  }
+
+  async deleteInvoiceTemplate(id: string): Promise<boolean> {
+    const result = await db.delete(invoiceTemplates).where(eq(invoiceTemplates.id, id)).returning();
+    return result.length > 0;
   }
 }
 

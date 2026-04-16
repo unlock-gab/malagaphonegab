@@ -3,7 +3,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Search, ShoppingCart, Trash2, Plus, Minus, CheckCircle,
   Smartphone, Package, X, CreditCard, Banknote, ChevronLeft,
-  User, Phone, Tag, Loader2, Zap,
+  User, Phone, Tag, Loader2, Zap, Printer, ReceiptText, Battery,
+  ScanLine, AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,13 @@ function shortId(id: string) { return "#" + id.slice(-6).toUpperCase(); }
 
 const PHONE_TYPES = new Set(["phone", "tablet"]);
 
+const CONDITION_LABELS: Record<string, string> = {
+  new: "جديد",
+  used_good: "مستعمل جيد",
+  used_acceptable: "مستعمل مقبول",
+  refurbished: "مجدد",
+};
+
 interface CartItem {
   productId: string;
   productName: string;
@@ -35,6 +43,20 @@ interface CartItem {
   imei?: string;
 }
 
+// ─── Live Clock ───────────────────────────────────────────────────────────────
+function LiveClock() {
+  const [time, setTime] = useState(new Date());
+  useEffect(() => {
+    const t = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <span className="text-gray-500 text-xs tabular-nums font-mono">
+      {time.toLocaleTimeString("ar-DZ", { hour: "2-digit", minute: "2-digit" })}
+    </span>
+  );
+}
+
 // ─── Phone Unit Picker Dialog ─────────────────────────────────────────────────
 function PhoneUnitPicker({ product, units, onSelect, onClose }: {
   product: Product;
@@ -43,57 +65,103 @@ function PhoneUnitPicker({ product, units, onSelect, onClose }: {
   onClose: () => void;
 }) {
   const [search, setSearch] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
   const available = units.filter(u =>
     u.status === "available" &&
-    (!search || (u.imei ?? "").includes(search))
+    (!search || (u.imei ?? "").toLowerCase().includes(search.toLowerCase()))
   );
+  const soldCount = units.filter(u => u.status === "sold").length;
 
   return (
     <Dialog open onOpenChange={o => { if (!o) onClose(); }}>
-      <DialogContent className="bg-white border-gray-200 max-w-md shadow-xl" dir="rtl">
-        <DialogHeader className="border-b border-gray-100 pb-3">
-          <DialogTitle className="text-gray-900 font-bold flex items-center gap-2">
-            <Smartphone className="w-4 h-4 text-blue-600" />
-            اختر وحدة IMEI — {product.name}
+      <DialogContent className="bg-white border-gray-200 max-w-lg shadow-2xl" dir="rtl">
+        <DialogHeader className="border-b border-gray-100 pb-4">
+          <DialogTitle className="text-gray-900 font-bold flex items-center gap-2 text-base">
+            <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center border border-blue-100">
+              <Smartphone className="w-4 h-4 text-blue-600" />
+            </div>
+            <div>
+              <p className="leading-tight">{product.name}</p>
+              <p className="text-xs text-gray-400 font-normal mt-0.5">
+                {available.length} وحدة متاحة{soldCount > 0 ? ` · ${soldCount} مباعة` : ""}
+              </p>
+            </div>
           </DialogTitle>
         </DialogHeader>
-        <div className="space-y-3 pt-1">
+
+        <div className="space-y-3">
           <div className="relative">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-            <Input value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="بحث بـ IMEI..." autoFocus
-              className="bg-white border-gray-200 text-gray-900 pr-9 font-mono text-sm" />
+            <ScanLine className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              ref={inputRef}
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="ابحث بـ IMEI أو امسح بالباركود..."
+              className="bg-gray-50 border-gray-200 text-gray-900 pr-10 font-mono text-sm h-10 focus-visible:ring-blue-400"
+              data-testid="input-unit-picker-search"
+            />
+            {search && (
+              <button onClick={() => setSearch("")}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
           {available.length === 0 ? (
-            <div className="text-center py-8 text-gray-400 text-sm">
-              <Smartphone className="w-8 h-8 text-gray-200 mx-auto mb-2" />
-              {search ? "لا توجد وحدات مطابقة" : "لا توجد وحدات متاحة لهذا الموديل"}
+            <div className="text-center py-10">
+              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Smartphone className="w-6 h-6 text-gray-300" />
+              </div>
+              <p className="text-gray-500 text-sm font-medium">
+                {search ? "لا توجد وحدات مطابقة" : "لا توجد وحدات متاحة لهذا الموديل"}
+              </p>
             </div>
           ) : (
-            <div className="space-y-1.5 max-h-64 overflow-y-auto">
-              {available.map(u => (
-                <button key={u.id} onClick={() => onSelect(u)}
-                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all text-right group"
-                  data-testid={`button-select-unit-${u.id}`}>
-                  <div className="flex-1">
-                    <p className="text-gray-900 font-mono text-sm font-semibold group-hover:text-blue-700">{u.imei}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      {u.batteryHealth && (
-                        <span className={`text-[10px] font-semibold ${parseInt(u.batteryHealth) >= 80 ? "text-emerald-600" : "text-amber-600"}`}>
-                          🔋 {u.batteryHealth}%
-                        </span>
-                      )}
-                      {u.condition && (
-                        <span className="text-[10px] text-gray-400">
-                          {{ new: "جديد", used_good: "مستعمل جيد", used_acceptable: "مستعمل مقبول", refurbished: "مجدد" }[u.condition] ?? u.condition}
-                        </span>
-                      )}
+            <div className="space-y-2 max-h-72 overflow-y-auto -mx-1 px-1">
+              {available.map(u => {
+                const batteryNum = u.batteryHealth ? parseInt(String(u.batteryHealth)) : null;
+                const batteryColor = batteryNum == null ? "" : batteryNum >= 80 ? "text-emerald-600 bg-emerald-50 border-emerald-200" : batteryNum >= 60 ? "text-amber-600 bg-amber-50 border-amber-200" : "text-red-600 bg-red-50 border-red-200";
+                return (
+                  <button key={u.id} onClick={() => onSelect(u)}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 hover:border-blue-400 hover:bg-blue-50/50 transition-all text-right group active:scale-[0.99]"
+                    data-testid={`button-select-unit-${u.id}`}>
+
+                    <div className="flex-1 min-w-0">
+                      <p className="text-gray-900 font-mono text-sm font-bold group-hover:text-blue-700 tracking-wide">
+                        {u.imei}
+                      </p>
+                      <div className="flex items-center gap-2 flex-wrap mt-1">
+                        {u.condition && (
+                          <span className="text-[10px] font-semibold bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full border border-gray-200">
+                            {CONDITION_LABELS[u.condition] ?? u.condition}
+                          </span>
+                        )}
+                        {batteryNum != null && (
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${batteryColor} flex items-center gap-0.5`}>
+                            <Battery className="w-2.5 h-2.5" />
+                            {batteryNum}%
+                          </span>
+                        )}
+                        {u.purchaseCost && (
+                          <span className="text-[10px] text-gray-400">
+                            تكلفة: {formatCurrency(parseFloat(String(u.purchaseCost)))}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <ChevronLeft className="w-4 h-4 text-gray-300 group-hover:text-blue-500" />
-                </button>
-              ))}
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-blue-700 font-black text-sm">
+                        {formatCurrency(parseFloat(product.price?.toString() ?? "0"))}
+                      </span>
+                      <ChevronLeft className="w-4 h-4 text-gray-300 group-hover:text-blue-500 transition-colors" />
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
@@ -102,9 +170,45 @@ function PhoneUnitPicker({ product, units, onSelect, onClose }: {
   );
 }
 
-// ─── Receipt (OrderInvoice renders its own fixed overlay) ─────────────────────
-function POSReceipt({ order, onClose }: { order: Order; onClose: () => void }) {
-  return <OrderInvoice order={order} onClose={onClose} />;
+// ─── Success Screen ────────────────────────────────────────────────────────────
+function SaleSuccess({ order, onPrint, onNew }: { order: Order; onPrint: () => void; onNew: () => void }) {
+  return (
+    <div className="fixed inset-0 bg-white/95 backdrop-blur-sm z-50 flex items-center justify-center" dir="rtl">
+      <div className="bg-white border border-gray-200 rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4 text-center">
+        <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <CheckCircle className="w-9 h-9 text-emerald-600" />
+        </div>
+        <h2 className="text-gray-900 text-xl font-black mb-1">تمت عملية البيع!</h2>
+        <p className="text-gray-400 text-sm mb-6">فاتورة رقم {shortId(order.id)}</p>
+
+        <div className="bg-gray-50 rounded-xl p-4 mb-6 text-right space-y-2 border border-gray-100">
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-500">الزبون</span>
+            <span className="font-semibold text-gray-800">{(order as any).customerName}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-500">المبلغ</span>
+            <span className="font-black text-blue-700 text-base">{formatCurrency(parseFloat(String(order.total)))}</span>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Button onClick={onPrint}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold gap-2 h-11"
+            data-testid="button-pos-print-receipt">
+            <Printer className="w-4 h-4" />
+            طباعة الفاتورة
+          </Button>
+          <Button variant="outline" onClick={onNew}
+            className="w-full border-gray-200 text-gray-700 hover:bg-gray-50 font-semibold h-11 gap-2"
+            data-testid="button-pos-new-sale">
+            <Zap className="w-4 h-4 text-blue-500" />
+            بيع جديد
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ─── Main POS Page ────────────────────────────────────────────────────────────
@@ -112,11 +216,9 @@ export default function AdminPOS() {
   const { toast } = useToast();
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // Data
   const { data: products = [], isLoading: loadingProducts } = useQuery<Product[]>({ queryKey: ["/api/products"] });
   const { data: allPhoneUnits = [] } = useQuery<PhoneUnit[]>({ queryKey: ["/api/phone-units"] });
 
-  // POS state
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [pickerProduct, setPickerProduct] = useState<Product | null>(null);
@@ -126,11 +228,24 @@ export default function AdminPOS() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [receiptOrder, setReceiptOrder] = useState<Order | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [completedOrder, setCompletedOrder] = useState<Order | null>(null);
 
-  // Focus search on mount
   useEffect(() => { searchRef.current?.focus(); }, []);
 
-  // Filtered products
+  // ── IMEI tracking helpers ─────────────────────────────────────────────────
+  const hasImeiTracking = (product: Product) =>
+    allPhoneUnits.some(u => u.productId === product.id);
+
+  const getAvailableCount = (product: Product) => {
+    if (PHONE_TYPES.has(product.productType ?? "") && hasImeiTracking(product)) {
+      const imeiAvailable = allPhoneUnits.filter(u => u.productId === product.id && u.status === "available").length;
+      return Math.min(imeiAvailable, product.stock);
+    }
+    return product.stock;
+  };
+
+  // ── Search & filter ───────────────────────────────────────────────────────
   const filteredProducts = search.trim()
     ? products.filter(p => {
         const q = search.toLowerCase();
@@ -138,28 +253,27 @@ export default function AdminPOS() {
           p.name.toLowerCase().includes(q) ||
           (p.sku ?? "").toLowerCase().includes(q) ||
           (p.barcode ?? "").toLowerCase().includes(q) ||
-          // IMEI direct search — match against phone units
           (PHONE_TYPES.has(p.productType ?? "") && allPhoneUnits.some(u =>
             u.productId === p.id && u.status === "available" && (u.imei ?? "").includes(q)
           ))
         );
       })
-    : products.filter(p => p.published && p.stock > 0).slice(0, 24);
+    : products.filter(p => p.published && getAvailableCount(p) > 0).slice(0, 32);
 
-  // If search looks like an IMEI, pre-select matching unit
   const handleImeiSearch = useCallback((q: string) => {
     const trimmed = q.trim();
     if (trimmed.length >= 10) {
       const unit = allPhoneUnits.find(u => u.status === "available" && u.imei === trimmed);
       if (unit) {
         const prod = products.find(p => p.id === unit.productId);
-        if (prod && prod.stock > 0) {
-          addPhoneUnitToCart(prod, unit);
-          setSearch("");
-          return;
-        } else if (prod && prod.stock <= 0) {
-          toast({ title: "هذا الهاتف نفد من المخزون", variant: "destructive" });
-          setSearch("");
+        if (prod) {
+          if (getAvailableCount(prod) > 0) {
+            addPhoneUnitToCart(prod, unit);
+            setSearch("");
+          } else {
+            toast({ title: "هذا الهاتف نفد من المخزون", variant: "destructive" });
+            setSearch("");
+          }
           return;
         }
       }
@@ -172,7 +286,6 @@ export default function AdminPOS() {
 
   // ── Cart actions ──────────────────────────────────────────────────────────
   const addPhoneUnitToCart = (product: Product, unit: PhoneUnit) => {
-    // Check not already in cart
     if (cart.some(c => c.phoneUnitId === unit.id)) {
       toast({ title: "هذه الوحدة موجودة في السلة بالفعل", variant: "destructive" });
       return;
@@ -181,7 +294,7 @@ export default function AdminPOS() {
     const cost = parseFloat(product.costPrice?.toString() ?? "0");
     setCart(prev => [...prev, {
       productId: product.id,
-      productName: product.name + (unit.imei ? ` [${unit.imei}]` : ""),
+      productName: product.name,
       productType: product.productType ?? "phone",
       unitPrice: price,
       costPrice: cost,
@@ -203,7 +316,6 @@ export default function AdminPOS() {
     const price = parseFloat(product.price?.toString() ?? "0");
     const cost = parseFloat(product.costPrice?.toString() ?? "0");
     if (existing >= 0) {
-      // Increment if not exceeding stock
       const cur = cart[existing];
       if (cur.quantity >= product.stock) {
         toast({ title: "لا يمكن تجاوز المخزون المتاح", variant: "destructive" });
@@ -228,10 +340,8 @@ export default function AdminPOS() {
 
   const handleProductClick = (product: Product) => {
     if (PHONE_TYPES.has(product.productType ?? "") && hasImeiTracking(product)) {
-      // Show IMEI picker only for phones with IMEI units registered
       setPickerProduct(product);
     } else {
-      // Accessories OR phones without IMEI tracking → regular stock
       addAccessoryToCart(product);
     }
   };
@@ -244,9 +354,7 @@ export default function AdminPOS() {
     }));
   };
 
-  const removeItem = (idx: number) => {
-    setCart(prev => prev.filter((_, i) => i !== idx));
-  };
+  const removeItem = (idx: number) => setCart(prev => prev.filter((_, i) => i !== idx));
 
   // ── Totals ────────────────────────────────────────────────────────────────
   const subtotal = cart.reduce((s, c) => s + c.total, 0);
@@ -293,148 +401,144 @@ export default function AdminPOS() {
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["/api/orders/counts"] });
-      // Reset POS
       setCart([]);
       setDiscount("");
       setCustomerName("");
       setCustomerPhone("");
       setNotes("");
       setSearch("");
-      // Show receipt
-      setReceiptOrder(order);
-      toast({ title: `✓ تمت عملية البيع ${shortId(order.id)}` });
+      setCompletedOrder(order);
+      setShowSuccess(true);
       searchRef.current?.focus();
     },
     onError: (e: any) => toast({ title: e.message || "فشلت عملية الدفع", variant: "destructive" }),
   });
 
-  // ── Units for picker ──────────────────────────────────────────────────────
   const pickerUnits = pickerProduct
     ? allPhoneUnits.filter(u => u.productId === pickerProduct.id)
     : [];
 
-  // ── IMEI tracking detection ───────────────────────────────────────────────
-  // A product "has IMEI tracking" only if at least one phone unit is registered for it
-  const hasImeiTracking = (product: Product) =>
-    allPhoneUnits.some(u => u.productId === product.id);
-
-  // ── Product availability badge ────────────────────────────────────────────
-  const getAvailableCount = (product: Product) => {
-    if (PHONE_TYPES.has(product.productType ?? "") && hasImeiTracking(product)) {
-      const imeiAvailable = allPhoneUnits.filter(u => u.productId === product.id && u.status === "available").length;
-      // Cap by product.stock to handle desync (e.g. stock deducted by non-IMEI order)
-      return Math.min(imeiAvailable, product.stock);
-    }
-    return product.stock;
-  };
-
   return (
     <AdminLayout>
-      <div className="flex flex-col h-[calc(100vh-3rem)] -m-4 sm:-m-6 overflow-hidden" dir="rtl">
+      <div className="flex flex-col h-[calc(100vh-3rem)] -m-4 sm:-m-6 overflow-hidden bg-gray-50" dir="rtl">
 
-        {/* ── POS Header ─────────────────────────────────────────────── */}
-        <div className="bg-white border-b border-gray-200 px-4 py-2.5 flex items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center">
-              <Zap className="w-4 h-4 text-white" />
+        {/* ══ POS Header ═══════════════════════════════════════════════════ */}
+        <div className="bg-white border-b border-gray-200 px-5 py-3 flex items-center justify-between gap-4 shrink-0 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center shadow-sm shadow-blue-200">
+              <ReceiptText className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-sm font-black text-gray-900 leading-tight">نقطة البيع <span className="text-blue-600">POS</span></h1>
+              <h1 className="text-sm font-black text-gray-900 leading-tight">
+                نقطة البيع <span className="text-blue-600">POS</span>
+              </h1>
               <p className="text-gray-400 text-[10px] leading-tight">بيع مباشر داخل المتجر</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 text-xs text-gray-400">
-            <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-semibold text-[10px]">
-              {cart.length} منتج في السلة
-            </span>
-            <span className="text-gray-300">|</span>
-            <span>{new Intl.DateTimeFormat("ar-DZ", { hour: "2-digit", minute: "2-digit" }).format(new Date())}</span>
+
+          <div className="flex items-center gap-3">
+            {cart.length > 0 && (
+              <span className="bg-blue-600 text-white text-[11px] px-2.5 py-1 rounded-full font-bold shadow-sm shadow-blue-200">
+                {cart.length} {cart.length === 1 ? "منتج" : "منتجات"}
+              </span>
+            )}
+            <LiveClock />
           </div>
         </div>
 
-        {/* ── Main Area ──────────────────────────────────────────────── */}
+        {/* ══ Main Layout ══════════════════════════════════════════════════ */}
         <div className="flex-1 flex overflow-hidden">
 
-          {/* LEFT: Products ─────────────────────────────────────────── */}
-          <div className="flex-1 flex flex-col overflow-hidden border-l border-gray-200">
+          {/* ── LEFT: Products Panel ──────────────────────────────────────── */}
+          <div className="flex-1 flex flex-col overflow-hidden">
 
             {/* Search bar */}
-            <div className="p-3 border-b border-gray-100 bg-white">
+            <div className="p-4 bg-white border-b border-gray-200 shadow-sm">
               <div className="relative">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-gray-400" />
+                <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <Input
                   ref={searchRef}
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  placeholder="ابحث بالاسم / SKU / رمز / IMEI — أو امسح الباركود..."
-                  className="bg-gray-50 border-gray-200 text-gray-900 pr-10 text-sm h-10 font-medium placeholder:text-gray-400 focus:bg-white focus-visible:ring-blue-400"
+                  placeholder="ابحث بالاسم / SKU / IMEI — أو امسح الباركود مباشرة..."
+                  className="bg-gray-50 border-gray-200 text-gray-900 pr-11 text-[15px] h-12 font-medium placeholder:text-gray-400 focus:bg-white focus-visible:ring-blue-400 rounded-xl"
                   data-testid="input-pos-search"
                   autoComplete="off"
                 />
                 {search && (
                   <button onClick={() => { setSearch(""); searchRef.current?.focus(); }}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                    <X className="w-3.5 h-3.5" />
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition-colors">
+                    <X className="w-4 h-4" />
                   </button>
                 )}
               </div>
             </div>
 
             {/* Product grid */}
-            <div className="flex-1 overflow-y-auto p-3">
+            <div className="flex-1 overflow-y-auto p-4">
               {loadingProducts ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-                  {Array.from({ length: 12 }).map((_, i) => (
-                    <Skeleton key={i} className="h-24 rounded-xl" />
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                  {Array.from({ length: 15 }).map((_, i) => (
+                    <Skeleton key={i} className="h-28 rounded-xl" />
                   ))}
                 </div>
               ) : filteredProducts.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-48 text-gray-400">
-                  <Package className="w-10 h-10 text-gray-200 mb-2" />
-                  <p className="text-sm font-medium">لا توجد منتجات مطابقة</p>
-                  {search && <p className="text-xs mt-1 text-gray-300">جرّب بحثاً مختلفاً</p>}
+                <div className="flex flex-col items-center justify-center h-56 text-gray-400">
+                  <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                    <Package className="w-7 h-7 text-gray-300" />
+                  </div>
+                  <p className="text-sm font-semibold text-gray-500">لا توجد منتجات مطابقة</p>
+                  {search && <p className="text-xs mt-1 text-gray-400">جرّب بحثاً مختلفاً</p>}
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                   {filteredProducts.map(product => {
                     const isPhone = PHONE_TYPES.has(product.productType ?? "");
                     const available = getAvailableCount(product);
                     const outOfStock = available === 0;
+                    const isImeiTracked = isPhone && hasImeiTracking(product);
                     const price = parseFloat(product.price?.toString() ?? "0");
 
                     return (
                       <button key={product.id}
                         onClick={() => !outOfStock && handleProductClick(product)}
                         disabled={outOfStock}
-                        className={`relative flex flex-col text-right p-3 rounded-xl border-2 transition-all group text-sm shadow-sm ${
+                        className={`relative flex flex-col text-right p-3 rounded-xl border-2 transition-all group shadow-sm ${
                           outOfStock
-                            ? "border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed"
-                            : "border-gray-200 bg-white hover:border-blue-400 hover:shadow-md hover:bg-blue-50/30 cursor-pointer active:scale-[0.97]"
+                            ? "border-gray-100 bg-white opacity-40 cursor-not-allowed"
+                            : isPhone
+                              ? "border-blue-100 bg-white hover:border-blue-400 hover:shadow-md hover:bg-blue-50/30 cursor-pointer active:scale-[0.97]"
+                              : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-md cursor-pointer active:scale-[0.97]"
                         }`}
                         data-testid={`button-pos-product-${product.id}`}>
 
-                        {/* Product type badge */}
-                        <span className={`absolute top-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${
-                          isPhone ? "bg-blue-50 text-blue-600 border-blue-200" : "bg-gray-50 text-gray-500 border-gray-200"
-                        }`}>
-                          {isPhone ? "📱 هاتف" : "📦 إكسسوار"}
-                        </span>
+                        {/* Type badge */}
+                        <div className="flex items-center justify-between mb-2">
+                          <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full border ${
+                            isPhone
+                              ? "bg-blue-50 text-blue-600 border-blue-200"
+                              : "bg-gray-50 text-gray-500 border-gray-200"
+                          }`}>
+                            {isPhone ? "هاتف" : "إكسسوار"}
+                          </span>
+                          {outOfStock && (
+                            <span className="text-[9px] font-bold bg-red-50 text-red-500 border border-red-100 px-1.5 py-0.5 rounded-full">نفد</span>
+                          )}
+                        </div>
 
-                        {/* Product name */}
-                        <p className="text-gray-900 font-bold text-xs leading-tight mt-4 line-clamp-2 min-h-8">{product.name}</p>
+                        {/* Name */}
+                        <p className="text-gray-900 font-bold text-xs leading-tight line-clamp-2 flex-1 min-h-7">{product.name}</p>
 
                         {/* Price */}
-                        <p className="text-blue-700 font-black text-sm mt-1.5">{formatCurrency(price)}</p>
+                        <p className="text-blue-700 font-black text-sm mt-2">{formatCurrency(price)}</p>
 
                         {/* Stock */}
-                        <p className={`text-[10px] font-semibold mt-1 ${
-                          outOfStock ? "text-red-500" : available <= 2 ? "text-amber-500" : "text-emerald-600"
+                        <p className={`text-[10px] font-semibold mt-0.5 ${
+                          outOfStock ? "text-red-400" : available <= 2 ? "text-amber-500" : "text-emerald-600"
                         }`}>
-                          {outOfStock
-                            ? "نفد"
-                            : isPhone && hasImeiTracking(product)
-                              ? `${available} وحدة متاحة`
-                              : `${available} في المخزون`}
+                          {outOfStock ? "نفد من المخزون"
+                            : isImeiTracked ? `${available} وحدة`
+                            : `${available} متوفر`}
                         </p>
                       </button>
                     );
@@ -444,63 +548,84 @@ export default function AdminPOS() {
             </div>
           </div>
 
-          {/* RIGHT: Cart ─────────────────────────────────────────────── */}
-          <div className="w-80 xl:w-96 bg-white flex flex-col shrink-0 shadow-xl">
+          {/* ── RIGHT: Cart Panel ─────────────────────────────────────────── */}
+          <div className="w-80 xl:w-[22rem] bg-white flex flex-col shrink-0 border-r border-gray-200 shadow-xl">
 
             {/* Cart header */}
-            <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
-              <h2 className="text-sm font-black text-gray-800 flex items-center gap-2">
-                <ShoppingCart className="w-4 h-4 text-blue-600" />
-                السلة
+            <div className="px-4 py-3.5 border-b border-gray-100 bg-white">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-black text-gray-800 flex items-center gap-2">
+                  <ShoppingCart className="w-4 h-4 text-blue-600" />
+                  السلة
+                  {cart.length > 0 && (
+                    <span className="bg-blue-600 text-white text-[10px] w-5 h-5 rounded-full font-bold flex items-center justify-center">{cart.length}</span>
+                  )}
+                </h2>
                 {cart.length > 0 && (
-                  <span className="bg-blue-600 text-white text-[10px] px-1.5 rounded-full font-bold">{cart.length}</span>
+                  <button onClick={() => setCart([])}
+                    className="text-[10px] text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1"
+                    data-testid="button-pos-clear-cart">
+                    <Trash2 className="w-3 h-3" /> مسح
+                  </button>
                 )}
-              </h2>
+              </div>
             </div>
 
             {/* Cart items */}
             <div className="flex-1 overflow-y-auto">
               {cart.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-32 text-gray-300">
-                  <ShoppingCart className="w-8 h-8 mb-1.5" />
-                  <p className="text-xs font-medium">السلة فارغة</p>
-                  <p className="text-[10px] mt-0.5">انقر على منتج لإضافته</p>
+                <div className="flex flex-col items-center justify-center h-40 text-gray-300 gap-2">
+                  <ShoppingCart className="w-10 h-10" />
+                  <div className="text-center">
+                    <p className="text-xs font-semibold text-gray-400">السلة فارغة</p>
+                    <p className="text-[10px] text-gray-300 mt-0.5">انقر على منتج لإضافته</p>
+                  </div>
                 </div>
               ) : (
                 <div className="divide-y divide-gray-50">
                   {cart.map((item, idx) => (
-                    <div key={idx} className="px-3 py-2.5 hover:bg-gray-50/50" data-testid={`cart-item-${idx}`}>
+                    <div key={idx} className="px-4 py-3 hover:bg-gray-50/50 transition-colors" data-testid={`cart-item-${idx}`}>
+                      {/* Item header */}
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
-                          <p className="text-gray-800 text-xs font-semibold leading-tight truncate">{item.productName}</p>
+                          <p className="text-gray-800 text-xs font-bold leading-tight truncate">{item.productName}</p>
                           {item.imei && (
-                            <p className="text-blue-500 text-[10px] font-mono mt-0.5">IMEI: {item.imei}</p>
+                            <div className="flex items-center gap-1 mt-1">
+                              <span className="text-[9px] bg-blue-600 text-white px-1.5 py-0.5 rounded font-bold">IMEI</span>
+                              <span className="text-blue-600 text-[10px] font-mono font-semibold">{item.imei}</span>
+                            </div>
                           )}
-                          <p className="text-gray-500 text-[10px] mt-0.5">{formatCurrency(item.unitPrice)} × {item.quantity}</p>
                         </div>
                         <button onClick={() => removeItem(idx)}
-                          className="text-gray-300 hover:text-red-500 transition-colors p-0.5 shrink-0">
-                          <X className="w-3.5 h-3.5" />
+                          className="w-6 h-6 rounded-lg bg-gray-100 hover:bg-red-50 hover:text-red-500 text-gray-400 flex items-center justify-center transition-colors shrink-0"
+                          data-testid={`button-remove-cart-item-${idx}`}>
+                          <X className="w-3 h-3" />
                         </button>
                       </div>
-                      <div className="flex items-center justify-between mt-1.5">
-                        {/* Qty controls — only for accessories */}
+
+                      {/* Qty + Total */}
+                      <div className="flex items-center justify-between mt-2">
                         {!item.phoneUnitId ? (
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1.5">
                             <button onClick={() => changeQty(idx, -1)}
-                              className="w-5 h-5 rounded bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 transition-colors">
-                              <Minus className="w-2.5 h-2.5" />
+                              className="w-6 h-6 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 transition-colors"
+                              data-testid={`button-decrease-qty-${idx}`}>
+                              <Minus className="w-3 h-3" />
                             </button>
-                            <span className="text-xs font-bold text-gray-900 w-5 text-center">{item.quantity}</span>
+                            <span className="text-sm font-black text-gray-900 w-6 text-center tabular-nums">{item.quantity}</span>
                             <button onClick={() => changeQty(idx, 1)}
-                              className="w-5 h-5 rounded bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 transition-colors">
-                              <Plus className="w-2.5 h-2.5" />
+                              className="w-6 h-6 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 transition-colors"
+                              data-testid={`button-increase-qty-${idx}`}>
+                              <Plus className="w-3 h-3" />
                             </button>
+                            <span className="text-[10px] text-gray-400 mr-1">× {formatCurrency(item.unitPrice)}</span>
                           </div>
                         ) : (
-                          <span className="text-[10px] text-blue-500 font-semibold bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">📱 x1</span>
+                          <span className="text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-1 rounded-lg border border-blue-100">
+                            📱 وحدة واحدة
+                          </span>
                         )}
-                        <p className="text-blue-700 font-black text-xs">{formatCurrency(item.total)}</p>
+                        <p className="text-gray-900 font-black text-sm">{formatCurrency(item.total)}</p>
                       </div>
                     </div>
                   ))}
@@ -508,101 +633,113 @@ export default function AdminPOS() {
               )}
             </div>
 
-            {/* ── Checkout Panel ──────────────────────────────────────── */}
-            <div className="border-t border-gray-200 p-3 space-y-2.5 bg-white">
+            {/* ── Checkout Panel ───────────────────────────────────────── */}
+            <div className="border-t border-gray-200 bg-white">
 
               {/* Customer info */}
-              <div className="grid grid-cols-2 gap-2">
-                <div className="relative">
-                  <User className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
-                  <Input value={customerName} onChange={e => setCustomerName(e.target.value)}
-                    placeholder="اسم الزبون" className="bg-gray-50 border-gray-200 text-gray-900 text-xs h-8 pr-7 placeholder:text-gray-400"
-                    data-testid="input-pos-customer-name" />
-                </div>
-                <div className="relative">
-                  <Phone className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
-                  <Input value={customerPhone} onChange={e => setCustomerPhone(e.target.value)}
-                    placeholder="رقم الهاتف" className="bg-gray-50 border-gray-200 text-gray-900 text-xs h-8 pr-7 placeholder:text-gray-400 font-mono"
-                    data-testid="input-pos-customer-phone" />
+              <div className="px-4 pt-3 pb-2 space-y-2">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">معلومات الزبون (اختياري)</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="relative">
+                    <User className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
+                    <Input value={customerName} onChange={e => setCustomerName(e.target.value)}
+                      placeholder="الاسم" className="bg-gray-50 border-gray-200 text-gray-800 text-xs h-9 pr-7 placeholder:text-gray-400 rounded-lg"
+                      data-testid="input-pos-customer-name" />
+                  </div>
+                  <div className="relative">
+                    <Phone className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
+                    <Input value={customerPhone} onChange={e => setCustomerPhone(e.target.value)}
+                      placeholder="الهاتف" className="bg-gray-50 border-gray-200 text-gray-800 text-xs h-9 pr-7 placeholder:text-gray-400 font-mono rounded-lg"
+                      data-testid="input-pos-customer-phone" />
+                  </div>
                 </div>
               </div>
 
               {/* Payment method */}
-              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                <SelectTrigger className="bg-gray-50 border-gray-200 text-gray-900 h-8 text-xs" data-testid="select-pos-payment">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-white border-gray-200 shadow-lg">
-                  <SelectItem value="cash" className="text-sm">
-                    <span className="flex items-center gap-2"><Banknote className="w-3.5 h-3.5 text-emerald-600" />نقداً</span>
-                  </SelectItem>
-                  <SelectItem value="transfer" className="text-sm">
-                    <span className="flex items-center gap-2"><CreditCard className="w-3.5 h-3.5 text-blue-600" />تحويل بنكي / CCP</span>
-                  </SelectItem>
-                  <SelectItem value="card" className="text-sm">
-                    <span className="flex items-center gap-2"><CreditCard className="w-3.5 h-3.5 text-purple-600" />بطاقة بنكية</span>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="px-4 pb-2">
+                <div className="grid grid-cols-3 gap-1.5">
+                  {[
+                    { value: "cash", label: "نقداً", icon: <Banknote className="w-3.5 h-3.5" />, color: "emerald" },
+                    { value: "transfer", label: "تحويل", icon: <CreditCard className="w-3.5 h-3.5" />, color: "blue" },
+                    { value: "card", label: "بطاقة", icon: <CreditCard className="w-3.5 h-3.5" />, color: "purple" },
+                  ].map(opt => (
+                    <button key={opt.value} onClick={() => setPaymentMethod(opt.value)}
+                      className={`flex flex-col items-center gap-1 py-2 px-1 rounded-xl border-2 text-[10px] font-bold transition-all ${
+                        paymentMethod === opt.value
+                          ? opt.color === "emerald"
+                            ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                            : opt.color === "blue"
+                              ? "border-blue-500 bg-blue-50 text-blue-700"
+                              : "border-purple-500 bg-purple-50 text-purple-700"
+                          : "border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300 hover:bg-gray-100"
+                      }`}
+                      data-testid={`button-payment-${opt.value}`}>
+                      {opt.icon}
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               {/* Discount + Notes */}
-              <div className="grid grid-cols-2 gap-2">
+              <div className="px-4 pb-2 grid grid-cols-2 gap-2">
                 <div className="relative">
-                  <Tag className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
+                  <Tag className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
                   <Input type="number" value={discount} onChange={e => setDiscount(e.target.value)}
-                    placeholder="خصم (د.ج)" min="0" className="bg-gray-50 border-gray-200 text-gray-900 text-xs h-8 pr-7 placeholder:text-gray-400"
+                    placeholder="خصم د.ج" min="0"
+                    className="bg-gray-50 border-gray-200 text-gray-800 text-xs h-9 pr-7 placeholder:text-gray-400 rounded-lg"
                     data-testid="input-pos-discount" />
                 </div>
                 <Input value={notes} onChange={e => setNotes(e.target.value)}
-                  placeholder="ملاحظات..." className="bg-gray-50 border-gray-200 text-gray-900 text-xs h-8 placeholder:text-gray-400"
+                  placeholder="ملاحظة..."
+                  className="bg-gray-50 border-gray-200 text-gray-800 text-xs h-9 placeholder:text-gray-400 rounded-lg"
                   data-testid="input-pos-notes" />
               </div>
 
               {/* Totals */}
               {cart.length > 0 && (
-                <div className="bg-gray-50 rounded-xl p-3 space-y-1.5 border border-gray-100">
-                  <div className="flex justify-between text-xs text-gray-500">
-                    <span>المجموع الفرعي</span>
-                    <span className="font-semibold text-gray-800">{formatCurrency(subtotal)}</span>
-                  </div>
-                  {discountAmount > 0 && (
-                    <div className="flex justify-between text-xs text-emerald-600">
-                      <span>خصم</span>
-                      <span className="font-semibold">− {formatCurrency(discountAmount)}</span>
+                <div className="mx-4 mb-3 bg-gray-50 rounded-xl border border-gray-200 overflow-hidden">
+                  <div className="px-3 py-2 space-y-1.5">
+                    <div className="flex justify-between text-xs text-gray-500">
+                      <span>مجموع البضاعة</span>
+                      <span className="font-semibold text-gray-700 tabular-nums">{formatCurrency(subtotal)}</span>
                     </div>
-                  )}
-                  <div className="flex justify-between text-sm font-black text-gray-900 border-t border-gray-200 pt-1.5">
-                    <span>الإجمالي</span>
-                    <span className="text-blue-700 text-base">{formatCurrency(total)}</span>
+                    {discountAmount > 0 && (
+                      <div className="flex justify-between text-xs text-emerald-600">
+                        <span>خصم</span>
+                        <span className="font-bold tabular-nums">− {formatCurrency(discountAmount)}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="bg-blue-600 px-3 py-2.5 flex items-center justify-between">
+                    <span className="text-white text-sm font-bold">الإجمالي</span>
+                    <span className="text-white font-black text-lg tabular-nums">{formatCurrency(total)}</span>
                   </div>
                 </div>
               )}
 
               {/* Checkout button */}
-              <Button
-                onClick={() => checkoutMutation.mutate()}
-                disabled={cart.length === 0 || checkoutMutation.isPending}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm h-11 shadow-lg shadow-emerald-200 disabled:opacity-50 gap-2"
-                data-testid="button-pos-checkout">
-                {checkoutMutation.isPending
-                  ? <><Loader2 className="w-4 h-4 animate-spin" />جاري الدفع...</>
-                  : <><CheckCircle className="w-4 h-4" />تأكيد البيع — {formatCurrency(total)}</>
-                }
-              </Button>
-
-              {/* Clear cart */}
-              {cart.length > 0 && (
-                <button onClick={() => setCart([])}
-                  className="w-full text-xs text-gray-400 hover:text-red-500 transition-colors py-1 flex items-center justify-center gap-1">
-                  <Trash2 className="w-3 h-3" /> مسح السلة
-                </button>
-              )}
+              <div className="px-4 pb-4">
+                <Button
+                  onClick={() => checkoutMutation.mutate()}
+                  disabled={cart.length === 0 || checkoutMutation.isPending}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm h-12 shadow-lg shadow-emerald-200/60 disabled:opacity-40 gap-2 rounded-xl"
+                  data-testid="button-pos-checkout">
+                  {checkoutMutation.isPending ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" />جاري الدفع...</>
+                  ) : cart.length === 0 ? (
+                    <><ShoppingCart className="w-4 h-4 opacity-50" />أضف منتجاً للمتابعة</>
+                  ) : (
+                    <><CheckCircle className="w-5 h-5" />تأكيد البيع — {formatCurrency(total)}</>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── Phone Unit Picker ──────────────────────────────────────────────── */}
+      {/* ── Phone Unit Picker ─────────────────────────────────────────────────── */}
       {pickerProduct && (
         <PhoneUnitPicker
           product={pickerProduct}
@@ -612,12 +749,25 @@ export default function AdminPOS() {
         />
       )}
 
-      {/* ── Receipt / Invoice ──────────────────────────────────────────────── */}
-      {receiptOrder && (
-        <POSReceipt
-          order={receiptOrder}
-          onClose={() => setReceiptOrder(null)}
+      {/* ── Post-sale Success Screen ──────────────────────────────────────────── */}
+      {showSuccess && completedOrder && (
+        <SaleSuccess
+          order={completedOrder}
+          onPrint={() => {
+            setShowSuccess(false);
+            setReceiptOrder(completedOrder);
+          }}
+          onNew={() => {
+            setShowSuccess(false);
+            setCompletedOrder(null);
+            searchRef.current?.focus();
+          }}
         />
+      )}
+
+      {/* ── Receipt / Invoice ─────────────────────────────────────────────────── */}
+      {receiptOrder && (
+        <OrderInvoice order={receiptOrder} onClose={() => setReceiptOrder(null)} />
       )}
     </AdminLayout>
   );

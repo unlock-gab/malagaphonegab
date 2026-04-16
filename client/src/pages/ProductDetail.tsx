@@ -14,17 +14,16 @@ import ProductCard from "@/components/ProductCard";
 import OrderForm from "@/components/OrderForm";
 import { useState } from "react";
 
-const STORE_PHONE = "0555123456";
+import { useStoreSettings, buildWhatsAppUrl } from "@/hooks/use-store-settings";
 
-function waLink(product: Product, extra?: string) {
-  const num = STORE_PHONE.replace(/^0/, "213");
+function waLink(phone: string, product: Product, extra?: string) {
   const msg = [
     `مرحباً، أريد الاستفسار عن:`,
     `📱 ${product.name}`,
     `💰 السعر: ${parseFloat(product.price as string).toLocaleString("ar-DZ")} دج`,
     extra ? extra : "",
   ].filter(Boolean).join("\n");
-  return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
+  return buildWhatsAppUrl(phone, msg);
 }
 
 const CONDITION_CFG: Record<string, { label: string; cls: string; desc: string }> = {
@@ -37,6 +36,8 @@ const CONDITION_CFG: Record<string, { label: string; cls: string; desc: string }
 export default function ProductDetail() {
   const [, params] = useRoute("/products/:id");
   const [selectedImage, setSelectedImage] = useState(0);
+  const storeSettings = useStoreSettings();
+  const waPhone = storeSettings.whatsappNumber || "0555123456";
 
   const { data: product, isLoading } = useQuery<Product>({
     queryKey: ["/api/products", params?.id],
@@ -255,7 +256,7 @@ export default function ProductDetail() {
 
             {/* WhatsApp CTA */}
             {!outOfStock && (
-              <a href={waLink(product)} target="_blank" rel="noopener noreferrer"
+              <a href={waLink(waPhone, product)} target="_blank" rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2.5 w-full py-3.5 bg-green-500 hover:bg-green-600 text-white font-black rounded-2xl shadow-lg shadow-green-500/25 transition-all mb-4 text-base"
                 data-testid="button-whatsapp-product">
                 <MessageCircle className="w-5 h-5" />
@@ -322,7 +323,7 @@ export default function ProductDetail() {
             <div className="text-xs text-gray-400 leading-none">السعر</div>
             <div className="text-lg font-black text-blue-700 leading-tight">{price.toLocaleString("ar-DZ")} دج</div>
           </div>
-          <a href={waLink(product)} target="_blank" rel="noopener noreferrer"
+          <a href={waLink(waPhone, product)} target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-1.5 px-4 py-2.5 bg-green-500 text-white font-bold rounded-xl text-sm shadow">
             <MessageCircle className="w-4 h-4" /> واتساب
           </a>

@@ -9,11 +9,7 @@ import {
 import { Product, Category, Brand } from "@shared/schema";
 import ProductCard from "@/components/ProductCard";
 
-const STORE_PHONE = "0555123456";
-function wa(msg?: string) {
-  const n = STORE_PHONE.replace(/^0/, "213");
-  return `https://wa.me/${n}${msg ? `?text=${encodeURIComponent(msg)}` : ""}`;
-}
+import { useStoreSettings, buildWhatsAppUrl } from "@/hooks/use-store-settings";
 
 const CAT_ICONS: Record<string, any> = {
   Smartphone, Headphones, Zap, Watch, Battery, Star,
@@ -53,6 +49,9 @@ export default function Home() {
   const { data: products = [] } = useQuery<Product[]>({ queryKey: ["/api/products"] });
   const { data: categories = [] } = useQuery<Category[]>({ queryKey: ["/api/categories"] });
   const { data: brands = [] } = useQuery<Brand[]>({ queryKey: ["/api/brands"] });
+  const storeSettings = useStoreSettings();
+  const waPhone = storeSettings.whatsappNumber || "0555123456";
+  const wa = (msg?: string) => buildWhatsAppUrl(waPhone, msg);
 
   const published = products.filter(p => p.published);
   const featured   = published.filter(p => p.featured).slice(0, 8);
@@ -379,7 +378,7 @@ export default function Home() {
               </button>
             </a>
             <p className="text-white/40 text-xs mt-4 flex items-center justify-center gap-1.5">
-              <PhoneCall className="w-3.5 h-3.5" />{STORE_PHONE}
+              <PhoneCall className="w-3.5 h-3.5" />{waPhone}
             </p>
           </motion.div>
         </div>

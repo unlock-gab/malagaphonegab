@@ -673,12 +673,35 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.patch("/api/settings", requireAdmin, async (req, res) => {
-    const ALLOWED = ["facebookPixelId", "tiktokPixelId", "googleSheetsWebhookUrl", "deliveryPrices", "storeName", "storePhone"];
+    const ALLOWED = [
+      "facebookPixelId", "tiktokPixelId", "googleSheetsWebhookUrl", "deliveryPrices",
+      "storeName", "storeAddress", "storePhone", "storeEmail", "storeDescription", "storeLogo",
+      "whatsappNumber", "whatsappDefaultMessage", "facebookUrl", "instagramUrl", "tiktokUrl",
+      "orderPrefix", "invoicePrefix", "defaultOrderNote",
+      "defaultDeliveryFee", "defaultShippingCompany",
+      "invoiceStoreName", "invoicePhone", "invoiceAddress", "invoiceFooterNote", "invoiceShowLogo",
+      "posDefaultPayment", "posAutoPrint",
+    ];
     const sanitized: Record<string, string> = {};
     for (const key of ALLOWED) {
       if (req.body[key] !== undefined && typeof req.body[key] === "string" && req.body[key].length <= 5000) sanitized[key] = req.body[key];
     }
     res.json(await storage.updateSettings(sanitized));
+  });
+
+  app.post("/api/admin/change-password", requireAdmin, async (req, res) => {
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+    if (!currentPassword || !newPassword || !confirmPassword)
+      return res.status(400).json({ message: "جميع الحقول مطلوبة" });
+    if (newPassword.length < 6)
+      return res.status(400).json({ message: "كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل" });
+    if (newPassword !== confirmPassword)
+      return res.status(400).json({ message: "كلمة المرور الجديدة وتأكيدها غير متطابقتين" });
+    const user = await storage.getUserById(req.session.userId!);
+    if (!user || user.password !== hashPassword(currentPassword))
+      return res.status(401).json({ message: "كلمة المرور الحالية غير صحيحة" });
+    await storage.updateUser(user.id, { password: hashPassword(newPassword) });
+    res.json({ message: "تم تغيير كلمة المرور بنجاح" });
   });
 
   // ==================== DELIVERY SHIPPERS ====================

@@ -135,6 +135,7 @@ export default function AdminInventory() {
   const [movSearch, setMovSearch] = useState("");
   const [movTypeFilter, setMovTypeFilter] = useState("all");
   const [stockFilter, setStockFilter] = useState<StockFilter>("all");
+  const [typeFilter, setTypeFilter] = useState("all");
   const [adj, setAdj] = useState({ productId: "", quantity: "", type: "in" as string, notes: "" });
 
   // Phone Units (IMEI) state
@@ -212,7 +213,8 @@ export default function AdminInventory() {
       stockFilter === "healthy" ? p.stock > min :
       stockFilter === "low" ? p.stock > 0 && p.stock <= min :
       stockFilter === "out" ? p.stock === 0 : true;
-    return matchSearch && matchStock;
+    const matchType = typeFilter === "all" || p.productType === typeFilter;
+    return matchSearch && matchStock && matchType;
   });
 
   const filteredMovements = movements.filter(m => {
@@ -288,6 +290,27 @@ export default function AdminInventory() {
 
           {/* PRODUCTS TAB */}
           <TabsContent value="products" className="mt-4 space-y-3">
+            {/* Category type filter */}
+            <div className="flex gap-1.5 flex-wrap">
+              {([
+                { key: "all",       label: "📦 الكل",          count: products.length },
+                { key: "phone",     label: "📱 هواتف",         count: products.filter(p => p.productType === "phone").length },
+                { key: "tablet",    label: "💻 تابلت",          count: products.filter(p => p.productType === "tablet").length },
+                { key: "accessory", label: "🎧 اكسسوارات",     count: products.filter(p => p.productType === "accessory").length },
+                { key: "other",     label: "🔧 أخرى",          count: products.filter(p => p.productType === "other").length },
+              ] as { key: string; label: string; count: number }[]).filter(b => b.count > 0 || b.key === "all").map(btn => (
+                <button key={btn.key} onClick={() => setTypeFilter(btn.key)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                    typeFilter === btn.key
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "text-gray-600 border-gray-200 bg-white hover:border-gray-300"
+                  }`}>
+                  {btn.label} <span className="opacity-60 mr-1">{btn.count}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Stock status filter */}
             <div className="flex gap-1.5 flex-wrap">
               {stockFilterBtns.map(btn => (
                 <button key={btn.key} onClick={() => setStockFilter(btn.key)}

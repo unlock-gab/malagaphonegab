@@ -72,7 +72,7 @@ export default function Home() {
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[90vh] gap-10 items-center py-20">
+          <div className={`grid gap-8 items-center py-12 lg:py-20 ${storeSettings.heroBannerImage ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1 max-w-3xl mx-auto"}`}>
             {/* Text */}
             <div>
               <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
@@ -122,12 +122,12 @@ export default function Home() {
 
             {/* Hero Banner Image */}
             {storeSettings.heroBannerImage ? (
-              <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.7, delay: 0.15 }}
-                className="hidden lg:flex justify-center items-center">
+              <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6, delay: 0.15 }}
+                className="flex justify-center items-center">
                 <img
                   src={storeSettings.heroBannerImage}
                   alt="banner"
-                  className="w-full max-h-[520px] object-contain rounded-2xl"
+                  className="w-full max-h-[420px] lg:max-h-[520px] object-contain rounded-2xl"
                 />
               </motion.div>
             ) : null}

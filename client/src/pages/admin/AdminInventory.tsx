@@ -203,10 +203,24 @@ export default function AdminInventory() {
     }
   });
 
+  // Build a map: productId → matching IMEIs for current search
+  const imeiSearchTerm = productSearch.trim();
+  const imeiMatchMap: Record<string, string[]> = {};
+  if (imeiSearchTerm.length >= 3) {
+    phoneUnits.forEach(u => {
+      if (u.imei.toLowerCase().includes(imeiSearchTerm.toLowerCase())) {
+        if (!imeiMatchMap[u.productId!]) imeiMatchMap[u.productId!] = [];
+        imeiMatchMap[u.productId!].push(u.imei);
+      }
+    });
+  }
+
   const filteredProducts = products.filter(p => {
-    const matchSearch = !productSearch ||
+    const matchName = !productSearch ||
       p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
       (p.sku ?? "").toLowerCase().includes(productSearch.toLowerCase());
+    const matchImei = !!imeiMatchMap[p.id];
+    const matchSearch = matchName || matchImei;
     const min = p.minStock ?? 3;
     const matchStock =
       stockFilter === "all" ? true :
@@ -325,7 +339,7 @@ export default function AdminInventory() {
             <div className="relative">
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
               <Input value={productSearch} onChange={e => setProductSearch(e.target.value)}
-                placeholder="بحث بالاسم أو SKU..." className="bg-white border-gray-200 text-gray-900 placeholder:text-gray-400 pr-9 text-sm h-9" />
+                placeholder="بحث بالاسم أو SKU أو IMEI..." className="bg-white border-gray-200 text-gray-900 placeholder:text-gray-400 pr-9 text-sm h-9" />
             </div>
 
             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
@@ -367,6 +381,15 @@ export default function AdminInventory() {
                               <td className="p-3">
                                 <p className="text-gray-800 text-sm font-medium truncate max-w-48">{p.name}</p>
                                 {p.sku && <p className="text-gray-400 text-[10px] font-mono">{p.sku}</p>}
+                                {imeiMatchMap[p.id] && (
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {imeiMatchMap[p.id].map((imei, i) => (
+                                      <span key={i} className="inline-flex items-center gap-1 font-mono text-[10px] bg-blue-50 text-blue-700 border border-blue-200 rounded px-1.5 py-0.5">
+                                        <Smartphone className="w-2.5 h-2.5" />{imei}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
                               </td>
                               <td className="p-3 text-center">
                                 <span className={`font-black text-xl ${isOut ? "text-red-600" : isLow ? "text-amber-600" : "text-gray-900"}`}>

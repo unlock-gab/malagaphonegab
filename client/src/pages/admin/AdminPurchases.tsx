@@ -214,7 +214,7 @@ function ProductSearchPicker({ products, onSelect, onAddNew }: {
         <input
           value={search}
           onChange={e => { setSearch(e.target.value); setOpen(true); }}
-          onFocus={() => setOpen(true)}
+          onClick={() => setOpen(true)}
           placeholder="ابحث عن منتج..."
           className="w-full h-8 pr-8 pl-3 text-xs rounded-md border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
           data-testid="input-product-search"
@@ -305,7 +305,7 @@ function SupplierCombobox({ suppliers, supplierId, supplierName, onSelect }: {
         <input
           value={open ? search : displayValue}
           onChange={e => { setSearch(e.target.value); setOpen(true); if (!e.target.value) onSelect("", ""); }}
-          onFocus={() => { setOpen(true); setSearch(""); }}
+          onClick={() => { setOpen(true); setSearch(""); }}
           placeholder="ابحث عن مورد أو اكتب اسماً جديداً..."
           className="w-full h-9 pr-8 pl-8 text-sm rounded-md border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
           data-testid="input-supplier-search"

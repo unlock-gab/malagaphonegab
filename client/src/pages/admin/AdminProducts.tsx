@@ -22,22 +22,15 @@ import { useAdminLang } from "@/context/AdminLangContext";
 import type { Product, Category, Brand } from "@shared/schema";
 
 function formatCurrency(v: number) {
-  return new Intl.NumberFormat("ar-DZ").format(v) + " د.ج";
+  return new Intl.NumberFormat("fr-DZ").format(v) + " DA";
 }
 
-const CONDITION_MAP: Record<string, string> = {
-  new: "جديد", used_good: "مستعمل جيد", used_acceptable: "مستعمل مقبول", refurbished: "مجدد",
-};
-const CONDITION_OPTIONS = Object.entries(CONDITION_MAP).map(([value, label]) => ({ value, label }));
-
-const PRODUCT_TYPE_MAP: Record<string, string> = {
-  phone: "هاتف", accessory: "إكسسوار", tablet: "تابلت", watch: "ساعة", earphone: "سماعات", other: "أخرى",
-};
-const PRODUCT_TYPE_OPTIONS = Object.entries(PRODUCT_TYPE_MAP).map(([value, label]) => ({ value, label }));
-
+const CONDITION_KEYS = ["new", "used_good", "used_acceptable", "refurbished"] as const;
+const PRODUCT_TYPE_KEYS = ["phone", "accessory", "tablet", "watch", "earphone", "other"] as const;
 const STORAGE_OPTIONS = ["16GB","32GB","64GB","128GB","256GB","512GB","1TB"];
 const RAM_OPTIONS = ["2GB","3GB","4GB","6GB","8GB","12GB","16GB","32GB"];
-const COLOR_OPTIONS = ["أسود","أبيض","أزرق","أحمر","أخضر","ذهبي","فضي","بنفسجي","رمادي","وردي","برتقالي"];
+const COLOR_OPTIONS_FR = ["Noir","Blanc","Bleu","Rouge","Vert","Or","Argent","Violet","Gris","Rose","Orange"];
+const COLOR_OPTIONS_AR = ["أسود","أبيض","أزرق","أحمر","أخضر","ذهبي","فضي","بنفسجي","رمادي","وردي","برتقالي"];
 
 const PHONE_TYPES: Record<string, boolean> = { phone: true, tablet: true };
 
@@ -120,7 +113,8 @@ function Field({ label, children, full, help }: { label: string; children: React
   );
 }
 
-function ImageUploader({ value, onChange, label }: { value: string; onChange: (url: string) => void; label: string }) {
+function ImageUploader({ value, onChange, label, uploadingLabel, hintLabel, formatsLabel, removeLabel, changeLabel }:
+  { value: string; onChange: (url: string) => void; label: string; uploadingLabel: string; hintLabel: string; formatsLabel: string; removeLabel: string; changeLabel: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -132,11 +126,7 @@ function ImageUploader({ value, onChange, label }: { value: string; onChange: (u
       const res = await fetch("/api/upload", { method: "POST", body: fd, credentials: "include" });
       const data = await res.json();
       if (data.url) onChange(data.url);
-    } catch {
-      /* silent */
-    } finally {
-      setUploading(false);
-    }
+    } catch { /* silent */ } finally { setUploading(false); }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -157,7 +147,6 @@ function ImageUploader({ value, onChange, label }: { value: string; onChange: (u
       >
         <input ref={inputRef} type="file" accept="image/*" className="hidden"
           onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }} />
-
         {value ? (
           <div className="flex items-center gap-3 p-3">
             <img src={value} alt="preview" className="h-20 w-20 object-contain rounded-lg border border-gray-200 bg-white flex-shrink-0" />
@@ -165,20 +154,20 @@ function ImageUploader({ value, onChange, label }: { value: string; onChange: (u
               <p className="text-xs text-gray-500 truncate font-mono">{value.split("/").pop()}</p>
               <button onClick={e => { e.stopPropagation(); onChange(""); }}
                 className="mt-1.5 text-xs text-red-500 hover:text-red-700 flex items-center gap-1">
-                <X className="w-3 h-3" /> إزالة الصورة
+                <X className="w-3 h-3" /> {removeLabel}
               </button>
             </div>
             <div className="flex-shrink-0 text-right">
               {uploading ? <Loader2 className="w-4 h-4 animate-spin text-blue-500" /> : (
-                <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-1 rounded-md border border-blue-200">تغيير</span>
+                <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-1 rounded-md border border-blue-200">{changeLabel}</span>
               )}
             </div>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-6 gap-2">
             {uploading ? <Loader2 className="w-6 h-6 animate-spin text-blue-500" /> : <Upload className="w-6 h-6 text-gray-400" />}
-            <p className="text-xs text-gray-500">{uploading ? "جاري الرفع..." : "اضغط أو اسحب صورة هنا"}</p>
-            <p className="text-[10px] text-gray-400">JPG، PNG، WebP — حتى 20MB</p>
+            <p className="text-xs text-gray-500">{uploading ? uploadingLabel : hintLabel}</p>
+            <p className="text-[10px] text-gray-400">{formatsLabel}</p>
           </div>
         )}
       </div>
@@ -186,7 +175,8 @@ function ImageUploader({ value, onChange, label }: { value: string; onChange: (u
   );
 }
 
-function MultiImageUploader({ value, onChange }: { value: string[]; onChange: (urls: string[]) => void }) {
+function MultiImageUploader({ value, onChange, label, uploadingLabel, addLabel }:
+  { value: string[]; onChange: (urls: string[]) => void; label: string; uploadingLabel: string; addLabel: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -198,18 +188,14 @@ function MultiImageUploader({ value, onChange }: { value: string[]; onChange: (u
       const res = await fetch("/api/upload/multiple", { method: "POST", body: fd, credentials: "include" });
       const data = await res.json();
       if (data.urls) onChange([...value, ...data.urls]);
-    } catch {
-      /* silent */
-    } finally {
-      setUploading(false);
-    }
+    } catch { /* silent */ } finally { setUploading(false); }
   };
 
   const remove = (idx: number) => onChange(value.filter((_, i) => i !== idx));
 
   return (
     <div className="space-y-2">
-      <Label className="text-gray-600 text-xs font-semibold block">صور إضافية</Label>
+      <Label className="text-gray-600 text-xs font-semibold block">{label}</Label>
       {value.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {value.map((url, i) => (
@@ -228,7 +214,7 @@ function MultiImageUploader({ value, onChange }: { value: string[]; onChange: (u
       <button onClick={() => inputRef.current?.click()} disabled={uploading}
         className="flex items-center gap-2 text-xs text-blue-600 hover:text-blue-700 border border-blue-200 hover:border-blue-300 bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-lg transition-colors disabled:opacity-50">
         {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-        {uploading ? "جاري الرفع..." : "إضافة صور"}
+        {uploading ? uploadingLabel : addLabel}
       </button>
     </div>
   );
@@ -238,130 +224,155 @@ function ProductFormDialog({ initial, onSave, onCancel, loading, categories, bra
   initial: ProductForm; onSave: (d: any) => void; onCancel: () => void; loading: boolean;
   categories: Category[]; brands: Brand[];
 }) {
+  const { t, dir, lang } = useAdminLang();
   const [form, setForm] = useState<ProductForm>(initial);
   const set = (k: keyof ProductForm, v: any) => setForm(f => ({ ...f, [k]: v }));
   const isPhone = PHONE_TYPES[form.productType];
   const isUsed = form.condition !== "new";
 
+  const conditionLabel = (key: string) => {
+    const map: Record<string, string> = {
+      new: t("cond_new"), used_good: t("cond_used_good"),
+      used_acceptable: t("cond_used_acceptable"), refurbished: t("cond_refurbished"),
+    };
+    return map[key] ?? key;
+  };
+  const typeLabel = (key: string) => {
+    const map: Record<string, string> = {
+      phone: t("type_phone"), accessory: t("type_accessory"), tablet: t("type_tablet"),
+      watch: t("type_watch"), earphone: t("type_earphone"), other: t("type_other"),
+    };
+    return map[key] ?? key;
+  };
+
+  const colorOptions = lang === "ar" ? COLOR_OPTIONS_AR : COLOR_OPTIONS_FR;
+
   return (
     <div dir={dir}>
       <Tabs defaultValue="basic">
         <TabsList className="bg-gray-100 border border-gray-200 mb-4 w-full">
-          <TabsTrigger value="basic" className="flex-1 data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-sm text-gray-500 text-xs">الأساسي</TabsTrigger>
-          <TabsTrigger value="specs" className="flex-1 data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-sm text-gray-500 text-xs">المواصفات</TabsTrigger>
-          <TabsTrigger value="stock" className="flex-1 data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-sm text-gray-500 text-xs">المخزون</TabsTrigger>
+          <TabsTrigger value="basic" className="flex-1 data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-sm text-gray-500 text-xs">{t("tab_basic")}</TabsTrigger>
+          <TabsTrigger value="specs" className="flex-1 data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-sm text-gray-500 text-xs">{t("tab_specs")}</TabsTrigger>
+          <TabsTrigger value="stock" className="flex-1 data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-sm text-gray-500 text-xs">{t("tab_stock")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="basic" className="space-y-3">
           <div>
-            <Label className="text-gray-600 text-xs mb-1.5 block font-semibold">اسم المنتج *</Label>
-            <Input value={form.name} onChange={e => set("name", e.target.value)} className={cls.input} placeholder="مثال: iPhone 15 Pro Max 256GB أسود" data-testid="input-product-name" />
+            <Label className="text-gray-600 text-xs mb-1.5 block font-semibold">{t("product_name")}</Label>
+            <Input value={form.name} onChange={e => set("name", e.target.value)} className={cls.input} placeholder={t("product_name_ph")} data-testid="input-product-name" />
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="نوع المنتج">
+            <Field label={t("product_type")}>
               <Select value={form.productType} onValueChange={v => set("productType", v)}>
                 <SelectTrigger className={cls.select} data-testid="select-product-type"><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-white border-gray-200 shadow-lg">
-                  {PRODUCT_TYPE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value} className="text-gray-800 text-sm">{o.label}</SelectItem>)}
+                  {PRODUCT_TYPE_KEYS.map(k => <SelectItem key={k} value={k} className="text-gray-800 text-sm">{typeLabel(k)}</SelectItem>)}
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="الحالة">
+            <Field label={t("condition")}>
               <Select value={form.condition} onValueChange={v => set("condition", v)}>
                 <SelectTrigger className={cls.select}><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-white border-gray-200 shadow-lg">
-                  {CONDITION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value} className="text-gray-800 text-sm">{o.label}</SelectItem>)}
+                  {CONDITION_KEYS.map(k => <SelectItem key={k} value={k} className="text-gray-800 text-sm">{conditionLabel(k)}</SelectItem>)}
                 </SelectContent>
               </Select>
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="الفئة">
+            <Field label={t("category")}>
               <Select value={form.categoryId} onValueChange={v => set("categoryId", v)}>
-                <SelectTrigger className={cls.select} data-testid="select-product-category"><SelectValue placeholder="اختر فئة" /></SelectTrigger>
+                <SelectTrigger className={cls.select} data-testid="select-product-category"><SelectValue placeholder={t("select_category")} /></SelectTrigger>
                 <SelectContent className="bg-white border-gray-200 shadow-lg">
                   {categories.map(c => <SelectItem key={c.id} value={c.id} className="text-gray-800 text-sm">{c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="الماركة">
+            <Field label={t("brand")}>
               <Select value={form.brandId} onValueChange={v => set("brandId", v)}>
-                <SelectTrigger className={cls.select} data-testid="select-product-brand"><SelectValue placeholder="اختر ماركة" /></SelectTrigger>
+                <SelectTrigger className={cls.select} data-testid="select-product-brand"><SelectValue placeholder={t("select_brand")} /></SelectTrigger>
                 <SelectContent className="bg-white border-gray-200 shadow-lg">
                   {brands.map(b => <SelectItem key={b.id} value={b.id} className="text-gray-800 text-sm">{b.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </Field>
           </div>
-          <Field label="وصف مختصر" full>
-            <Textarea value={form.shortDescription} onChange={e => set("shortDescription", e.target.value)} className={`${cls.input} resize-none`} rows={2} placeholder="يظهر في بطاقة المنتج..." />
+          <Field label={t("short_description")} full>
+            <Textarea value={form.shortDescription} onChange={e => set("shortDescription", e.target.value)} className={`${cls.input} resize-none`} rows={2} placeholder={t("short_description_ph")} />
           </Field>
-          <Field label="الوصف الكامل" full>
-            <Textarea value={form.description} onChange={e => set("description", e.target.value)} className={`${cls.input} resize-none`} rows={3} placeholder="تفاصيل شاملة..." />
+          <Field label={t("full_description")} full>
+            <Textarea value={form.description} onChange={e => set("description", e.target.value)} className={`${cls.input} resize-none`} rows={3} placeholder={t("full_description_ph")} />
           </Field>
           <div className="grid grid-cols-3 gap-3">
-            <Field label="سعر البيع *" help="السعر الذي يراه الزبون">
+            <Field label={t("sale_price")} help={t("sale_price_help")}>
               <Input type="number" value={form.price} onChange={e => set("price", e.target.value)} className={cls.input} placeholder="0" data-testid="input-product-price" />
             </Field>
-            <Field label="سعر قبل الخصم" help="اشطبه لإظهار التخفيض">
+            <Field label={t("original_price")} help={t("original_price_help")}>
               <Input type="number" value={form.originalPrice} onChange={e => set("originalPrice", e.target.value)} className={cls.input} placeholder="0" />
             </Field>
-            <Field label="سعر التكلفة" help="للحساب الداخلي فقط">
+            <Field label={t("cost_price_field")} help={t("cost_price_help")}>
               <Input type="number" value={form.costPrice} onChange={e => set("costPrice", e.target.value)} className={cls.input} placeholder="0" data-testid="input-product-cost" />
             </Field>
           </div>
           <div className="flex items-center gap-6 pt-1">
             <div className="flex items-center gap-2">
               <Switch checked={form.published} onCheckedChange={v => set("published", v)} data-testid="switch-product-published" />
-              <Label className="text-gray-700 text-sm">منشور في المتجر</Label>
+              <Label className="text-gray-700 text-sm">{t("published_store")}</Label>
             </div>
             <div className="flex items-center gap-2">
               <Switch checked={form.featured} onCheckedChange={v => set("featured", v)} />
-              <Label className="text-gray-700 text-sm">مميز (واجهة المتجر)</Label>
+              <Label className="text-gray-700 text-sm">{t("featured_store")}</Label>
             </div>
           </div>
-
           <div className="border-t border-gray-100 pt-3 space-y-3">
             <ImageUploader
-              label="الصورة الرئيسية"
+              label={t("main_image")}
               value={form.image}
               onChange={v => set("image", v)}
+              uploadingLabel={t("uploading")}
+              hintLabel={t("upload_hint")}
+              formatsLabel={t("upload_formats")}
+              removeLabel={t("remove_image")}
+              changeLabel={t("change_image")}
             />
             <MultiImageUploader
+              label={t("extra_images")}
               value={form.images}
               onChange={v => set("images", v)}
+              uploadingLabel={t("uploading")}
+              addLabel={t("add_images")}
             />
           </div>
         </TabsContent>
 
         <TabsContent value="specs" className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <Field label="اللون">
+            <Field label={t("color_field")}>
               <Select value={form.color} onValueChange={v => set("color", v)}>
-                <SelectTrigger className={cls.select}><SelectValue placeholder="اختر" /></SelectTrigger>
+                <SelectTrigger className={cls.select}><SelectValue placeholder="—" /></SelectTrigger>
                 <SelectContent className="bg-white border-gray-200 shadow-lg">
-                  {COLOR_OPTIONS.map(c => <SelectItem key={c} value={c} className="text-gray-800 text-sm">{c}</SelectItem>)}
+                  {colorOptions.map(c => <SelectItem key={c} value={c} className="text-gray-800 text-sm">{c}</SelectItem>)}
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="مدة الضمان (أيام)" help="0 = بدون ضمان">
+            <Field label={t("warranty_days")} help={t("warranty_help")}>
               <Input type="number" value={form.warrantyDays} onChange={e => set("warrantyDays", e.target.value)} className={cls.input} placeholder="365" />
             </Field>
           </div>
           {isPhone ? (
             <>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="التخزين الداخلي">
+                <Field label={t("storage_label")}>
                   <Select value={form.storageGb} onValueChange={v => set("storageGb", v)}>
-                    <SelectTrigger className={cls.select}><SelectValue placeholder="اختر" /></SelectTrigger>
+                    <SelectTrigger className={cls.select}><SelectValue placeholder="—" /></SelectTrigger>
                     <SelectContent className="bg-white border-gray-200 shadow-lg">
                       {STORAGE_OPTIONS.map(s => <SelectItem key={s} value={s} className="text-gray-800 text-sm">{s}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </Field>
-                <Field label="الذاكرة العشوائية RAM">
+                <Field label={t("ram_label")}>
                   <Select value={form.ram} onValueChange={v => set("ram", v)}>
-                    <SelectTrigger className={cls.select}><SelectValue placeholder="اختر" /></SelectTrigger>
+                    <SelectTrigger className={cls.select}><SelectValue placeholder="—" /></SelectTrigger>
                     <SelectContent className="bg-white border-gray-200 shadow-lg">
                       {RAM_OPTIONS.map(r => <SelectItem key={r} value={r} className="text-gray-800 text-sm">{r}</SelectItem>)}
                     </SelectContent>
@@ -369,37 +380,37 @@ function ProductFormDialog({ initial, onSave, onCancel, loading, categories, bra
                 </Field>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="حجم الشاشة" help='مثال: 6.7"'>
+                <Field label={t("screen_size")} help={t("screen_size_help")}>
                   <Input value={form.screenSize} onChange={e => set("screenSize", e.target.value)} className={cls.input} placeholder='6.7"' />
                 </Field>
-                <Field label="المعالج" help="مثال: A17 Pro">
+                <Field label={t("processor")} help={t("processor_help")}>
                   <Input value={form.processor} onChange={e => set("processor", e.target.value)} className={cls.input} placeholder="A17 Pro" />
                 </Field>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="نظام التشغيل">
+                <Field label={t("os_label")}>
                   <Input value={form.operatingSystem} onChange={e => set("operatingSystem", e.target.value)} className={cls.input} placeholder="iOS 17" />
                 </Field>
-                <Field label="نوع الشريحة">
+                <Field label={t("sim_type")}>
                   <Input value={form.simType} onChange={e => set("simType", e.target.value)} className={cls.input} placeholder="Nano / eSIM" />
                 </Field>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="الكاميرا الخلفية">
+                <Field label={t("rear_camera")}>
                   <Input value={form.camera} onChange={e => set("camera", e.target.value)} className={cls.input} placeholder="48MP + 12MP + 12MP" />
                 </Field>
-                <Field label="الكاميرا الأمامية">
+                <Field label={t("front_camera")}>
                   <Input value={form.frontCamera} onChange={e => set("frontCamera", e.target.value)} className={cls.input} placeholder="12MP" />
                 </Field>
               </div>
-              <Field label="الاتصال والشبكات" full>
-                <Input value={form.connectivity} onChange={e => set("connectivity", e.target.value)} className={cls.input} placeholder="5G, Wi-Fi 6E, Bluetooth 5.3, NFC" />
+              <Field label={t("connectivity_label")} full>
+                <Input value={form.connectivity} onChange={e => set("connectivity", e.target.value)} className={cls.input} placeholder={t("connectivity_ph")} />
               </Field>
               {isUsed && (
                 <div className="border border-amber-200 rounded-xl p-3 bg-amber-50 space-y-3">
-                  <p className="text-amber-700 text-xs font-bold">⚠ حقول الجهاز المستعمل</p>
+                  <p className="text-amber-700 text-xs font-bold">{t("used_device_fields")}</p>
                   <div className="grid grid-cols-2 gap-3">
-                    <Field label="صحة البطارية (%)" help="القيمة الحالية مقارنة بالجديد">
+                    <Field label={t("battery_health_pct")} help={t("battery_health_help")}>
                       <Input type="number" value={form.batteryHealth} onChange={e => set("batteryHealth", e.target.value)} className={cls.input} placeholder="85" min="0" max="100" />
                     </Field>
                   </div>
@@ -409,43 +420,43 @@ function ProductFormDialog({ initial, onSave, onCancel, loading, categories, bra
           ) : (
             <div className="text-center py-10 text-gray-500 text-sm">
               <Tag className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-              <p>الإكسسوارات لا تحتاج مواصفات هاتف</p>
-              <p className="text-xs mt-1 text-gray-400">أضف تفاصيل في حقل الوصف الكامل</p>
+              <p>{t("accessories_no_specs")}</p>
+              <p className="text-xs mt-1 text-gray-400">{t("accessories_hint")}</p>
             </div>
           )}
         </TabsContent>
 
         <TabsContent value="stock" className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <Field label="الكمية الحالية في المخزون">
+            <Field label={t("current_stock")}>
               <Input type="number" value={form.stock} onChange={e => set("stock", e.target.value)} className={cls.input} data-testid="input-product-stock" />
             </Field>
-            <Field label="حد التنبيه" help="يُنبّه عند النزول لهذا الحد">
+            <Field label={t("min_stock_label")} help={t("min_stock_help")}>
               <Input type="number" value={form.minStock} onChange={e => set("minStock", e.target.value)} className={cls.input} />
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="SKU (كود المنتج)">
+            <Field label={t("sku_label")}>
               <Input value={form.sku} onChange={e => set("sku", e.target.value)} className={`${cls.input} font-mono`} placeholder="SKU-001" />
             </Field>
-            <Field label="باركود">
+            <Field label={t("barcode_label")}>
               <Input value={form.barcode} onChange={e => set("barcode", e.target.value)} className={`${cls.input} font-mono`} placeholder="6291041500213" />
             </Field>
           </div>
-          <Field label="رقم IMEI" full help="رقم IMEI للجهاز — للهواتف المستعملة خصوصاً">
+          <Field label={t("imei_label")} full help={t("imei_help")}>
             <Input value={form.imei} onChange={e => set("imei", e.target.value)} className={`${cls.input} font-mono`} placeholder="351234567890123" dir="ltr" data-testid="input-product-imei" />
           </Field>
-          <Field label="Slug (رابط SEO)" full>
+          <Field label={t("slug_label")} full>
             <Input value={form.slug} onChange={e => set("slug", e.target.value)} className={`${cls.input} font-mono`} placeholder="iphone-15-pro-max-256gb" dir="ltr" />
           </Field>
         </TabsContent>
-
       </Tabs>
+
       <DialogFooter className="mt-4 gap-2 border-t border-gray-100 pt-4">
-        <Button variant="outline" onClick={onCancel} className="border-gray-200 text-gray-600 hover:bg-gray-50">إلغاء</Button>
+        <Button variant="outline" onClick={onCancel} className="border-gray-200 text-gray-600 hover:bg-gray-50">{t("cancel")}</Button>
         <Button onClick={() => onSave(toPayload(form))} disabled={loading || !form.name || !form.price}
           className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm" data-testid="button-save-product">
-          {loading ? <><Loader2 className="w-4 h-4 animate-spin ml-2" />جاري الحفظ...</> : "حفظ المنتج"}
+          {loading ? <><Loader2 className="w-4 h-4 animate-spin ml-2" />{t("saving")}</> : t("save_product")}
         </Button>
       </DialogFooter>
     </div>
@@ -475,11 +486,13 @@ interface ProductVariant {
 }
 
 function ProductVariantsDialog({ product, onClose }: { product: Product; onClose: () => void }) {
+  const { t, dir, lang } = useAdminLang();
   const { toast } = useToast();
   const [addOpen, setAddOpen] = useState(false);
   const [editingVariant, setEditingVariant] = useState<ProductVariant | null>(null);
   const [form, setForm] = useState({ storage: "", color: "", sku: "", imei: "", costPrice: "", price: "", stock: "1", active: true });
   const setF = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }));
+  const colorOptions = lang === "ar" ? COLOR_OPTIONS_AR : COLOR_OPTIONS_FR;
 
   const { data: variants = [], isLoading } = useQuery<ProductVariant[]>({
     queryKey: ["/api/products", product.id, "variants"],
@@ -509,9 +522,9 @@ function ProductVariantsDialog({ product, onClose }: { product: Product; onClose
       queryClient.invalidateQueries({ queryKey: ["/api/products", product.id, "variants"] });
       setAddOpen(false); setEditingVariant(null);
       setForm({ storage: "", color: "", sku: "", imei: "", costPrice: "", price: "", stock: "1", active: true });
-      toast({ title: "✓ تم الحفظ" });
+      toast({ title: t("saved_ok") });
     },
-    onError: () => toast({ title: "فشل الحفظ", variant: "destructive" }),
+    onError: () => toast({ title: t("save_failed"), variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
@@ -521,7 +534,7 @@ function ProductVariantsDialog({ product, onClose }: { product: Product; onClose
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products", product.id, "variants"] });
-      toast({ title: "تم الحذف" });
+      toast({ title: t("deleted_ok") });
     },
   });
 
@@ -550,30 +563,28 @@ function ProductVariantsDialog({ product, onClose }: { product: Product; onClose
         <DialogHeader className="border-b border-gray-100 pb-3">
           <DialogTitle className="text-gray-900 flex items-center gap-2 text-sm font-bold">
             <Cpu className="w-4 h-4 text-blue-600" />
-            متغيرات المنتج — {product.name}
+            {t("variants_title")} — {product.name}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 pt-1">
           <div className="flex items-center justify-between">
-            <p className="text-gray-500 text-xs">{variants.length} متغير مسجّل</p>
+            <p className="text-gray-500 text-xs">{variants.length} {t("variants_registered")}</p>
             <Button size="sm" onClick={() => { setEditingVariant(null); setForm({ storage:"",color:"",sku:"",imei:"",costPrice:"",price:"",stock:"1",active:true }); setAddOpen(true); }}
               className="bg-blue-600 hover:bg-blue-700 text-white text-xs shadow-sm" data-testid="btn-add-variant">
-              <Plus className="w-3.5 h-3.5 ml-1" /> إضافة متغير
+              <Plus className="w-3.5 h-3.5 ml-1" /> {t("add_variant")}
             </Button>
           </div>
 
           {isLoading ? (
-            <div className="space-y-2">
-              {[1,2,3].map(i => <div key={i} className="h-14 bg-gray-100 rounded-xl animate-pulse" />)}
-            </div>
+            <div className="space-y-2">{[1,2,3].map(i => <div key={i} className="h-14 bg-gray-100 rounded-xl animate-pulse" />)}</div>
           ) : variants.length === 0 ? (
             <div className="py-10 text-center">
               <div className="w-12 h-12 bg-gray-50 border border-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
                 <Cpu className="w-6 h-6 text-gray-300" />
               </div>
-              <p className="text-gray-500 text-sm font-semibold">لا توجد متغيرات</p>
-              <p className="text-gray-400 text-xs mt-0.5">أضف متغيرات للمنتج (لون، سعة، IMEI...)</p>
+              <p className="text-gray-500 text-sm font-semibold">{t("no_variants")}</p>
+              <p className="text-gray-400 text-xs mt-0.5">{t("no_variants_hint")}</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -584,11 +595,11 @@ function ProductVariantsDialog({ product, onClose }: { product: Product; onClose
                       {v.color && <span className="text-xs bg-gray-50 border border-gray-200 px-2 py-0.5 rounded text-gray-700 font-medium">{v.color}</span>}
                       {v.storage && <span className="text-xs bg-blue-50 border border-blue-200 px-2 py-0.5 rounded text-blue-700 font-medium">{v.storage}</span>}
                       {v.sku && <span className="text-[10px] text-gray-400 font-mono">{v.sku}</span>}
-                      {!v.active && <span className="text-[10px] text-amber-600 border border-amber-200 px-1.5 py-0.5 rounded bg-amber-50">معطّل</span>}
+                      {!v.active && <span className="text-[10px] text-amber-600 border border-amber-200 px-1.5 py-0.5 rounded bg-amber-50">{t("variant_disabled")}</span>}
                     </div>
                     <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
-                      <span>المخزون: <b className="text-gray-700">{v.stock}</b></span>
-                      {v.price && <span>السعر: <b className="text-blue-700">{v.price} د.ج</b></span>}
+                      <span>{t("col_stock")}: <b className="text-gray-700">{v.stock}</b></span>
+                      {v.price && <span>{t("col_price")}: <b className="text-blue-700">{v.price} DA</b></span>}
                       {v.imei && <span className="font-mono text-[10px]">IMEI: {v.imei}</span>}
                     </div>
                   </div>
@@ -596,7 +607,7 @@ function ProductVariantsDialog({ product, onClose }: { product: Product; onClose
                     <button onClick={() => openEdit(v)} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
-                    <button onClick={() => { if (confirm("حذف هذا المتغير؟")) deleteMutation.mutate(v.id); }}
+                    <button onClick={() => { if (confirm(t("confirm_delete_variant"))) deleteMutation.mutate(v.id); }}
                       className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -608,38 +619,38 @@ function ProductVariantsDialog({ product, onClose }: { product: Product; onClose
 
           {addOpen && (
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3">
-              <h4 className="text-gray-700 text-sm font-bold">{editingVariant ? "تعديل المتغير" : "إضافة متغير جديد"}</h4>
+              <h4 className="text-gray-700 text-sm font-bold">{editingVariant ? t("edit_variant") : t("add_new_variant")}</h4>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-gray-500 text-xs mb-1 block">اللون</Label>
+                  <Label className="text-gray-500 text-xs mb-1 block">{t("color_field")}</Label>
                   <Select value={form.color} onValueChange={v => setF("color", v)}>
-                    <SelectTrigger className={`${inputCls} h-9`}><SelectValue placeholder="اختر" /></SelectTrigger>
+                    <SelectTrigger className={`${inputCls} h-9`}><SelectValue placeholder="—" /></SelectTrigger>
                     <SelectContent className="bg-white border-gray-200 shadow-lg">
-                      <SelectItem value="">بدون</SelectItem>
-                      {COLOR_OPTIONS.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                      <SelectItem value="">{t("no_value")}</SelectItem>
+                      {colorOptions.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-gray-500 text-xs mb-1 block">التخزين</Label>
+                  <Label className="text-gray-500 text-xs mb-1 block">{t("storage_label")}</Label>
                   <Select value={form.storage} onValueChange={v => setF("storage", v)}>
-                    <SelectTrigger className={`${inputCls} h-9`}><SelectValue placeholder="اختر" /></SelectTrigger>
+                    <SelectTrigger className={`${inputCls} h-9`}><SelectValue placeholder="—" /></SelectTrigger>
                     <SelectContent className="bg-white border-gray-200 shadow-lg">
-                      <SelectItem value="">بدون</SelectItem>
+                      <SelectItem value="">{t("no_value")}</SelectItem>
                       {STORAGE_OPTIONS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-gray-500 text-xs mb-1 block">سعر البيع</Label>
+                  <Label className="text-gray-500 text-xs mb-1 block">{t("sale_price")}</Label>
                   <Input type="number" value={form.price} onChange={e => setF("price", e.target.value)} className={`${inputCls} h-9`} placeholder={product.price?.toString() || "0"} />
                 </div>
                 <div>
-                  <Label className="text-gray-500 text-xs mb-1 block">سعر التكلفة</Label>
+                  <Label className="text-gray-500 text-xs mb-1 block">{t("cost_price_field")}</Label>
                   <Input type="number" value={form.costPrice} onChange={e => setF("costPrice", e.target.value)} className={`${inputCls} h-9`} placeholder="0" />
                 </div>
                 <div>
-                  <Label className="text-gray-500 text-xs mb-1 block">المخزون</Label>
+                  <Label className="text-gray-500 text-xs mb-1 block">{t("col_stock")}</Label>
                   <Input type="number" value={form.stock} onChange={e => setF("stock", e.target.value)} className={`${inputCls} h-9`} placeholder="1" />
                 </div>
                 <div>
@@ -648,19 +659,19 @@ function ProductVariantsDialog({ product, onClose }: { product: Product; onClose
                 </div>
               </div>
               <div>
-                <Label className="text-gray-500 text-xs mb-1 block">رقم IMEI</Label>
+                <Label className="text-gray-500 text-xs mb-1 block">IMEI</Label>
                 <Input value={form.imei} onChange={e => setF("imei", e.target.value)} className={`${inputCls} h-9 font-mono`} placeholder="351234567890123" dir="ltr" />
               </div>
               <div className="flex items-center gap-2">
                 <Switch checked={form.active} onCheckedChange={v => setF("active", v)} />
-                <Label className="text-gray-700 text-sm">متغير نشط</Label>
+                <Label className="text-gray-700 text-sm">{t("variant_active")}</Label>
               </div>
               <div className="flex gap-2">
                 <Button onClick={handleSave} disabled={saveMutation.isPending} className="bg-blue-600 hover:bg-blue-700 text-white text-sm flex-1" data-testid="btn-save-variant">
                   {saveMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin ml-1" /> : null}
-                  {editingVariant ? "تحديث" : "إضافة"}
+                  {editingVariant ? t("update_variant") : t("add")}
                 </Button>
-                <Button variant="outline" onClick={() => { setAddOpen(false); setEditingVariant(null); }} className="border-gray-200 text-gray-600 text-sm">إلغاء</Button>
+                <Button variant="outline" onClick={() => { setAddOpen(false); setEditingVariant(null); }} className="border-gray-200 text-gray-600 text-sm">{t("cancel")}</Button>
               </div>
             </div>
           )}
@@ -671,7 +682,7 @@ function ProductVariantsDialog({ product, onClose }: { product: Product; onClose
 }
 
 export default function AdminProducts() {
-  const { dir } = useAdminLang();
+  const { t, dir } = useAdminLang();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
@@ -688,20 +699,35 @@ export default function AdminProducts() {
   const { data: categories = [] } = useQuery<Category[]>({ queryKey: ["/api/categories"] });
   const { data: brands = [] } = useQuery<Brand[]>({ queryKey: ["/api/brands"] });
 
+  const conditionLabel = (key: string) => {
+    const map: Record<string, string> = {
+      new: t("cond_new"), used_good: t("cond_used_good"),
+      used_acceptable: t("cond_used_acceptable"), refurbished: t("cond_refurbished"),
+    };
+    return map[key] ?? key;
+  };
+  const typeLabel = (key: string) => {
+    const map: Record<string, string> = {
+      phone: t("type_phone"), accessory: t("type_accessory"), tablet: t("type_tablet"),
+      watch: t("type_watch"), earphone: t("type_earphone"), other: t("type_other"),
+    };
+    return map[key] ?? key;
+  };
+
   const createMutation = useMutation({
     mutationFn: (data: any) => apiRequest("POST", "/api/products", data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/products"] }); setOpen(false); toast({ title: "✓ تم إضافة المنتج" }); },
-    onError: (e: any) => toast({ title: "فشل الإضافة", description: e.message, variant: "destructive" }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/products"] }); setOpen(false); toast({ title: t("product_added") }); },
+    onError: (e: any) => toast({ title: t("add_failed"), description: e.message, variant: "destructive" }),
   });
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) => apiRequest("PATCH", `/api/products/${id}`, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/products"] }); setOpen(false); setEditing(null); toast({ title: "✓ تم التحديث" }); },
-    onError: (e: any) => toast({ title: "فشل التحديث", description: e.message, variant: "destructive" }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/products"] }); setOpen(false); setEditing(null); toast({ title: t("product_updated") }); },
+    onError: (e: any) => toast({ title: t("update_failed"), description: e.message, variant: "destructive" }),
   });
   const deleteMutation = useMutation({
     mutationFn: (id: string) => apiRequest("DELETE", `/api/products/${id}`),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/products"] }); toast({ title: "تم الحذف" }); },
-    onError: () => toast({ title: "فشل الحذف", variant: "destructive" }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/products"] }); toast({ title: t("product_deleted") }); },
+    onError: () => toast({ title: t("delete_failed"), variant: "destructive" }),
   });
 
   const handleSave = (data: any) => editing ? updateMutation.mutate({ id: editing.id, data }) : createMutation.mutate(data);
@@ -718,13 +744,13 @@ export default function AdminProducts() {
       const matchStatus = statusFilter === "all" || (statusFilter === "published" && p.published) || (statusFilter === "hidden" && !p.published) || (statusFilter === "low" && p.stock <= (p.minStock ?? 3) && p.stock > 0) || (statusFilter === "out" && p.stock === 0);
       return matchSearch && matchCat && matchType && matchStatus;
     });
-    const [key, dir] = sort;
+    const [key, d] = sort;
     list = [...list].sort((a, b) => {
       let av: any = a[key as keyof Product], bv: any = b[key as keyof Product];
       if (key === "price" || key === "costPrice") { av = parseFloat(av ?? "0"); bv = parseFloat(bv ?? "0"); }
       if (key === "published") { av = a.published ? 1 : 0; bv = b.published ? 1 : 0; }
-      if (typeof av === "string") return dir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
-      return dir === "asc" ? av - bv : bv - av;
+      if (typeof av === "string") return d === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+      return d === "asc" ? av - bv : bv - av;
     });
     return list;
   }, [products, search, catFilter, typeFilter, statusFilter, sort]);
@@ -743,14 +769,14 @@ export default function AdminProducts() {
     await Promise.all([...selected].map(id => apiRequest("PATCH", `/api/products/${id}`, { published })));
     queryClient.invalidateQueries({ queryKey: ["/api/products"] });
     setSelected(new Set());
-    toast({ title: `تم ${published ? "نشر" : "إخفاء"} ${selected.size} منتجات` });
+    toast({ title: `${published ? t("bulk_publish") : t("bulk_hide")} — ${selected.size}` });
   };
   const bulkDelete = async () => {
-    if (!confirm(`حذف ${selected.size} منتجات؟`)) return;
+    if (!confirm(`${t("delete")} ${selected.size}?`)) return;
     await Promise.all([...selected].map(id => apiRequest("DELETE", `/api/products/${id}`)));
     queryClient.invalidateQueries({ queryKey: ["/api/products"] });
     setSelected(new Set());
-    toast({ title: `تم حذف ${selected.size} منتجات` });
+    toast({ title: t("product_deleted") });
   };
 
   const stockOk = products.filter(p => p.stock > (p.minStock ?? 3)).length;
@@ -763,12 +789,12 @@ export default function AdminProducts() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-black text-gray-900">المنتجات</h1>
+            <h1 className="text-lg font-black text-gray-900">{t("products_title")}</h1>
             <p className="text-gray-500 text-xs mt-0.5">
-              {products.length} منتج •{" "}
-              <span className="text-emerald-600">{stockOk} جيد</span>
-              {stockLow > 0 && <> • <span className="text-amber-600">{stockLow} منخفض</span></>}
-              {stockOut > 0 && <> • <span className="text-red-600">{stockOut} نفد</span></>}
+              {products.length} •{" "}
+              <span className="text-emerald-600">{stockOk} {t("stock_good")}</span>
+              {stockLow > 0 && <> • <span className="text-amber-600">{stockLow} {t("stock_low_label")}</span></>}
+              {stockOut > 0 && <> • <span className="text-red-600">{stockOut} {t("stock_out_label")}</span></>}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -777,7 +803,7 @@ export default function AdminProducts() {
               <button onClick={() => setViewMode("card")} className={`p-2 transition-colors ${viewMode === "card" ? "bg-blue-600 text-white" : "text-gray-400 hover:text-gray-700 bg-white"}`}><LayoutGrid className="w-4 h-4" /></button>
             </div>
             <Button onClick={() => { setEditing(null); setOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white gap-2 text-sm shadow-sm" data-testid="button-add-product">
-              <Plus className="w-4 h-4" /> منتج جديد
+              <Plus className="w-4 h-4" /> {t("new_product")}
             </Button>
           </div>
         </div>
@@ -786,30 +812,30 @@ export default function AdminProducts() {
         <div className="flex gap-2 flex-wrap">
           <div className="relative flex-1 min-w-40">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="اسم، SKU، باركود..." className="bg-white border-gray-200 text-gray-900 pr-9 text-sm h-9 placeholder:text-gray-400" data-testid="input-product-search" />
+            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder={t("search_products")} className="bg-white border-gray-200 text-gray-900 pr-9 text-sm h-9 placeholder:text-gray-400" data-testid="input-product-search" />
           </div>
           <Select value={catFilter} onValueChange={setCatFilter}>
-            <SelectTrigger className="bg-white border-gray-200 text-gray-700 w-32 text-xs h-9"><SelectValue placeholder="الفئة" /></SelectTrigger>
+            <SelectTrigger className="bg-white border-gray-200 text-gray-700 w-36 text-xs h-9"><SelectValue placeholder={t("category")} /></SelectTrigger>
             <SelectContent className="bg-white border-gray-200 shadow-lg">
-              <SelectItem value="all" className="text-gray-800 text-sm">كل الفئات</SelectItem>
+              <SelectItem value="all" className="text-gray-800 text-sm">{t("all_categories")}</SelectItem>
               {categories.map(c => <SelectItem key={c.id} value={c.id} className="text-gray-800 text-sm">{c.name}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="bg-white border-gray-200 text-gray-700 w-28 text-xs h-9"><SelectValue placeholder="النوع" /></SelectTrigger>
+            <SelectTrigger className="bg-white border-gray-200 text-gray-700 w-32 text-xs h-9"><SelectValue placeholder={t("col_type")} /></SelectTrigger>
             <SelectContent className="bg-white border-gray-200 shadow-lg">
-              <SelectItem value="all" className="text-gray-800 text-sm">كل الأنواع</SelectItem>
-              {PRODUCT_TYPE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value} className="text-gray-800 text-sm">{o.label}</SelectItem>)}
+              <SelectItem value="all" className="text-gray-800 text-sm">{t("all_types")}</SelectItem>
+              {PRODUCT_TYPE_KEYS.map(k => <SelectItem key={k} value={k} className="text-gray-800 text-sm">{typeLabel(k)}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="bg-white border-gray-200 text-gray-700 w-28 text-xs h-9"><SelectValue placeholder="الحالة" /></SelectTrigger>
+            <SelectTrigger className="bg-white border-gray-200 text-gray-700 w-32 text-xs h-9"><SelectValue placeholder={t("col_status")} /></SelectTrigger>
             <SelectContent className="bg-white border-gray-200 shadow-lg">
-              <SelectItem value="all" className="text-gray-800 text-sm">الكل</SelectItem>
-              <SelectItem value="published" className="text-gray-800 text-sm">منشور</SelectItem>
-              <SelectItem value="hidden" className="text-gray-800 text-sm">مخفي</SelectItem>
-              <SelectItem value="low" className="text-gray-800 text-sm">مخزون منخفض</SelectItem>
-              <SelectItem value="out" className="text-gray-800 text-sm">نفد المخزون</SelectItem>
+              <SelectItem value="all" className="text-gray-800 text-sm">{t("all_statuses")}</SelectItem>
+              <SelectItem value="published" className="text-gray-800 text-sm">{t("status_published")}</SelectItem>
+              <SelectItem value="hidden" className="text-gray-800 text-sm">{t("status_hidden")}</SelectItem>
+              <SelectItem value="low" className="text-gray-800 text-sm">{t("status_low_stock")}</SelectItem>
+              <SelectItem value="out" className="text-gray-800 text-sm">{t("status_out_stock")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -817,12 +843,12 @@ export default function AdminProducts() {
         {/* Bulk actions */}
         {selected.size > 0 && (
           <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5">
-            <span className="text-blue-700 text-sm font-semibold">{selected.size} محدد</span>
+            <span className="text-blue-700 text-sm font-semibold">{selected.size} {t("selected_count")}</span>
             <div className="flex gap-2 mr-auto">
-              <Button size="sm" onClick={() => bulkPublish(true)} className="bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 text-xs h-7"><Eye className="w-3 h-3 ml-1" />نشر</Button>
-              <Button size="sm" onClick={() => bulkPublish(false)} className="bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200 text-xs h-7"><EyeOff className="w-3 h-3 ml-1" />إخفاء</Button>
-              <Button size="sm" onClick={bulkDelete} className="bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 text-xs h-7"><Trash2 className="w-3 h-3 ml-1" />حذف</Button>
-              <Button size="sm" variant="outline" onClick={() => setSelected(new Set())} className="border-gray-200 text-gray-500 text-xs h-7 hover:bg-gray-50">إلغاء</Button>
+              <Button size="sm" onClick={() => bulkPublish(true)} className="bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 text-xs h-7"><Eye className="w-3 h-3 ml-1" />{t("bulk_publish")}</Button>
+              <Button size="sm" onClick={() => bulkPublish(false)} className="bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200 text-xs h-7"><EyeOff className="w-3 h-3 ml-1" />{t("bulk_hide")}</Button>
+              <Button size="sm" onClick={bulkDelete} className="bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 text-xs h-7"><Trash2 className="w-3 h-3 ml-1" />{t("bulk_delete")}</Button>
+              <Button size="sm" variant="outline" onClick={() => setSelected(new Set())} className="border-gray-200 text-gray-500 text-xs h-7 hover:bg-gray-50">{t("bulk_cancel")}</Button>
             </div>
           </div>
         )}
@@ -836,10 +862,10 @@ export default function AdminProducts() {
               <div className="w-12 h-12 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
                 <Package className="w-5 h-5 text-gray-300" />
               </div>
-              <p className="text-gray-600 font-semibold text-sm">لا توجد منتجات مطابقة</p>
-              <p className="text-gray-400 text-xs mt-1">عدّل الفلتر أو أضف منتجاً جديداً</p>
+              <p className="text-gray-600 font-semibold text-sm">{t("no_products")}</p>
+              <p className="text-gray-400 text-xs mt-1">{t("no_products_hint")}</p>
               <Button onClick={() => { setEditing(null); setOpen(true); }} className="mt-4 bg-blue-600 hover:bg-blue-700 text-white gap-2 text-sm shadow-sm">
-                <Plus className="w-4 h-4" /> إضافة أول منتج
+                <Plus className="w-4 h-4" /> {t("add_first_product")}
               </Button>
             </div>
           ) : (
@@ -852,27 +878,27 @@ export default function AdminProducts() {
                         <button onClick={toggleAll}>{allSelected ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <Square className="w-4 h-4 text-gray-300" />}</button>
                       </th>
                       <th className="text-right p-3 font-semibold min-w-48">
-                        <SortHeader label="المنتج" sortKey="name" current={sort} onSort={toggleSort} />
+                        <SortHeader label={t("col_product")} sortKey="name" current={sort} onSort={toggleSort} />
                       </th>
                       <th className="text-right p-3 font-semibold hidden md:table-cell">SKU</th>
-                      <th className="text-right p-3 font-semibold hidden lg:table-cell">الفئة</th>
-                      <th className="text-right p-3 font-semibold hidden xl:table-cell">الماركة</th>
-                      <th className="text-right p-3 font-semibold hidden sm:table-cell">النوع</th>
-                      <th className="text-right p-3 font-semibold hidden md:table-cell">الحالة</th>
+                      <th className="text-right p-3 font-semibold hidden lg:table-cell">{t("col_category")}</th>
+                      <th className="text-right p-3 font-semibold hidden xl:table-cell">{t("col_brand")}</th>
+                      <th className="text-right p-3 font-semibold hidden sm:table-cell">{t("col_type")}</th>
+                      <th className="text-right p-3 font-semibold hidden md:table-cell">{t("col_condition")}</th>
                       <th className="text-center p-3 font-semibold">
-                        <SortHeader label="المخزون" sortKey="stock" current={sort} onSort={toggleSort} />
+                        <SortHeader label={t("col_stock")} sortKey="stock" current={sort} onSort={toggleSort} />
                       </th>
                       <th className="text-right p-3 font-semibold hidden lg:table-cell">
-                        <SortHeader label="التكلفة" sortKey="costPrice" current={sort} onSort={toggleSort} />
+                        <SortHeader label={t("col_cost")} sortKey="costPrice" current={sort} onSort={toggleSort} />
                       </th>
                       <th className="text-right p-3 font-semibold">
-                        <SortHeader label="السعر" sortKey="price" current={sort} onSort={toggleSort} />
+                        <SortHeader label={t("col_price")} sortKey="price" current={sort} onSort={toggleSort} />
                       </th>
                       <th className="text-center p-3 font-semibold hidden sm:table-cell">
-                        <SortHeader label="نشر" sortKey="published" current={sort} onSort={toggleSort} />
+                        <SortHeader label={t("col_publish")} sortKey="published" current={sort} onSort={toggleSort} />
                       </th>
-                      <th className="text-center p-3 font-semibold hidden md:table-cell">مميز</th>
-                      <th className="text-center p-3 font-semibold w-20">إجراء</th>
+                      <th className="text-center p-3 font-semibold hidden md:table-cell">{t("col_featured")}</th>
+                      <th className="text-center p-3 font-semibold w-20">{t("col_actions")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -902,11 +928,11 @@ export default function AdminProducts() {
                           <td className="p-3 text-gray-500 text-xs hidden xl:table-cell">{getBrand(p.brandId)}</td>
                           <td className="p-3 hidden sm:table-cell">
                             <span className="text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
-                              {PRODUCT_TYPE_MAP[p.productType ?? ""] ?? p.productType}
+                              {typeLabel(p.productType ?? "")}
                             </span>
                           </td>
                           <td className="p-3 hidden md:table-cell">
-                            <span className="text-xs text-gray-500">{CONDITION_MAP[p.condition ?? ""] ?? p.condition}</span>
+                            <span className="text-xs text-gray-500">{conditionLabel(p.condition ?? "")}</span>
                           </td>
                           <td className="p-3 text-center">
                             <span className={`text-xs font-bold px-2 py-0.5 rounded border ${
@@ -930,25 +956,21 @@ export default function AdminProducts() {
                           </td>
                           <td className="p-3 text-center hidden md:table-cell">
                             <button onClick={() => updateMutation.mutate({ id: p.id, data: { featured: !p.featured } })}
-                              className={`transition-colors ${p.featured ? "text-amber-500 hover:text-gray-400" : "text-gray-300 hover:text-amber-500"}`}>
-                              <Star className="w-4 h-4" fill={p.featured ? "currentColor" : "none"} />
+                              className={`transition-colors ${p.featured ? "text-amber-500 hover:text-gray-400" : "text-gray-200 hover:text-amber-400"}`}
+                              data-testid={`toggle-featured-${p.id}`}>
+                              {p.featured ? <Star className="w-4 h-4 fill-current" /> : <StarOff className="w-4 h-4" />}
                             </button>
                           </td>
                           <td className="p-3">
-                            <div className="flex items-center gap-1 justify-center">
-                              <button onClick={() => setVariantsProduct(p)}
-                                className="p-1.5 rounded-lg text-gray-400 hover:text-violet-600 hover:bg-violet-50 transition-colors"
-                                title="إدارة المتغيرات" data-testid={`button-variants-${p.id}`}>
-                                <Cpu className="w-3.5 h-3.5" />
+                            <div className="flex items-center justify-center gap-1">
+                              <button onClick={() => setVariantsProduct(p)} className="p-1.5 rounded-lg text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition-colors" title="Variantes" data-testid={`btn-variants-${p.id}`}>
+                                <Layers className="w-3.5 h-3.5" />
                               </button>
-                              <button onClick={() => { setEditing(p); setOpen(true); }}
-                                className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                                data-testid={`button-edit-product-${p.id}`}>
+                              <button onClick={() => { setEditing(p); setOpen(true); }} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" data-testid={`btn-edit-${p.id}`}>
                                 <Pencil className="w-3.5 h-3.5" />
                               </button>
-                              <button onClick={() => { if (confirm("حذف المنتج؟")) deleteMutation.mutate(p.id); }}
-                                className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors"
-                                data-testid={`button-delete-product-${p.id}`}>
+                              <button onClick={() => { if (confirm(t("confirm_delete"))) deleteMutation.mutate(p.id); }}
+                                className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors" data-testid={`btn-delete-${p.id}`}>
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
@@ -966,47 +988,34 @@ export default function AdminProducts() {
         {/* CARD VIEW */}
         {viewMode === "card" && (
           isLoading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-              {Array.from({ length: 10 }).map((_, i) => <Skeleton key={i} className="h-48 rounded-xl" />)}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-48 rounded-xl" />)}
             </div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-14">
-              <Package className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-              <p className="text-gray-500 font-semibold">لا توجد منتجات مطابقة</p>
+              <p className="text-gray-500 font-semibold">{t("no_products")}</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {filtered.map(p => (
-                <div key={p.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-blue-300 hover:shadow-md transition-all group" data-testid={`card-product-${p.id}`}>
-                  <div className="h-32 bg-gray-50 relative overflow-hidden border-b border-gray-100">
-                    {p.image?.trim() ? <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                      : <div className="w-full h-full flex items-center justify-center"><ImageOff className="w-8 h-8 text-gray-200" /></div>}
-                    <div className="absolute top-1.5 right-1.5 flex flex-col gap-1">
-                      {!p.published && <span className="text-[10px] bg-gray-100 text-gray-500 border border-gray-200 px-1.5 py-0.5 rounded">مخفي</span>}
-                      {p.featured && <span className="text-[10px] bg-amber-100 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded">مميز</span>}
-                    </div>
-                    <div className="absolute bottom-1.5 left-1.5">
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
-                        p.stock === 0 ? "bg-red-50 text-red-600 border-red-200" :
-                        p.stock <= (p.minStock ?? 3) ? "bg-amber-50 text-amber-700 border-amber-200" :
-                        "bg-emerald-50 text-emerald-700 border-emerald-200"
-                      }`}>{p.stock === 0 ? "نفد" : p.stock}</span>
-                    </div>
+                <div key={p.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow" data-testid={`card-product-${p.id}`}>
+                  <div className="h-36 bg-gray-50 flex items-center justify-center overflow-hidden">
+                    {p.image?.trim() ? <img src={p.image} alt={p.name} className="w-full h-full object-contain" /> : <ImageOff className="w-8 h-8 text-gray-200" />}
                   </div>
-                  <div className="p-2.5">
-                    <p className="text-gray-800 font-semibold text-xs line-clamp-2 mb-2 leading-snug">{p.name}</p>
-                    <div className="flex items-center justify-between mb-2.5">
-                      <span className="text-blue-700 font-black text-sm">{formatCurrency(parseFloat(p.price.toString()))}</span>
-                    </div>
-                    <div className="flex gap-1.5">
-                      <Button size="sm" variant="outline" onClick={() => { setEditing(p); setOpen(true); }}
-                        className="flex-1 border-gray-200 text-gray-600 hover:text-blue-700 hover:bg-blue-50 hover:border-blue-200 text-xs h-7 px-2">
-                        <Pencil className="w-3 h-3 ml-1" /> تعديل
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => { if (confirm("حذف؟")) deleteMutation.mutate(p.id); }}
-                        className="border-gray-200 text-gray-400 hover:text-red-500 hover:bg-red-50 hover:border-red-200 text-xs h-7 px-2">
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
+                  <div className="p-3">
+                    <p className="text-gray-800 font-semibold text-xs truncate">{p.name}</p>
+                    <p className="text-blue-700 font-bold text-sm mt-1">{formatCurrency(parseFloat(p.price.toString()))}</p>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded border ${p.stock === 0 ? "bg-red-50 text-red-600 border-red-200" : p.stock <= (p.minStock ?? 3) ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-emerald-50 text-emerald-700 border-emerald-200"}`}>{p.stock}</span>
+                      <div className="flex gap-1">
+                        <button onClick={() => { setEditing(p); setOpen(true); }} className="p-1 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" data-testid={`btn-card-edit-${p.id}`}>
+                          <Pencil className="w-3 h-3" />
+                        </button>
+                        <button onClick={() => { if (confirm(t("confirm_delete"))) deleteMutation.mutate(p.id); }}
+                          className="p-1 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors" data-testid={`btn-card-delete-${p.id}`}>
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1015,25 +1024,28 @@ export default function AdminProducts() {
           )
         )}
 
-        <Dialog open={open} onOpenChange={o => { setOpen(o); if (!o) setEditing(null); }}>
-          <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-2xl max-h-[92vh] overflow-y-auto shadow-xl" dir={dir}>
-            <DialogHeader className="border-b border-gray-100 pb-3">
-              <DialogTitle className="text-gray-900 flex items-center gap-2 font-bold">
-                <Layers className="w-4 h-4 text-blue-600" />
-                {editing ? `تعديل: ${editing.name}` : "إضافة منتج جديد"}
-              </DialogTitle>
-            </DialogHeader>
-            <ProductFormDialog
-              initial={editing ? fromProduct(editing) : EMPTY_FORM}
-              onSave={handleSave}
-              onCancel={() => { setOpen(false); setEditing(null); }}
-              loading={isMutating}
-              categories={categories}
-              brands={brands}
-            />
-          </DialogContent>
-        </Dialog>
+        {/* Add/Edit Dialog */}
+        {open && (
+          <Dialog open onOpenChange={o => { if (!o) { setOpen(false); setEditing(null); } }}>
+            <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl" dir={dir}>
+              <DialogHeader className="border-b border-gray-100 pb-3">
+                <DialogTitle className="text-gray-900 font-bold">
+                  {editing ? `${t("edit_product")}: ${editing.name}` : t("add_product")}
+                </DialogTitle>
+              </DialogHeader>
+              <ProductFormDialog
+                initial={editing ? fromProduct(editing) : EMPTY_FORM}
+                onSave={handleSave}
+                onCancel={() => { setOpen(false); setEditing(null); }}
+                loading={isMutating}
+                categories={categories}
+                brands={brands}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
 
+        {/* Variants Dialog */}
         {variantsProduct && (
           <ProductVariantsDialog product={variantsProduct} onClose={() => setVariantsProduct(null)} />
         )}

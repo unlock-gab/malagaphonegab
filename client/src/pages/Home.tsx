@@ -4,7 +4,7 @@ import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import {
   Truck, Shield, MessageCircle, Smartphone, ChevronLeft,
-  Headphones, Zap, Watch, Battery, CheckCircle2, PhoneCall, Star, ArrowLeft,
+  Headphones, Zap, Watch, Battery, CheckCircle2, PhoneCall, Star,
 } from "lucide-react";
 import { Product, Category, Brand } from "@shared/schema";
 import ProductCard from "@/components/ProductCard";
@@ -63,77 +63,19 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white" dir="rtl">
 
-      {/* ── HERO ── */}
-      <section className="relative overflow-hidden bg-white pt-16 border-b border-gray-100">
-        {/* Subtle geometric light */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 right-0 w-[700px] h-[700px] bg-blue-500/5 rounded-full blur-3xl -translate-y-1/3 translate-x-1/4" />
-          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-indigo-500/5 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4" />
-        </div>
-
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className={`grid gap-8 items-center py-12 lg:py-20 ${storeSettings.heroBannerImage ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1 max-w-3xl mx-auto"}`}>
-            {/* Text */}
-            <div>
-              <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-                className="inline-flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-full px-4 py-1.5 mb-6">
-                <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                <span className="text-blue-600 text-sm font-medium">أكبر متجر هواتف في الجزائر</span>
-              </motion.div>
-
-              <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }}
-                className="text-5xl sm:text-6xl lg:text-6xl font-black text-gray-900 leading-[1.1] mb-5 tracking-tight">
-                هاتفك المثالي<br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-l from-blue-600 to-blue-400">
-                  بأفضل سعر
-                </span>
-              </motion.h1>
-
-              <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}
-                className="text-gray-500 text-lg leading-relaxed mb-8 max-w-lg">
-                هواتف جديدة ومستعملة معتمدة، إكسسوارات أصلية. الدفع عند الاستلام لكل ولايات الجزائر.
-              </motion.p>
-
-              <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }}
-                className="flex flex-wrap gap-3 mb-10">
-                <Link href="/products">
-                  <button className="flex items-center gap-2 px-7 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-lg shadow-blue-600/30 transition-all text-base"
-                    data-testid="button-shop-now">
-                    تسوق الآن <ArrowLeft className="w-4 h-4" />
-                  </button>
-                </Link>
-                <a href={wa("مرحباً، أريد الاستفسار")} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-7 py-3.5 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl shadow-lg shadow-green-600/25 transition-all text-base">
-                  <MessageCircle className="w-4 h-4" /> واتساب
-                </a>
-              </motion.div>
-
-              {/* Stats */}
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
-                className="flex flex-wrap gap-8">
-                {[{ n: "+500", l: "منتج" }, { n: "+2K", l: "عميل" }, { n: "58", l: "ولاية" }].map((s, i) => (
-                  <div key={i}>
-                    <p className="text-2xl font-black text-gray-900">{s.n}</p>
-                    <p className="text-gray-400 text-xs mt-0.5">{s.l}</p>
-                  </div>
-                ))}
-              </motion.div>
-            </div>
-
-            {/* Hero Banner Image */}
-            {storeSettings.heroBannerImage ? (
-              <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6, delay: 0.15 }}
-                className="flex justify-center items-center">
-                <img
-                  src={storeSettings.heroBannerImage}
-                  alt="banner"
-                  className="w-full max-h-[420px] lg:max-h-[520px] object-contain rounded-2xl"
-                />
-              </motion.div>
-            ) : null}
-          </div>
-        </div>
-      </section>
+      {/* ── HERO BANNER ── */}
+      {storeSettings.heroBannerImage && (
+        <section className="bg-white pt-16">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}
+            className="w-full">
+            <img
+              src={storeSettings.heroBannerImage}
+              alt="banner"
+              className="w-full object-cover"
+            />
+          </motion.div>
+        </section>
+      )}
 
       {/* ── TRUST BAR ── */}
       <div className="bg-white border-b border-gray-100">

@@ -25,7 +25,7 @@ const T = {
   nav_delivery:         { fr: "Tarifs livraison",      ar: "أسعار التوصيل" },
   nav_shippers:         { fr: "Transporteurs",         ar: "شركات التوصيل" },
   nav_settings:         { fr: "Paramètres",            ar: "الإعدادات" },
-  nav_pos:              { fr: "Point de vente POS",    ar: "نقطة البيع POS" },
+  nav_pos:              { fr: "Vente comptoire",        ar: "نقطة البيع POS" },
   nav_invoices:         { fr: "Factures",              ar: "الفواتير" },
   nav_partners:         { fr: "Partenaires",           ar: "الشركاء" },
   nav_back_to_store:    { fr: "Retour boutique",       ar: "العودة للمتجر" },

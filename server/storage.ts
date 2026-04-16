@@ -1051,6 +1051,7 @@ export class DatabaseStorage implements IStorage {
       recentOrders,
       recentMovements,
       recentPurchases,
+      allExpenses,
     ] = await Promise.all([
       db.select({ id: products.id, stock: products.stock, minStock: products.minStock, name: products.name,
         price: products.price, costPrice: products.costPrice, image: products.image,
@@ -1061,6 +1062,7 @@ export class DatabaseStorage implements IStorage {
       db.select().from(orders).orderBy(desc(orders.createdAt)).limit(5),
       db.select().from(inventoryMovements).orderBy(desc(inventoryMovements.createdAt)).limit(8),
       db.select().from(purchases).orderBy(desc(purchases.createdAt)).limit(5),
+      db.select().from(expenses),
     ]);
 
     const totalProducts = allProducts.length;
@@ -1071,9 +1073,14 @@ export class DatabaseStorage implements IStorage {
     const deliveredOrders = allOrders.filter(o => o.status === "delivered");
     const totalRevenue = deliveredOrders.reduce((sum, o) => sum + parseFloat(o.total as string || "0"), 0);
 
-    const netProfit = allProfitRecords.reduce((sum, p) => sum + parseFloat(p.netProfit as string || "0"), 0);
-    const partnerShare = allProfitRecords.reduce((sum, p) => sum + parseFloat(p.partnerShare as string || "0"), 0);
-    const ownerShare = allProfitRecords.reduce((sum, p) => sum + parseFloat(p.ownerShare as string || "0"), 0);
+    // General expenses (not linked to a specific order) must be deducted from total profit
+    const generalExpenses = allExpenses.filter(e => !e.relatedOrderId);
+    const generalExpensesTotal = generalExpenses.reduce((sum, e) => sum + parseFloat(e.amount as string || "0"), 0);
+
+    const grossNetProfit = allProfitRecords.reduce((sum, p) => sum + parseFloat(p.netProfit as string || "0"), 0);
+    const netProfit = grossNetProfit - generalExpensesTotal;
+    const partnerShare = netProfit * 0.3333;
+    const ownerShare = netProfit * 0.6667;
 
     const fullLowStock = await this.getLowStockProducts(5);
 
@@ -1091,6 +1098,13 @@ export class DatabaseStorage implements IStorage {
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
       if (!monthlyMap[key]) monthlyMap[key] = { revenue: 0, profit: 0 };
       monthlyMap[key].profit += parseFloat(p.netProfit as string || "0");
+    }
+    // Deduct general expenses from their respective month's profit
+    for (const e of generalExpenses) {
+      const d = new Date(e.expenseDate ?? e.createdAt!);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      if (!monthlyMap[key]) monthlyMap[key] = { revenue: 0, profit: 0 };
+      monthlyMap[key].profit -= parseFloat(e.amount as string || "0");
     }
     const MONTH_NAMES_AR = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
     const monthlyRevenue = Object.entries(monthlyMap)

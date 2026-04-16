@@ -501,16 +501,95 @@ export class DatabaseStorage implements IStorage {
       }
     }
 
+    // CRITICAL FIX 4: When cancelling a completed purchase, reverse phone_units AND stock
+    if (status === "cancelled" && existing.status !== "cancelled" && stockAlreadyApplied) {
+      const [updated] = await db.update(purchases)
+        .set({ purchaseStockApplied: false })
+        .where(eq(purchases.id, id))
+        .returning();
+
+      const items = await this.getPurchaseItems(id);
+      for (const item of items) {
+        if (!item.productId) continue;
+        const product = await this.getProduct(item.productId);
+        const isPhone = product?.productType === "phone" || product?.productType === "tablet";
+        const imeis: string[] = (item.imeis as any) ?? [];
+
+        if (isPhone && imeis.length > 0) {
+          // Delete only available phone_units from this purchase (sold ones stay intact with a warning)
+          const units = await db.select().from(phoneUnits).where(eq(phoneUnits.purchaseId, id));
+          for (const u of units) {
+            if (u.productId === item.productId) {
+              if (u.status === "available") {
+                await db.delete(phoneUnits).where(eq(phoneUnits.id, u.id));
+              } else {
+                await this.createInventoryMovement({
+                  productId: item.productId,
+                  productName: product?.name ?? "منتج",
+                  type: "note",
+                  quantity: 0,
+                  reference: "purchase_cancelled",
+                  referenceId: id,
+                  notes: `تحذير: وحدة IMEI ${u.imei} مباعة من شراء تم إلغاؤه`,
+                });
+              }
+            }
+          }
+          await this.syncPhoneStock(item.productId);
+        } else {
+          // Non-IMEI: reverse via adjustStock
+          await this.adjustStock(
+            item.productId,
+            item.quantity,
+            "out",
+            "purchase_cancelled",
+            id,
+            `إلغاء شراء: ${existing.supplierName}`,
+          );
+        }
+      }
+      return updated ?? p;
+    }
+
     return p;
   }
 
   async deletePurchase(id: string): Promise<boolean> {
     const existing = await this.getPurchase(id);
-    // Fix 3: Reverse stock if this completed purchase had already applied stock
+    // CRITICAL FIX 1: Reverse stock AND phone_units if this completed purchase applied stock
     if (existing && (existing as any).purchaseStockApplied) {
       const items = await this.getPurchaseItems(id);
       for (const item of items) {
-        if (item.productId) {
+        if (!item.productId) continue;
+        const product = await this.getProduct(item.productId);
+        const isPhone = product?.productType === "phone" || product?.productType === "tablet";
+        const imeis: string[] = (item.imeis as any) ?? [];
+
+        if (isPhone && imeis.length > 0) {
+          // Delete phone_units that were created by this purchase to prevent orphan IMEI units
+          const units = await db.select().from(phoneUnits).where(eq(phoneUnits.purchaseId, id));
+          for (const u of units) {
+            if (u.productId === item.productId) {
+              // Only delete units that are still available (not yet sold)
+              if (u.status === "available") {
+                await db.delete(phoneUnits).where(eq(phoneUnits.id, u.id));
+              } else {
+                // Unit was sold — log a warning note movement but don't delete
+                await this.createInventoryMovement({
+                  productId: item.productId,
+                  productName: product?.name ?? "منتج",
+                  type: "note",
+                  quantity: 0,
+                  reference: "purchase_deleted",
+                  referenceId: id,
+                  notes: `تحذير: وحدة IMEI ${u.imei} مباعة من شراء تم حذفه`,
+                });
+              }
+            }
+          }
+          await this.syncPhoneStock(item.productId);
+        } else {
+          // Non-IMEI product: reverse via adjustStock
           await this.adjustStock(
             item.productId,
             item.quantity,
@@ -691,15 +770,32 @@ export class DatabaseStorage implements IStorage {
           }
         }
       } else if (existing.productId) {
-        // Storefront single-product order (no order_items row)
-        await this.adjustStock(
-          existing.productId,
-          existing.quantity ?? 1,
-          "order_out",
-          "order",
-          id,
-          `طلب مؤكد: ${existing.customerName}`,
-        );
+        // CRITICAL FIX 3: Storefront single-product phone order — auto-assign a real phone_unit
+        const product = await this.getProduct(existing.productId);
+        const isPhone = product?.productType === "phone" || product?.productType === "tablet";
+        const availableUnit = isPhone
+          ? (await db.select().from(phoneUnits)
+              .where(and(eq(phoneUnits.productId, existing.productId), eq(phoneUnits.status, "available")))
+              .limit(1))[0]
+          : undefined;
+
+        if (isPhone && availableUnit) {
+          // Lock this specific IMEI unit and mark it sold
+          await this.updatePhoneUnit(availableUnit.id, { status: "sold", soldOrderId: id });
+          // Save the phoneUnitId on the order for future reference (returns, etc.)
+          await db.update(orders).set({ phoneUnitId: availableUnit.id } as any).where(eq(orders.id, id));
+          await this.syncPhoneStock(existing.productId);
+        } else {
+          // Non-IMEI product or phone with no tracked units — fallback to quantity adjustment
+          await this.adjustStock(
+            existing.productId,
+            existing.quantity ?? 1,
+            "order_out",
+            "order",
+            id,
+            `طلب مؤكد: ${existing.customerName}`,
+          );
+        }
       }
       await db.update(orders).set({ stockDeducted: true }).where(eq(orders.id, id));
     }
@@ -715,7 +811,24 @@ export class DatabaseStorage implements IStorage {
             }
           }
         } else if (existing.productId) {
-          await this.adjustStock(existing.productId, existing.quantity ?? 1, "order_out", "order", id, `طلب مسلَّم: ${existing.customerName}`);
+          // FIX 3 fallback at delivered: auto-assign phone unit if not already done
+          const product = await this.getProduct(existing.productId);
+          const isPhone = product?.productType === "phone" || product?.productType === "tablet";
+          const alreadyLinked = (existing as any).phoneUnitId;
+          if (isPhone && !alreadyLinked) {
+            const availableUnit = (await db.select().from(phoneUnits)
+              .where(and(eq(phoneUnits.productId, existing.productId), eq(phoneUnits.status, "available")))
+              .limit(1))[0];
+            if (availableUnit) {
+              await this.updatePhoneUnit(availableUnit.id, { status: "sold", soldOrderId: id });
+              await db.update(orders).set({ phoneUnitId: availableUnit.id } as any).where(eq(orders.id, id));
+              await this.syncPhoneStock(existing.productId);
+            } else {
+              await this.adjustStock(existing.productId, existing.quantity ?? 1, "order_out", "order", id, `طلب مسلَّم: ${existing.customerName}`);
+            }
+          } else {
+            await this.adjustStock(existing.productId, existing.quantity ?? 1, "order_out", "order", id, `طلب مسلَّم: ${existing.customerName}`);
+          }
         }
         await db.update(orders).set({ stockDeducted: true }).where(eq(orders.id, id));
       }
@@ -744,14 +857,21 @@ export class DatabaseStorage implements IStorage {
             }
           }
         } else if (existing.productId) {
-          await this.adjustStock(
-            existing.productId,
-            existing.quantity ?? 1,
-            "return_in",
-            "order_cancelled",
-            id,
-            `إلغاء طلب: ${existing.customerName}`,
-          );
+          // Restore phone_unit if linked, otherwise adjustStock
+          const linkedUnitId = (existing as any).phoneUnitId;
+          if (linkedUnitId) {
+            await this.updatePhoneUnit(linkedUnitId, { status: "available", soldOrderId: null });
+            await this.syncPhoneStock(existing.productId);
+          } else {
+            await this.adjustStock(
+              existing.productId,
+              existing.quantity ?? 1,
+              "return_in",
+              "order_cancelled",
+              id,
+              `إلغاء طلب: ${existing.customerName}`,
+            );
+          }
         }
         await db.update(orders).set({ stockDeducted: false }).where(eq(orders.id, id));
       }
@@ -1174,12 +1294,19 @@ export class DatabaseStorage implements IStorage {
       .where(eq(orders.id, orderId))
       .returning();
 
-    // Fix 1+8: Restore or log stock — dual-path for orderItems vs single-product orders
+    // CRITICAL FIX 2: Restore stock AND phone_unit status for sellable returns
     if (condition === "sellable" && existing.stockDeducted) {
       const items = await this.getOrderItems(orderId);
       if (items.length > 0) {
         for (const item of items) {
-          if (item.productId) {
+          if (!item.productId) continue;
+          const itemAny = item as any;
+          if (itemAny.phoneUnitId) {
+            // Restore the exact IMEI unit back to available — this is the source of truth
+            await this.updatePhoneUnit(itemAny.phoneUnitId, { status: "available", soldOrderId: null });
+            await this.syncPhoneStock(item.productId);
+          } else {
+            // Non-IMEI item: restore via adjustStock
             await this.adjustStock(
               item.productId,
               item.quantity,
@@ -1191,14 +1318,22 @@ export class DatabaseStorage implements IStorage {
           }
         }
       } else if (existing.productId) {
-        await this.adjustStock(
-          existing.productId,
-          existing.quantity ?? 1,
-          "return_in",
-          "delivery_return",
-          orderId,
-          `مرتجع توصيل قابل للبيع - ${reason} — ${existing.customerName}`,
-        );
+        // Single-product storefront order — check if it has a linked phone unit
+        const linkedUnitId = (existing as any).phoneUnitId;
+        if (linkedUnitId) {
+          await this.updatePhoneUnit(linkedUnitId, { status: "available", soldOrderId: null });
+          await this.syncPhoneStock(existing.productId);
+        } else {
+          // No IMEI unit linked — restore stock quantity
+          await this.adjustStock(
+            existing.productId,
+            existing.quantity ?? 1,
+            "return_in",
+            "delivery_return",
+            orderId,
+            `مرتجع توصيل قابل للبيع - ${reason} — ${existing.customerName}`,
+          );
+        }
       }
     }
     // Fix 8: For damaged/inspection, just add an informational note movement (no quantity=0)

@@ -478,7 +478,14 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
 
       <div className="space-y-2">
         <Label className="text-gray-600 text-sm font-semibold">المنتجات</Label>
-        <div className="grid grid-cols-[1fr_80px_100px_36px] gap-2">
+        {/* Column headers */}
+        <div className="grid grid-cols-[1fr_72px_100px_36px] gap-2">
+          <span className="text-[10px] text-gray-400 font-semibold pr-1">المنتج</span>
+          <span className="text-[10px] text-gray-400 font-semibold text-center">الكمية</span>
+          <span className="text-[10px] text-gray-400 font-semibold">سعر الوحدة (د.ج)</span>
+          <span />
+        </div>
+        <div className="grid grid-cols-[1fr_72px_100px_36px] gap-2 items-center">
           <ProductSearchPicker
             products={products}
             onSelect={id => {
@@ -488,16 +495,40 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
             }}
             onAddNew={() => setShowAddProduct(true)}
           />
-          <Input type="number" value={newItem.quantity}
+          <Input
+            type="number"
+            value={newItem.quantity}
             onChange={e => setNewItem(i => ({ ...i, quantity: e.target.value }))}
-            className="bg-white border-gray-200 text-gray-900 text-xs h-8" placeholder="الكمية" min="1" data-testid="input-purchase-item-qty" />
-          <Input type="number" value={newItem.unitCost}
+            className="bg-white border-gray-200 text-gray-900 text-xs h-8 text-center"
+            placeholder="1"
+            min="1"
+            data-testid="input-purchase-item-qty"
+          />
+          <Input
+            type="number"
+            value={newItem.unitCost}
             onChange={e => setNewItem(i => ({ ...i, unitCost: e.target.value }))}
-            className="bg-white border-gray-200 text-gray-900 text-xs h-8" placeholder="سعر الوحدة" data-testid="input-purchase-item-cost" />
-          <Button size="sm" onClick={addItem} disabled={!newItem.productId} className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 px-2 shadow-sm disabled:opacity-40" data-testid="button-add-purchase-item">
+            className={`bg-white text-gray-900 text-xs h-8 ${!newItem.unitCost && newItem.productId ? "border-orange-300 focus-visible:ring-orange-400" : "border-gray-200"}`}
+            placeholder="أدخل السعر"
+            data-testid="input-purchase-item-cost"
+          />
+          <Button
+            size="sm"
+            onClick={addItem}
+            disabled={!newItem.productId || !newItem.unitCost}
+            title={!newItem.productId ? "اختر منتجاً أولاً" : !newItem.unitCost ? "أدخل سعر الوحدة" : "إضافة للقائمة"}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 px-2 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            data-testid="button-add-purchase-item"
+          >
             <Plus className="w-3 h-3" />
           </Button>
         </div>
+        {/* Helper hint */}
+        {newItem.productId && !newItem.unitCost && (
+          <p className="text-[11px] text-orange-500 flex items-center gap-1 mt-0.5">
+            ↑ أدخل سعر الوحدة لتفعيل زر الإضافة
+          </p>
+        )}
 
         {/* IMEI input for phones/tablets */}
         {isPhone(newItem.productType) && newItem.productId && (

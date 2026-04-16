@@ -694,6 +694,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       "defaultDeliveryFee", "defaultShippingCompany",
       "invoiceStoreName", "invoicePhone", "invoiceAddress", "invoiceFooterNote", "invoiceShowLogo",
       "posDefaultPayment", "posAutoPrint",
+      "deliveryEnabled", "showDeliveryPrice",
     ];
     const sanitized: Record<string, string> = {};
     for (const key of ALLOWED) {

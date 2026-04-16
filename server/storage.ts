@@ -1092,8 +1092,9 @@ export class DatabaseStorage implements IStorage {
     const lowStockCount = lowStockProducts.length;
     const newOrdersCount = allOrders.filter(o => o.status === "new").length;
 
-    const paidOrders = allOrders.filter(o => o.status === "paid");
-    const totalRevenue = paidOrders.reduce((sum, o) => sum + parseFloat(o.total as string || "0"), 0);
+    // Revenue = product subtotal only (delivery fees excluded from chiffre d'affaires)
+    // Use profit records which already correctly exclude delivery from revenue
+    const totalRevenue = allProfitRecords.reduce((sum, r) => sum + parseFloat(r.revenue as string || "0"), 0);
 
     // General expenses (not linked to a specific order) must be deducted from total profit
     const generalExpenses = allExpenses.filter(e => !e.relatedOrderId);

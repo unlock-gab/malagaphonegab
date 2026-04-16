@@ -43,18 +43,19 @@ export default function OrderForm({ product, source = "product", idPrefix = "" }
   const { data: settings = {} } = useQuery<Record<string, string>>({ queryKey: ["/api/settings"] });
   const deliveryPrices: DeliveryPrices = settings.deliveryPrices ? JSON.parse(settings.deliveryPrices) : DEFAULT_DELIVERY_PRICES;
   const showDeliveryPrice = settings.showDeliveryPrice !== "false";
+  const deliveryEnabled = settings.deliveryEnabled !== "false";
 
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(orderSchema),
     defaultValues: { customerName: "", customerPhone: "", wilaya: "", quantity: 1, notes: "" },
   });
 
-  const quantity      = form.watch("quantity");
+  const quantity       = form.watch("quantity");
   const selectedWilaya = form.watch("wilaya");
-  const wilayaDelivery = selectedWilaya ? (deliveryPrices[selectedWilaya] || DEFAULT_DELIVERY_PRICES[selectedWilaya]) : null;
+  const wilayaDelivery = deliveryEnabled && selectedWilaya ? (deliveryPrices[selectedWilaya] || DEFAULT_DELIVERY_PRICES[selectedWilaya]) : null;
   const deliveryPrice  = wilayaDelivery ? wilayaDelivery.home : 0;
   const productTotal   = parseFloat(product.price as string) * quantity;
-  const grandTotal     = productTotal + deliveryPrice;
+  const grandTotal     = productTotal + (deliveryEnabled ? deliveryPrice : 0);
   const canDeliver     = !selectedWilaya || deliveryPrice > 0;
 
   const captureAbandoned = async (phone: string) => {
@@ -69,12 +70,16 @@ export default function OrderForm({ product, source = "product", idPrefix = "" }
 
   const orderMutation = useMutation({
     mutationFn: async (data: OrderFormValues) => {
+      const effectiveDelivery = deliveryEnabled ? deliveryPrice : 0;
+      const effectiveTotal = productTotal + effectiveDelivery;
       const res = await apiRequest("POST", "/api/orders", {
         customerName: data.customerName, customerPhone: data.customerPhone,
-        wilaya: data.wilaya, commune: "", deliveryType: "home",
-        deliveryPrice: String(deliveryPrice),
+        wilaya: data.wilaya || "غير محدد", commune: "", deliveryType: "home",
+        deliveryPrice: String(effectiveDelivery),
         productId: product.id, productName: product.name, productImage: product.image,
-        quantity: data.quantity, price: String(product.price), total: String(grandTotal),
+        quantity: data.quantity, price: String(product.price),
+        subtotal: String(productTotal),
+        total: String(effectiveTotal),
         status: "pending", notes: data.notes || null, source,
       });
       return res.json();
@@ -181,25 +186,27 @@ export default function OrderForm({ product, source = "product", idPrefix = "" }
               </FormItem>
             )} />
 
-            {/* Delivery info */}
-            <AnimatePresence>
-              {selectedWilaya && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
-                  <div className={`rounded-xl px-3 py-2.5 text-sm flex items-center justify-between ${canDeliver ? "bg-emerald-50 border border-emerald-100" : "bg-red-50 border border-red-100"}`}>
-                    {canDeliver ? (
-                      <>
-                        <span className="text-emerald-700 flex items-center gap-1.5 text-xs">
-                          <Truck className="w-3.5 h-3.5" /> التوصيل إلى {selectedWilaya}
-                        </span>
-                        {showDeliveryPrice && <span className="font-black text-emerald-700 text-sm">{deliveryPrice} دج</span>}
-                      </>
-                    ) : (
-                      <p className="text-red-600 text-xs font-semibold">⚠️ التوصيل غير متاح لهذه الولاية</p>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* Delivery info — only shown when delivery is enabled */}
+            {deliveryEnabled && (
+              <AnimatePresence>
+                {selectedWilaya && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
+                    <div className={`rounded-xl px-3 py-2.5 text-sm flex items-center justify-between ${canDeliver ? "bg-emerald-50 border border-emerald-100" : "bg-red-50 border border-red-100"}`}>
+                      {canDeliver ? (
+                        <>
+                          <span className="text-emerald-700 flex items-center gap-1.5 text-xs">
+                            <Truck className="w-3.5 h-3.5" /> التوصيل إلى {selectedWilaya}
+                          </span>
+                          {showDeliveryPrice && <span className="font-black text-emerald-700 text-sm">{deliveryPrice} دج</span>}
+                        </>
+                      ) : (
+                        <p className="text-red-600 text-xs font-semibold">⚠️ التوصيل غير متاح لهذه الولاية</p>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            )}
 
             {/* Quantity */}
             <div>
@@ -214,19 +221,29 @@ export default function OrderForm({ product, source = "product", idPrefix = "" }
             </div>
 
             {/* Order total */}
-            {selectedWilaya && canDeliver && showDeliveryPrice && (
+            {deliveryEnabled ? (
+              selectedWilaya && canDeliver && showDeliveryPrice && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  className="bg-gray-50 rounded-xl p-3 border border-gray-100 space-y-1">
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span>المنتج × {quantity}</span>
+                    <span>{productTotal.toLocaleString("ar-DZ")} دج</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span>التوصيل</span>
+                    <span>{deliveryPrice} دج</span>
+                  </div>
+                  <div className="flex justify-between font-black text-blue-700 text-sm pt-2 border-t border-gray-200">
+                    <span>الإجمالي</span>
+                    <span>{grandTotal.toLocaleString("ar-DZ")} دج</span>
+                  </div>
+                </motion.div>
+              )
+            ) : (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                className="bg-gray-50 rounded-xl p-3 border border-gray-100 space-y-1">
-                <div className="flex justify-between text-xs text-gray-500">
-                  <span>المنتج × {quantity}</span>
-                  <span>{productTotal.toLocaleString("ar-DZ")} دج</span>
-                </div>
-                <div className="flex justify-between text-xs text-gray-500">
-                  <span>التوصيل</span>
-                  <span>{deliveryPrice} دج</span>
-                </div>
-                <div className="flex justify-between font-black text-blue-700 text-sm pt-2 border-t border-gray-200">
-                  <span>الإجمالي</span>
+                className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                <div className="flex justify-between font-black text-blue-700 text-sm">
+                  <span>المجموع</span>
                   <span>{grandTotal.toLocaleString("ar-DZ")} دج</span>
                 </div>
               </motion.div>
@@ -234,7 +251,7 @@ export default function OrderForm({ product, source = "product", idPrefix = "" }
 
             {/* Submit */}
             <button type="submit"
-              disabled={orderMutation.isPending || (!!selectedWilaya && !canDeliver)}
+              disabled={orderMutation.isPending || (deliveryEnabled && !!selectedWilaya && !canDeliver)}
               className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-black rounded-xl shadow-md shadow-blue-600/20 transition-all flex items-center justify-center gap-2 text-sm"
               data-testid={`${idPrefix}button-place-order`}>
               {orderMutation.isPending ? (
@@ -242,7 +259,11 @@ export default function OrderForm({ product, source = "product", idPrefix = "" }
               ) : (
                 <>
                   اطلب الآن — الدفع عند الاستلام
-                  {selectedWilaya && canDeliver && showDeliveryPrice && (
+                  {deliveryEnabled ? (
+                    selectedWilaya && canDeliver && showDeliveryPrice && (
+                      <span className="bg-white/20 px-2 py-0.5 rounded-lg text-xs font-black">{grandTotal.toLocaleString("ar-DZ")} دج</span>
+                    )
+                  ) : (
                     <span className="bg-white/20 px-2 py-0.5 rounded-lg text-xs font-black">{grandTotal.toLocaleString("ar-DZ")} دج</span>
                   )}
                 </>

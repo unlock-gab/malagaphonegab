@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Truck, Save, Search, Home, Building2, RotateCcw, TrendingUp, TrendingDown, Eye, EyeOff } from "lucide-react";
+import { Truck, Save, Search, Home, Building2, RotateCcw, Eye, EyeOff, Power, TrendingUp, TrendingDown } from "lucide-react";
 import { ALGERIAN_WILAYAS, DEFAULT_DELIVERY_PRICES, DeliveryPrices } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +14,7 @@ export default function AdminDelivery() {
   const [search, setSearch] = useState("");
   const [prices, setPrices] = useState<DeliveryPrices>({ ...DEFAULT_DELIVERY_PRICES });
   const [showDeliveryPrice, setShowDeliveryPrice] = useState(true);
+  const [deliveryEnabled, setDeliveryEnabled] = useState(true);
 
   const { data: settings } = useQuery<Record<string, string>>({ queryKey: ["/api/settings"] });
 
@@ -27,7 +28,21 @@ export default function AdminDelivery() {
     if (settings?.showDeliveryPrice !== undefined) {
       setShowDeliveryPrice(settings.showDeliveryPrice !== "false");
     }
+    if (settings?.deliveryEnabled !== undefined) {
+      setDeliveryEnabled(settings.deliveryEnabled !== "false");
+    }
   }, [settings]);
+
+  const toggleDeliveryMutation = useMutation({
+    mutationFn: async (value: boolean) => {
+      const res = await apiRequest("PATCH", "/api/settings", { deliveryEnabled: String(value) });
+      return res.json();
+    },
+    onSuccess: (_, value) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      toast({ title: value ? "✓ التوصيل مفعّل — يظهر للزبائن الآن" : "✓ التوصيل معطّل — لن يظهر للزبائن" });
+    },
+  });
 
   const toggleVisibilityMutation = useMutation({
     mutationFn: async (value: boolean) => {
@@ -36,7 +51,7 @@ export default function AdminDelivery() {
     },
     onSuccess: (_, value) => {
       queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
-      toast({ title: value ? t("success") : t("success") });
+      toast({ title: value ? "✓ سعر التوصيل مرئي" : "✓ سعر التوصيل مخفي" });
     },
   });
 
@@ -102,6 +117,19 @@ export default function AdminDelivery() {
             <p className="text-gray-500 text-xs mt-0.5">{t("delivery_sub")}</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Global ON/OFF Toggle */}
+            <button
+              onClick={() => { const v = !deliveryEnabled; setDeliveryEnabled(v); toggleDeliveryMutation.mutate(v); }}
+              disabled={toggleDeliveryMutation.isPending}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 transition-all text-sm font-bold shadow-sm ${
+                deliveryEnabled
+                  ? "border-emerald-400 bg-emerald-500 text-white hover:bg-emerald-600"
+                  : "border-red-300 bg-red-50 text-red-600 hover:bg-red-100"
+              }`}
+              data-testid="button-toggle-delivery-enabled">
+              <Power className="w-4 h-4" />
+              {deliveryEnabled ? "ON — التوصيل مفعّل" : "OFF — التوصيل معطّل"}
+            </button>
             <button
               onClick={() => { const v = !showDeliveryPrice; setShowDeliveryPrice(v); toggleVisibilityMutation.mutate(v); }}
               disabled={toggleVisibilityMutation.isPending}
@@ -127,6 +155,17 @@ export default function AdminDelivery() {
             </Button>
           </div>
         </div>
+
+        {/* Delivery disabled warning banner */}
+        {!deliveryEnabled && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
+            <Power className="w-5 h-5 text-red-500 shrink-0" />
+            <div>
+              <p className="text-red-700 font-bold text-sm">التوصيل معطّل حالياً</p>
+              <p className="text-red-500 text-xs mt-0.5">لن تظهر خيارات التوصيل للزبائن في المتجر. جميع الطلبات ستُسجَّل بدون رسوم توصيل.</p>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <div className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">

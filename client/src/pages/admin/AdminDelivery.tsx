@@ -57,6 +57,29 @@ export default function AdminDelivery() {
     toast({ title: t("success") });
   };
 
+  const resetToZeroMutation = useMutation({
+    mutationFn: async () => {
+      const zeroed: DeliveryPrices = {};
+      ALGERIAN_WILAYAS.forEach(w => { zeroed[w] = { home: 0, desk: 0 }; });
+      const res = await apiRequest("PATCH", "/api/settings", { deliveryPrices: JSON.stringify(zeroed) });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      const zeroed: DeliveryPrices = {};
+      ALGERIAN_WILAYAS.forEach(w => { zeroed[w] = { home: 0, desk: 0 }; });
+      setPrices(zeroed);
+      toast({ title: t("success") });
+    },
+    onError: () => toast({ title: t("failed"), variant: "destructive" }),
+  });
+
+  const handleResetToZero = () => {
+    if (window.confirm(t("reset_to_zero_confirm"))) {
+      resetToZeroMutation.mutate();
+    }
+  };
+
   const updatePrice = (wilaya: string, type: "home" | "desk", value: string) => {
     const num = parseInt(value) || 0;
     setPrices(prev => ({ ...prev, [wilaya]: { ...(prev[wilaya] || { home: 0, desk: 0 }), [type]: num } }));
@@ -91,6 +114,11 @@ export default function AdminDelivery() {
               className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-all text-sm font-medium"
               data-testid="button-reset-delivery">
               <RotateCcw className="w-4 h-4" /> {t("reset")}
+            </button>
+            <button onClick={handleResetToZero} disabled={resetToZeroMutation.isPending}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 hover:border-red-300 transition-all text-sm font-medium disabled:opacity-50"
+              data-testid="button-reset-zero-delivery">
+              <RotateCcw className="w-4 h-4" /> {t("reset_to_zero")}
             </button>
             <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}
               className="bg-blue-600 hover:bg-blue-700 text-white gap-2 shadow-sm text-sm" data-testid="button-save-delivery">

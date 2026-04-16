@@ -392,6 +392,8 @@ const T = {
   desk_delivery:          { fr: "Au bureau",                  ar: "توصيل للمكتب" },
   reset_default:          { fr: "Réinitialiser",              ar: "إعادة التعيين" },
   reset:                  { fr: "Réinitialiser",              ar: "إعادة الضبط" },
+  reset_to_zero:          { fr: "Tout mettre à 0 DA",         ar: "تصفير جميع الأسعار" },
+  reset_to_zero_confirm:  { fr: "Confirmer la mise à zéro ? Tous les tarifs de livraison seront mis à 0 DA et sauvegardés.", ar: "هل تريد تصفير جميع أسعار التوصيل وحفظها؟ لا يمكن التراجع." },
   show_delivery_price:    { fr: "Afficher les tarifs",        ar: "إظهار أسعار التوصيل" },
   hide_delivery_price:    { fr: "Masquer les tarifs",         ar: "إخفاء أسعار التوصيل" },
   delivery_saved:         { fr: "Tarifs enregistrés",         ar: "تم حفظ الأسعار" },

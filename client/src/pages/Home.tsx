@@ -77,56 +77,6 @@ export default function Home() {
         </section>
       )}
 
-      {/* ── CATEGORIES ── */}
-      <Appear className="py-14 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <SectionHead title="تسوق حسب الفئة" sub="اختر الفئة التي تبحث عنها" />
-        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-          {categories.slice(0, 8).map((cat, i) => {
-            const Icon = CAT_ICONS[cat.icon] ?? Smartphone;
-            return (
-              <Link key={cat.id} href={`/products?category=${cat.slug}`}>
-                <motion.div whileHover={{ y: -5, scale: 1.04 }} whileTap={{ scale: 0.97 }}
-                  className="group cursor-pointer text-center">
-                  <div className="aspect-square rounded-2xl flex items-center justify-center mb-2 border border-gray-100 group-hover:border-blue-200 group-hover:shadow-md transition-all"
-                    style={{ background: `linear-gradient(135deg, ${cat.color}15, ${cat.color}25)` }}>
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm" style={{ background: cat.color }}>
-                      <Icon className="w-5 h-5 text-white" />
-                    </div>
-                  </div>
-                  <p className="text-xs font-semibold text-gray-700 group-hover:text-blue-600 transition-colors leading-tight">{cat.name}</p>
-                </motion.div>
-              </Link>
-            );
-          })}
-        </div>
-      </Appear>
-
-      {/* ── TRUST BAR ── */}
-      <div className="bg-white border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {[
-              { icon: Truck,         title: "توصيل لكل الجزائر",    desc: "58 ولاية — منزل أو مكتب",    color: "text-blue-600 bg-blue-50" },
-              { icon: Shield,        title: "الدفع عند الاستلام",    desc: "لا دفع مسبق — آمن 100%",      color: "text-indigo-600 bg-indigo-50" },
-              { icon: CheckCircle2,  title: "ضمان معتمد",            desc: "على جميع المنتجات",            color: "text-emerald-600 bg-emerald-50" },
-              { icon: MessageCircle, title: "دعم واتساب",            desc: "رد خلال دقائق",               color: "text-green-600 bg-green-50" },
-            ].map((f, i) => (
-              <motion.div key={i} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-                transition={{ delay: i * 0.08 }}
-                className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 border border-gray-100">
-                <div className={`w-10 h-10 flex-shrink-0 rounded-xl flex items-center justify-center ${f.color}`}>
-                  <f.icon className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-gray-800 leading-none mb-0.5">{f.title}</p>
-                  <p className="text-xs text-gray-500">{f.desc}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </div>
-
       {/* ── FEATURED ── */}
       {featured.length > 0 && (
         <Appear className="py-12 bg-gray-50/70 border-y border-gray-100">
@@ -272,6 +222,56 @@ export default function Home() {
           </div>
         </div>
       </Appear>
+
+      {/* ── CATEGORIES ── */}
+      <Appear className="py-14 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <SectionHead title="تسوق حسب الفئة" sub="اختر الفئة التي تبحث عنها" />
+        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+          {categories.slice(0, 8).map((cat, i) => {
+            const Icon = CAT_ICONS[cat.icon] ?? Smartphone;
+            return (
+              <Link key={cat.id} href={`/products?category=${cat.slug}`}>
+                <motion.div whileHover={{ y: -5, scale: 1.04 }} whileTap={{ scale: 0.97 }}
+                  className="group cursor-pointer text-center">
+                  <div className="aspect-square rounded-2xl flex items-center justify-center mb-2 border border-gray-100 group-hover:border-blue-200 group-hover:shadow-md transition-all"
+                    style={{ background: `linear-gradient(135deg, ${cat.color}15, ${cat.color}25)` }}>
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm" style={{ background: cat.color }}>
+                      <Icon className="w-5 h-5 text-white" />
+                    </div>
+                  </div>
+                  <p className="text-xs font-semibold text-gray-700 group-hover:text-blue-600 transition-colors leading-tight">{cat.name}</p>
+                </motion.div>
+              </Link>
+            );
+          })}
+        </div>
+      </Appear>
+
+      {/* ── TRUST BAR ── */}
+      <div className="bg-white border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {[
+              { icon: Truck,         title: "توصيل لكل الجزائر",    desc: "58 ولاية — منزل أو مكتب",    color: "text-blue-600 bg-blue-50" },
+              { icon: Shield,        title: "الدفع عند الاستلام",    desc: "لا دفع مسبق — آمن 100%",      color: "text-indigo-600 bg-indigo-50" },
+              { icon: CheckCircle2,  title: "ضمان معتمد",            desc: "على جميع المنتجات",            color: "text-emerald-600 bg-emerald-50" },
+              { icon: MessageCircle, title: "دعم واتساب",            desc: "رد خلال دقائق",               color: "text-green-600 bg-green-50" },
+            ].map((f, i) => (
+              <motion.div key={i} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+                transition={{ delay: i * 0.08 }}
+                className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 border border-gray-100">
+                <div className={`w-10 h-10 flex-shrink-0 rounded-xl flex items-center justify-center ${f.color}`}>
+                  <f.icon className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-gray-800 leading-none mb-0.5">{f.title}</p>
+                  <p className="text-xs text-gray-500">{f.desc}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* ── WHATSAPP CTA ── */}
       <section className="py-14 bg-gradient-to-r from-green-700 to-emerald-700 relative overflow-hidden">

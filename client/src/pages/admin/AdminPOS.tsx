@@ -153,8 +153,12 @@ export default function AdminPOS() {
       const unit = allPhoneUnits.find(u => u.status === "available" && u.imei === trimmed);
       if (unit) {
         const prod = products.find(p => p.id === unit.productId);
-        if (prod) {
+        if (prod && prod.stock > 0) {
           addPhoneUnitToCart(prod, unit);
+          setSearch("");
+          return;
+        } else if (prod && prod.stock <= 0) {
+          toast({ title: "هذا الهاتف نفد من المخزون", variant: "destructive" });
           setSearch("");
           return;
         }
@@ -317,7 +321,9 @@ export default function AdminPOS() {
   // ── Product availability badge ────────────────────────────────────────────
   const getAvailableCount = (product: Product) => {
     if (PHONE_TYPES.has(product.productType ?? "") && hasImeiTracking(product)) {
-      return allPhoneUnits.filter(u => u.productId === product.id && u.status === "available").length;
+      const imeiAvailable = allPhoneUnits.filter(u => u.productId === product.id && u.status === "available").length;
+      // Cap by product.stock to handle desync (e.g. stock deducted by non-IMEI order)
+      return Math.min(imeiAvailable, product.stock);
     }
     return product.stock;
   };

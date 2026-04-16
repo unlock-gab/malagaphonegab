@@ -132,6 +132,7 @@ function ProductPickerInline({ products, onSelect }: {
 }
 
 function NewOrderDialog({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const { dir } = useAdminLang();
   const { toast } = useToast();
   const { data: products = [] } = useQuery<Product[]>({ queryKey: ["/api/products"] });
   const { data: settings = {} } = useQuery<any>({ queryKey: ["/api/settings"] });

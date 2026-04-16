@@ -65,6 +65,7 @@ function PhoneUnitPicker({ product, units, onSelect, onClose }: {
   onSelect: (unit: PhoneUnit) => void;
   onClose: () => void;
 }) {
+  const { dir } = useAdminLang();
   const [search, setSearch] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => { inputRef.current?.focus(); }, []);
@@ -173,6 +174,7 @@ function PhoneUnitPicker({ product, units, onSelect, onClose }: {
 
 // ─── Success Screen ────────────────────────────────────────────────────────────
 function SaleSuccess({ order, onPrint, onNew }: { order: Order; onPrint: () => void; onNew: () => void }) {
+  const { dir } = useAdminLang();
   return (
     <div className="fixed inset-0 bg-white/95 backdrop-blur-sm z-50 flex items-center justify-center" dir={dir}>
       <div className="bg-white border border-gray-200 rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4 text-center">

@@ -59,6 +59,7 @@ const CONDITIONS = [
 function QuickAddProductDialog({ onCreated, onClose }: {
   onCreated: (p: Product, imeis: string[]) => void; onClose: () => void;
 }) {
+  const { dir } = useAdminLang();
   const { toast } = useToast();
   const [form, setForm] = useState({ name: "", productType: "phone", condition: "new", price: "", costPrice: "" });
   const setF = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
@@ -378,6 +379,7 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
   onSave: (d: any) => void; onCancel: () => void; loading: boolean;
   suppliers: Supplier[]; products: Product[];
 }) {
+  const { dir } = useAdminLang();
   const [form, setForm] = useState({
     supplierId: "", supplierName: "", referenceNumber: "", status: "pending",
     extraCosts: "", purchaseDate: new Date().toISOString().split("T")[0], notes: "",
@@ -699,6 +701,7 @@ function ViewPurchaseDialog({ purchase, onClose, onComplete, onCancel: onCancelP
   purchase: any; onClose: () => void;
   onComplete: () => void; onCancel: () => void; onDelete: () => void;
 }) {
+  const { dir } = useAdminLang();
   const { data: full, isLoading } = useQuery<any>({
     queryKey: ["/api/purchases", purchase.id],
     queryFn: () => fetch(`/api/purchases/${purchase.id}`, { credentials: "include" }).then(r => r.json()),

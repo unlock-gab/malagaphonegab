@@ -4,7 +4,7 @@ import {
   Search, ShoppingCart, Trash2, Plus, Minus, CheckCircle,
   Smartphone, Package, X, CreditCard, Banknote, ChevronLeft,
   User, Phone, Tag, Loader2, Zap, Printer, ReceiptText, Battery,
-  ScanLine, AlertCircle,
+  ScanLine, AlertCircle, Store, Truck, MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import AdminLayout from "./AdminLayout";
 import { useAdminLang } from "@/context/AdminLangContext";
 import OrderInvoice from "@/components/OrderInvoice";
 import type { Product, PhoneUnit, Order } from "@shared/schema";
+import { ALGERIAN_WILAYAS } from "@shared/schema";
 
 function formatCurrency(v: number) {
   return new Intl.NumberFormat("ar-DZ").format(Math.round(v)) + " د.ج";
@@ -234,6 +235,10 @@ export default function AdminPOS() {
   const [receiptOrder, setReceiptOrder] = useState<Order | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<Order | null>(null);
+  const [saleType, setSaleType] = useState<"magasin" | "livraison">("magasin");
+  const [posWilaya, setPosWilaya] = useState("الجزائر");
+  const [posAddress, setPosAddress] = useState("");
+  const [posDeliveryPrice, setPosDeliveryPrice] = useState("");
 
   useEffect(() => { searchRef.current?.focus(); }, []);
 
@@ -363,7 +368,8 @@ export default function AdminPOS() {
   // ── Totals ────────────────────────────────────────────────────────────────
   const subtotal = cart.reduce((s, c) => s + c.total, 0);
   const discountAmount = parseFloat(discount) || 0;
-  const total = Math.max(0, subtotal - discountAmount);
+  const deliveryAmount = saleType === "livraison" ? (parseFloat(posDeliveryPrice) || 0) : 0;
+  const total = Math.max(0, subtotal - discountAmount + deliveryAmount);
 
   // ── Checkout mutation ─────────────────────────────────────────────────────
   const checkoutMutation = useMutation({
@@ -379,20 +385,21 @@ export default function AdminPOS() {
         phoneUnitId: c.phoneUnitId ?? null,
         imei: c.imei ?? null,
       }));
+      const isLivraison = saleType === "livraison";
       const res = await apiRequest("POST", "/api/admin/orders", {
-        customerName: customerName || "زبون متجر",
+        customerName: customerName || (isLivraison ? "زبون توصيل" : "زبون متجر"),
         customerPhone: customerPhone || "0000000000",
-        wilaya: "الجزائر",
-        commune: "متجر",
-        address: "كاشير - بيع مباشر",
-        deliveryType: "pickup",
-        deliveryPrice: "0",
+        wilaya: isLivraison ? posWilaya : "الجزائر",
+        commune: isLivraison ? "" : "متجر",
+        address: isLivraison ? (posAddress || posWilaya) : "كاشير - بيع مباشر",
+        deliveryType: isLivraison ? "home" : "pickup",
+        deliveryPrice: isLivraison ? (parseFloat(posDeliveryPrice) || 0).toFixed(2) : "0",
         subtotal: subtotal.toFixed(2),
         total: total.toFixed(2),
         discount: discountAmount.toFixed(2),
-        paymentMethod,
-        paymentStatus: "paid",
-        status: "delivered",
+        paymentMethod: isLivraison ? "cash_on_delivery" : paymentMethod,
+        paymentStatus: isLivraison ? "pending" : "paid",
+        status: isLivraison ? "confirmed" : "delivered",
         source: "pos",
         notes: notes || null,
         items,
@@ -411,6 +418,10 @@ export default function AdminPOS() {
       setCustomerPhone("");
       setNotes("");
       setSearch("");
+      setSaleType("magasin");
+      setPosWilaya("الجزائر");
+      setPosAddress("");
+      setPosDeliveryPrice("");
       setCompletedOrder(order);
       setShowSuccess(true);
       searchRef.current?.focus();
@@ -659,6 +670,70 @@ export default function AdminPOS() {
                 </div>
               </div>
 
+              {/* ── Sale Type Toggle: Magasin / Livraison ── */}
+              <div className="px-4 pb-2">
+                <div className="grid grid-cols-2 gap-1.5">
+                  {[
+                    { value: "magasin" as const,   label: "Magasin",   icon: <Store className="w-3.5 h-3.5" />,  color: "blue" },
+                    { value: "livraison" as const, label: "Livraison", icon: <Truck className="w-3.5 h-3.5" />,  color: "orange" },
+                  ].map(opt => (
+                    <button key={opt.value} onClick={() => setSaleType(opt.value)}
+                      className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl border-2 text-xs font-bold transition-all ${
+                        saleType === opt.value
+                          ? opt.color === "blue"
+                            ? "border-blue-500 bg-blue-50 text-blue-700"
+                            : "border-orange-500 bg-orange-50 text-orange-700"
+                          : "border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300 hover:bg-gray-100"
+                      }`}
+                      data-testid={`button-sale-type-${opt.value}`}>
+                      {opt.icon}
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Livraison Fields */}
+                {saleType === "livraison" && (
+                  <div className="mt-2 space-y-2 animate-in slide-in-from-top-2 duration-200">
+                    <Select value={posWilaya} onValueChange={setPosWilaya}>
+                      <SelectTrigger className="h-9 text-xs border-orange-200 focus:ring-orange-300 bg-orange-50" data-testid="select-pos-wilaya">
+                        <MapPin className="w-3 h-3 text-orange-400 mr-1 flex-shrink-0" />
+                        <SelectValue placeholder="اختر الولاية..." />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-48">
+                        {ALGERIAN_WILAYAS.map(w => (
+                          <SelectItem key={w} value={w} className="text-xs">{w}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="relative">
+                        <MapPin className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
+                        <Input
+                          value={posAddress}
+                          onChange={e => setPosAddress(e.target.value)}
+                          placeholder="العنوان التفصيلي"
+                          className="bg-gray-50 border-gray-200 text-gray-800 text-xs h-9 pr-7 placeholder:text-gray-400 rounded-lg"
+                          data-testid="input-pos-address"
+                        />
+                      </div>
+                      <div className="relative">
+                        <Truck className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-orange-400" />
+                        <Input
+                          type="number"
+                          value={posDeliveryPrice}
+                          onChange={e => setPosDeliveryPrice(e.target.value)}
+                          placeholder="سعر التوصيل"
+                          min="0"
+                          className="bg-orange-50 border-orange-200 text-gray-800 text-xs h-9 pr-7 placeholder:text-gray-400 rounded-lg"
+                          data-testid="input-pos-delivery-price"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Payment method */}
               <div className="px-4 pb-2">
                 <div className="grid grid-cols-3 gap-1.5">
@@ -714,9 +789,17 @@ export default function AdminPOS() {
                         <span className="font-bold tabular-nums">− {formatCurrency(discountAmount)}</span>
                       </div>
                     )}
+                    {saleType === "livraison" && deliveryAmount > 0 && (
+                      <div className="flex justify-between text-xs text-orange-600">
+                        <span className="flex items-center gap-1"><Truck className="w-3 h-3" />توصيل</span>
+                        <span className="font-bold tabular-nums">+ {formatCurrency(deliveryAmount)}</span>
+                      </div>
+                    )}
                   </div>
-                  <div className="bg-blue-600 px-3 py-2.5 flex items-center justify-between">
-                    <span className="text-white text-sm font-bold">الإجمالي</span>
+                  <div className={`px-3 py-2.5 flex items-center justify-between ${saleType === "livraison" ? "bg-orange-500" : "bg-blue-600"}`}>
+                    <span className="text-white text-sm font-bold flex items-center gap-1">
+                      {saleType === "livraison" ? <><Truck className="w-3.5 h-3.5" />الإجمالي مع التوصيل</> : "الإجمالي"}
+                    </span>
                     <span className="text-white font-black text-lg tabular-nums">{formatCurrency(total)}</span>
                   </div>
                 </div>
@@ -727,12 +810,18 @@ export default function AdminPOS() {
                 <Button
                   onClick={() => checkoutMutation.mutate()}
                   disabled={cart.length === 0 || checkoutMutation.isPending}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm h-12 shadow-lg shadow-emerald-200/60 disabled:opacity-40 gap-2 rounded-xl"
+                  className={`w-full text-white font-black text-sm h-12 shadow-lg disabled:opacity-40 gap-2 rounded-xl transition-all ${
+                    saleType === "livraison"
+                      ? "bg-orange-500 hover:bg-orange-600 shadow-orange-200/60"
+                      : "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200/60"
+                  }`}
                   data-testid="button-pos-checkout">
                   {checkoutMutation.isPending ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" />جاري الدفع...</>
+                    <><Loader2 className="w-4 h-4 animate-spin" />جاري المعالجة...</>
                   ) : cart.length === 0 ? (
                     <><ShoppingCart className="w-4 h-4 opacity-50" />أضف منتجاً للمتابعة</>
+                  ) : saleType === "livraison" ? (
+                    <><Truck className="w-5 h-5" />إنشاء طلب توصيل — {formatCurrency(total)}</>
                   ) : (
                     <><CheckCircle className="w-5 h-5" />تأكيد البيع — {formatCurrency(total)}</>
                   )}

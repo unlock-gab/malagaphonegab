@@ -5,6 +5,7 @@ import { ShoppingCart, Phone, MapPin, Package, Clock, Trash2, Search, X } from "
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import AdminLayout from "./AdminLayout";
+import { useAdminLang } from "@/context/AdminLangContext";
 
 type AbandonedCart = {
   id: string;
@@ -19,6 +20,7 @@ type AbandonedCart = {
 };
 
 export default function AdminAbandoned() {
+  const { dir } = useAdminLang();
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -57,7 +59,7 @@ export default function AdminAbandoned() {
 
   return (
     <AdminLayout>
-      <div>
+      <div dir={dir}>
         <div className="mb-8">
           <h1 className="text-3xl font-black text-white mb-1 flex items-center gap-3">
             <ShoppingCart className="w-8 h-8 text-orange-400" />

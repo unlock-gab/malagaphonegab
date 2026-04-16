@@ -5,58 +5,63 @@ import {
   Menu, Bell, Settings, Truck, Users, LogOut, Loader2,
   ShoppingBag, Building2, Tags, Star, Smartphone,
   TrendingUp, Boxes, Home, Receipt, ChevronRight, BarChart3, Shield, Zap,
+  Languages,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
+import { useAdminLang } from "@/context/AdminLangContext";
 import { ORDER_STATUSES } from "@shared/schema";
 
-const navSections = [
-  {
-    label: "الرئيسية",
-    items: [
-      { icon: LayoutDashboard, label: "لوحة التحكم", href: "/admin" },
-    ],
-  },
-  {
-    label: "المنتجات",
-    items: [
-      { icon: Smartphone,  label: "المنتجات",  href: "/admin/products" },
-      { icon: Tags,        label: "الفئات",     href: "/admin/categories" },
-      { icon: Star,        label: "الماركات",   href: "/admin/brands" },
-    ],
-  },
-  {
-    label: "المشتريات والمخزون",
-    items: [
-      { icon: Building2,   label: "الموردون",   href: "/admin/suppliers" },
-      { icon: ShoppingBag, label: "المشتريات",  href: "/admin/purchases" },
-      { icon: Boxes,       label: "المخزون",    href: "/admin/inventory" },
-    ],
-  },
-  {
-    label: "المبيعات والمالية",
-    items: [
-      { icon: Receipt,    label: "المصاريف",  href: "/admin/expenses" },
-      { icon: TrendingUp, label: "الأرباح",   href: "/admin/profit" },
-      { icon: BarChart3,  label: "التقارير",  href: "/admin/reports" },
-      { icon: Users,      label: "الزبائن",   href: "/admin/customers" },
-      { icon: Shield,     label: "ما بعد البيع", href: "/admin/after-sale" },
-    ],
-  },
-  {
-    label: "الإدارة",
-    items: [
-      { icon: Users,     label: "المؤكدون",        href: "/admin/confirmateurs" },
-      { icon: Truck,     label: "أسعار التوصيل",  href: "/admin/delivery" },
-      { icon: Building2, label: "شركات التوصيل",  href: "/admin/shippers" },
-      { icon: Settings,  label: "الإعدادات",       href: "/admin/settings" },
-    ],
-  },
-];
+function buildNavSections(t: (k: any) => string) {
+  return [
+    {
+      label: t("nav_home"),
+      items: [
+        { icon: LayoutDashboard, label: t("nav_dashboard"), href: "/admin" },
+      ],
+    },
+    {
+      label: t("nav_products_section"),
+      items: [
+        { icon: Smartphone,  label: t("nav_products"),    href: "/admin/products" },
+        { icon: Tags,        label: t("nav_categories"),  href: "/admin/categories" },
+        { icon: Star,        label: t("nav_brands"),      href: "/admin/brands" },
+      ],
+    },
+    {
+      label: t("nav_purchases_section"),
+      items: [
+        { icon: Building2,   label: t("nav_suppliers"),  href: "/admin/suppliers" },
+        { icon: ShoppingBag, label: t("nav_purchases"),  href: "/admin/purchases" },
+        { icon: Boxes,       label: t("nav_inventory"),  href: "/admin/inventory" },
+      ],
+    },
+    {
+      label: t("nav_sales_section"),
+      items: [
+        { icon: Receipt,    label: t("nav_expenses"),    href: "/admin/expenses" },
+        { icon: TrendingUp, label: t("nav_profit"),      href: "/admin/profit" },
+        { icon: BarChart3,  label: t("nav_reports"),     href: "/admin/reports" },
+        { icon: Users,      label: t("nav_customers"),   href: "/admin/customers" },
+        { icon: Shield,     label: t("nav_after_sale"),  href: "/admin/after-sale" },
+      ],
+    },
+    {
+      label: t("nav_admin_section"),
+      items: [
+        { icon: Users,     label: t("nav_confirmateurs"), href: "/admin/confirmateurs" },
+        { icon: Truck,     label: t("nav_delivery"),      href: "/admin/delivery" },
+        { icon: Building2, label: t("nav_shippers"),      href: "/admin/shippers" },
+        { icon: Settings,  label: t("nav_settings"),      href: "/admin/settings" },
+      ],
+    },
+  ];
+}
 
-function OrdersSubmenu({ counts, location, navigate, onClose }: {
-  counts: Record<string, number>; location: string; navigate: (to: string) => void; onClose?: () => void;
+function OrdersSubmenu({ counts, location, navigate, onClose, t, salesLabel }: {
+  counts: Record<string, number>; location: string; navigate: (to: string) => void;
+  onClose?: () => void; t: (k: any) => string; salesLabel: string;
 }) {
   const isOnOrders = location.startsWith("/admin/orders");
   const [open, setOpen] = useState(isOnOrders);
@@ -76,7 +81,7 @@ function OrdersSubmenu({ counts, location, navigate, onClose }: {
         data-testid="nav-admin-orders"
       >
         <ShoppingCart className={`w-4 h-4 flex-shrink-0 ${isOnOrders ? "text-blue-600" : "text-gray-400 group-hover:text-gray-600"}`} />
-        <span className="flex-1 text-right">الطلبات</span>
+        <span className="flex-1 text-start">{t("nav_orders")}</span>
         {(counts.all ?? 0) > 0 && (
           <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded min-w-[18px] text-center ${
             isOnOrders ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-500"
@@ -94,13 +99,13 @@ function OrdersSubmenu({ counts, location, navigate, onClose }: {
             transition={{ duration: 0.18 }}
             className="overflow-hidden"
           >
-            <div className="mr-5 mb-1 border-r-2 border-gray-100 pr-3 space-y-0.5 py-0.5">
+            <div className="ms-5 mb-1 border-s-2 border-gray-100 ps-3 space-y-0.5 py-0.5">
               <button onClick={() => { navigate("/admin/orders"); onClose?.(); }}
                 className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs transition-all ${
                   currentSearch === "all" && isOnOrders ? "bg-blue-50 text-blue-700 font-semibold" : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                 }`} data-testid="nav-orders-status-all">
                 <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-gray-400" />
-                <span className="flex-1 text-right">جميع الطلبات</span>
+                <span className="flex-1 text-start">{t("nav_all_orders")}</span>
                 <span className="text-[10px] bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">{counts.all ?? 0}</span>
               </button>
               {ORDER_STATUSES.map(s => (
@@ -110,7 +115,7 @@ function OrdersSubmenu({ counts, location, navigate, onClose }: {
                     currentSearch === s.key && isOnOrders ? "bg-blue-50 text-blue-700 font-semibold" : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                   }`} data-testid={`nav-orders-status-${s.key}`}>
                   <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${s.dot}`} />
-                  <span className="flex-1 text-right">{s.label}</span>
+                  <span className="flex-1 text-start">{s.label}</span>
                   <span className="text-[10px] bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">{counts[s.key] ?? 0}</span>
                 </button>
               ))}
@@ -150,13 +155,14 @@ const renderNavItem = (item: { icon: any; label: string; href: string }, locatio
   );
 };
 
-function NavContent({ location, orderCounts, navigate, onClose }: {
-  location: string; orderCounts: Record<string, number>; navigate: (to: string) => void; onClose?: () => void;
+function NavContent({ location, orderCounts, navigate, onClose, t }: {
+  location: string; orderCounts: Record<string, number>; navigate: (to: string) => void;
+  onClose?: () => void; t: (k: any) => string;
 }) {
+  const navSections = buildNavSections(t);
   const isPOS = location === "/admin/pos";
   return (
     <div className="space-y-5">
-      {/* POS Quick Button */}
       <Link href="/admin/pos">
         <div onClick={onClose}
           className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl cursor-pointer transition-all text-sm font-black shadow-sm border ${
@@ -166,7 +172,7 @@ function NavContent({ location, orderCounts, navigate, onClose }: {
           }`}
           data-testid="nav-admin-pos">
           <Zap className="w-4 h-4 flex-shrink-0" />
-          <span className="flex-1">نقطة البيع POS</span>
+          <span className="flex-1">{t("nav_pos")}</span>
         </div>
       </Link>
 
@@ -175,9 +181,9 @@ function NavContent({ location, orderCounts, navigate, onClose }: {
           <div className="text-gray-400 text-[9px] font-bold uppercase tracking-[0.12em] mb-1.5 px-3">
             {section.label}
           </div>
-          {section.label === "المبيعات والمالية"
+          {section.label === t("nav_sales_section")
             ? <>
-                <OrdersSubmenu counts={orderCounts} location={location} navigate={navigate} onClose={onClose} />
+                <OrdersSubmenu counts={orderCounts} location={location} navigate={navigate} onClose={onClose} t={t} salesLabel={section.label} />
                 {section.items.map(item => renderNavItem(item, location, onClose))}
               </>
             : section.items.map(item => renderNavItem(item, location, onClose))
@@ -188,7 +194,7 @@ function NavContent({ location, orderCounts, navigate, onClose }: {
   );
 }
 
-function SidebarHeader() {
+function SidebarHeader({ t }: { t: (k: any) => string }) {
   return (
     <div className="px-3 py-3 border-b border-gray-100">
       <div className="flex flex-col items-center gap-1.5">
@@ -197,19 +203,45 @@ function SidebarHeader() {
         </div>
         <div className="text-center">
           <div className="text-gray-900 font-black text-xs tracking-tight leading-tight">MALAGA <span className="text-blue-600">PHONE</span></div>
-          <div className="text-gray-400 text-[9px] leading-tight">لوحة الإدارة</div>
+          <div className="text-gray-400 text-[9px] leading-tight">{t("nav_admin_panel")}</div>
         </div>
       </div>
     </div>
   );
 }
 
-function SidebarFooter({ user, onLogout }: { user: any; onLogout: () => void }) {
+function LangSwitcher() {
+  const { lang, setLang } = useAdminLang();
+  return (
+    <div className="flex items-center gap-1 px-3 py-2">
+      <Languages className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+      <div className="flex flex-1 rounded-lg overflow-hidden border border-gray-200 text-[10px] font-bold">
+        <button
+          onClick={() => setLang("fr")}
+          className={`flex-1 py-1 transition-all ${lang === "fr" ? "bg-blue-600 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}
+          data-testid="button-lang-fr"
+        >
+          FR
+        </button>
+        <button
+          onClick={() => setLang("ar")}
+          className={`flex-1 py-1 transition-all ${lang === "ar" ? "bg-blue-600 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}
+          data-testid="button-lang-ar"
+        >
+          AR
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SidebarFooter({ user, onLogout, t }: { user: any; onLogout: () => void; t: (k: any) => string }) {
   return (
     <div className="p-3 border-t border-gray-100">
+      <LangSwitcher />
       <div className="flex items-center gap-2.5 px-2 py-2 mb-1">
         <div className="w-7 h-7 bg-blue-600 rounded-md flex items-center justify-center text-white font-black text-xs shrink-0">
-          {user?.name?.charAt(0) || "أ"}
+          {user?.name?.charAt(0) || "A"}
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-gray-800 text-xs font-bold truncate leading-tight">{user?.name}</p>
@@ -219,14 +251,14 @@ function SidebarFooter({ user, onLogout }: { user: any; onLogout: () => void }) 
       <Link href="/">
         <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 cursor-pointer transition-all text-xs group" data-testid="nav-back-to-store">
           <Home className="w-3.5 h-3.5" />
-          <span className="font-medium">العودة للمتجر</span>
+          <span className="font-medium">{t("nav_back_to_store")}</span>
         </div>
       </Link>
       <button onClick={onLogout}
         className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-red-400 hover:bg-red-50 hover:text-red-600 cursor-pointer transition-all text-xs mt-0.5"
         data-testid="button-admin-logout">
         <LogOut className="w-3.5 h-3.5" />
-        <span className="font-medium">تسجيل الخروج</span>
+        <span className="font-medium">{t("nav_logout")}</span>
       </button>
     </div>
   );
@@ -236,6 +268,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [location, navigate] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, loading, logout } = useAuth();
+  const { t, dir } = useAdminLang();
+
+  const navSections = buildNavSections(t);
 
   const { data: orderCounts = {} } = useQuery<Record<string, number>>({
     queryKey: ["/api/orders/counts"],
@@ -243,32 +278,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     enabled: !!user && user.role === "admin",
   });
 
-  useEffect(() => {
-    if (!loading && !user) navigate("/admin/login");
-    else if (!loading && user && user.role !== "admin") navigate("/confirmateur/orders");
-  }, [user, loading]);
-
   if (loading) return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="text-center">
         <Loader2 className="w-8 h-8 text-blue-500 animate-spin mx-auto mb-2" />
-        <p className="text-gray-400 text-sm">جاري التحقق...</p>
+        <p className="text-gray-400 text-sm">{t("loading_checking")}</p>
       </div>
     </div>
   );
 
-  if (!user || user.role !== "admin") return null;
+  if (!user) { navigate("/admin/login"); return null; }
+  if (user.role !== "admin") { navigate("/confirmateur/orders"); return null; }
 
   const currentLabel = location === "/admin/pos"
-    ? "نقطة البيع POS"
+    ? t("nav_pos")
     : location.startsWith("/admin/orders")
-      ? "الطلبات"
-      : navSections.flatMap(s => s.items).find(n => n.href === location)?.label || "لوحة التحكم";
+      ? t("nav_orders")
+      : navSections.flatMap(s => s.items).find(n => n.href === location)?.label || t("nav_dashboard");
 
   const handleLogout = async () => { await logout(); navigate("/admin/login"); };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex" dir="rtl">
+    <div className="min-h-screen bg-gray-50 flex" dir={dir}>
       <AnimatePresence>
         {sidebarOpen && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -279,29 +310,29 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Mobile Sidebar */}
       <motion.aside
-        initial={{ x: "100%" }}
-        animate={{ x: sidebarOpen ? 0 : "100%" }}
+        initial={{ x: dir === "rtl" ? "100%" : "-100%" }}
+        animate={{ x: sidebarOpen ? 0 : (dir === "rtl" ? "100%" : "-100%") }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="fixed right-0 top-0 bottom-0 w-60 bg-white border-l border-gray-200 z-50 lg:hidden flex flex-col shadow-xl"
+        className={`fixed ${dir === "rtl" ? "right-0" : "left-0"} top-0 bottom-0 w-60 bg-white border-gray-200 z-50 lg:hidden flex flex-col shadow-xl ${dir === "rtl" ? "border-l" : "border-r"}`}
       >
-        <SidebarHeader />
+        <SidebarHeader t={t} />
         <nav className="flex-1 p-2.5 overflow-y-auto">
-          <NavContent location={location} orderCounts={orderCounts} navigate={navigate} onClose={() => setSidebarOpen(false)} />
+          <NavContent location={location} orderCounts={orderCounts} navigate={navigate} onClose={() => setSidebarOpen(false)} t={t} />
         </nav>
-        <SidebarFooter user={user} onLogout={handleLogout} />
+        <SidebarFooter user={user} onLogout={handleLogout} t={t} />
       </motion.aside>
 
       {/* Desktop Sidebar */}
-      <div className="hidden lg:flex lg:flex-col lg:fixed lg:right-0 lg:top-0 lg:bottom-0 lg:w-56 bg-white border-l border-gray-200 z-30 shadow-sm">
-        <SidebarHeader />
+      <div className={`hidden lg:flex lg:flex-col lg:fixed ${dir === "rtl" ? "lg:right-0" : "lg:left-0"} lg:top-0 lg:bottom-0 lg:w-56 bg-white z-30 shadow-sm ${dir === "rtl" ? "border-l border-gray-200" : "border-r border-gray-200"}`}>
+        <SidebarHeader t={t} />
         <nav className="flex-1 p-2.5 overflow-y-auto">
-          <NavContent location={location} orderCounts={orderCounts} navigate={navigate} />
+          <NavContent location={location} orderCounts={orderCounts} navigate={navigate} t={t} />
         </nav>
-        <SidebarFooter user={user} onLogout={handleLogout} />
+        <SidebarFooter user={user} onLogout={handleLogout} t={t} />
       </div>
 
       {/* Main area */}
-      <div className="flex-1 lg:mr-56">
+      <div className={`flex-1 ${dir === "rtl" ? "lg:mr-56" : "lg:ml-56"}`}>
         {/* Top header */}
         <header className="sticky top-0 z-20 bg-white border-b border-gray-200 h-12 flex items-center justify-between px-4 sm:px-6 shadow-sm">
           <div className="flex items-center gap-3">
@@ -323,7 +354,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               )}
             </button>
             <div className="w-7 h-7 bg-blue-600 rounded-md flex items-center justify-center text-white font-black text-xs shadow-sm">
-              {user?.name?.charAt(0) || "أ"}
+              {user?.name?.charAt(0) || "A"}
             </div>
           </div>
         </header>

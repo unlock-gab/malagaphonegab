@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import AdminLayout from "./AdminLayout";
+import { useAdminLang } from "@/context/AdminLangContext";
 import type { Purchase, Supplier, Product } from "@shared/schema";
 
 function formatCurrency(v: number) {
@@ -96,7 +97,7 @@ function QuickAddProductDialog({ onCreated, onClose }: {
 
   return (
     <Dialog open onOpenChange={o => { if (!o) onClose(); }}>
-      <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-sm shadow-xl" dir="rtl">
+      <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-sm shadow-xl" dir={dir}>
         <DialogHeader className="border-b border-gray-100 pb-3">
           <DialogTitle className="text-gray-900 flex items-center gap-2 text-sm font-bold">
             <PackagePlus className="w-4 h-4 text-blue-600" />
@@ -428,7 +429,7 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
   const total = subtotal + extraCosts;
 
   return (
-    <div className="space-y-4" dir="rtl">
+    <div className="space-y-4" dir={dir}>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label className="text-gray-600 text-sm font-semibold">المورد *</Label>
@@ -710,7 +711,7 @@ function ViewPurchaseDialog({ purchase, onClose, onComplete, onCancel: onCancelP
 
   return (
     <Dialog open onOpenChange={o => { if (!o) onClose(); }}>
-      <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-lg max-h-[90vh] overflow-y-auto shadow-xl" dir="rtl">
+      <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-lg max-h-[90vh] overflow-y-auto shadow-xl" dir={dir}>
         <DialogHeader className="border-b border-gray-100 pb-3">
           <DialogTitle className="text-gray-900 flex items-center gap-2 text-sm font-bold">
             <ShoppingBag className="w-4 h-4 text-blue-600" />
@@ -834,6 +835,7 @@ function ViewPurchaseDialog({ purchase, onClose, onComplete, onCancel: onCancelP
 }
 
 export default function AdminPurchases() {
+  const { dir } = useAdminLang();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [viewPurchase, setViewPurchase] = useState<any | null>(null);
@@ -894,7 +896,7 @@ export default function AdminPurchases() {
 
   return (
     <AdminLayout>
-      <div className="space-y-4" dir="rtl">
+      <div className="space-y-4" dir={dir}>
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-lg font-black text-gray-900">المشتريات</h1>
@@ -1020,7 +1022,7 @@ export default function AdminPurchases() {
         )}
 
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-2xl max-h-[92vh] overflow-y-auto shadow-xl" dir="rtl">
+          <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-2xl max-h-[92vh] overflow-y-auto shadow-xl" dir={dir}>
             <DialogHeader className="border-b border-gray-100 pb-3">
               <DialogTitle className="text-gray-900 flex items-center gap-2 font-bold">
                 <ShoppingBag className="w-4 h-4 text-blue-600" /> شراء جديد

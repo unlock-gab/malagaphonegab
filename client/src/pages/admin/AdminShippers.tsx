@@ -5,6 +5,7 @@ import AdminLayout from "./AdminLayout";
 import { DELIVERY_SHIPPERS, type ShipperInfo, type DeliveryCompany } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAdminLang } from "@/context/AdminLangContext";
 
 type ShipperRow = ShipperInfo & Partial<DeliveryCompany> & { enabled: boolean };
 
@@ -147,6 +148,7 @@ function ShipperCard({ shipper, saved }: { shipper: ShipperRow; saved: Partial<D
 }
 
 export default function AdminShippers() {
+  const { t, dir } = useAdminLang();
   const { data: savedList = [] } = useQuery<DeliveryCompany[]>({ queryKey: ["/api/shippers"] });
 
   const savedMap = Object.fromEntries(savedList.map(s => [s.slug, s]));
@@ -162,7 +164,7 @@ export default function AdminShippers() {
 
   return (
     <AdminLayout>
-      <div className="space-y-5" dir="rtl">
+      <div className="space-y-5" dir={dir}>
         <div>
           <h1 className="text-lg font-black text-gray-900">شركات التوصيل</h1>
           <p className="text-gray-500 text-xs mt-0.5">اربط حساباتك مع شركات التوصيل الجزائرية عبر API</p>

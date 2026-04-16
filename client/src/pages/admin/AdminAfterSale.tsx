@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import AdminLayout from "./AdminLayout";
+import { useAdminLang } from "@/context/AdminLangContext";
 import type { AfterSaleRecord } from "@shared/schema";
 import { AFTER_SALE_TYPES, AFTER_SALE_STATUSES } from "@shared/schema";
 
@@ -59,6 +60,7 @@ const EMPTY_FORM = {
 };
 
 export default function AdminAfterSale() {
+  const { dir } = useAdminLang();
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -151,7 +153,7 @@ export default function AdminAfterSale() {
 
   return (
     <AdminLayout>
-      <div className="space-y-4" dir="rtl">
+      <div className="space-y-4" dir={dir}>
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -276,7 +278,7 @@ export default function AdminAfterSale() {
 
         {/* Dialog */}
         <Dialog open={dialogOpen} onOpenChange={o => { if (!o) { setDialogOpen(false); setEditRecord(null); } }}>
-          <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-lg max-h-[92vh] overflow-y-auto shadow-xl" dir="rtl">
+          <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-lg max-h-[92vh] overflow-y-auto shadow-xl" dir={dir}>
             <DialogHeader className="border-b border-gray-100 pb-3">
               <DialogTitle className="text-gray-900 text-sm font-bold flex items-center gap-2">
                 <Shield className="w-4 h-4 text-blue-600" />

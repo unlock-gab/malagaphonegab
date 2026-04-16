@@ -14,6 +14,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import AdminLayout from "./AdminLayout";
+import { useAdminLang } from "@/context/AdminLangContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type SettingsMap = Record<string, string>;
@@ -170,6 +171,7 @@ function BannerUpload({ value, onChange }: { value: string; onChange: (url: stri
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function AdminSettings() {
+  const { dir } = useAdminLang();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("general");
   const [form, setForm] = useState<SettingsMap>({});
@@ -241,7 +243,7 @@ export default function AdminSettings() {
 
   return (
     <AdminLayout>
-      <div className="space-y-5 max-w-5xl" dir="rtl">
+      <div className="space-y-5 max-w-5xl" dir={dir}>
         <div>
           <h1 className="text-lg font-black text-gray-900 flex items-center gap-2">
             <Settings className="w-5 h-5 text-blue-600" />

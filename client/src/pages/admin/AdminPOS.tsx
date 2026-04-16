@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import AdminLayout from "./AdminLayout";
+import { useAdminLang } from "@/context/AdminLangContext";
 import OrderInvoice from "@/components/OrderInvoice";
 import type { Product, PhoneUnit, Order } from "@shared/schema";
 
@@ -76,7 +77,7 @@ function PhoneUnitPicker({ product, units, onSelect, onClose }: {
 
   return (
     <Dialog open onOpenChange={o => { if (!o) onClose(); }}>
-      <DialogContent className="bg-white border-gray-200 max-w-lg shadow-2xl" dir="rtl">
+      <DialogContent className="bg-white border-gray-200 max-w-lg shadow-2xl" dir={dir}>
         <DialogHeader className="border-b border-gray-100 pb-4">
           <DialogTitle className="text-gray-900 font-bold flex items-center gap-2 text-base">
             <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center border border-blue-100">
@@ -173,7 +174,7 @@ function PhoneUnitPicker({ product, units, onSelect, onClose }: {
 // ─── Success Screen ────────────────────────────────────────────────────────────
 function SaleSuccess({ order, onPrint, onNew }: { order: Order; onPrint: () => void; onNew: () => void }) {
   return (
-    <div className="fixed inset-0 bg-white/95 backdrop-blur-sm z-50 flex items-center justify-center" dir="rtl">
+    <div className="fixed inset-0 bg-white/95 backdrop-blur-sm z-50 flex items-center justify-center" dir={dir}>
       <div className="bg-white border border-gray-200 rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4 text-center">
         <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <CheckCircle className="w-9 h-9 text-emerald-600" />
@@ -213,6 +214,7 @@ function SaleSuccess({ order, onPrint, onNew }: { order: Order; onPrint: () => v
 
 // ─── Main POS Page ────────────────────────────────────────────────────────────
 export default function AdminPOS() {
+  const { dir } = useAdminLang();
   const { toast } = useToast();
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -420,7 +422,7 @@ export default function AdminPOS() {
 
   return (
     <AdminLayout>
-      <div className="flex flex-col h-[calc(100vh-3rem)] -m-4 sm:-m-6 overflow-hidden bg-gray-50" dir="rtl">
+      <div className="flex flex-col h-[calc(100vh-3rem)] -m-4 sm:-m-6 overflow-hidden bg-gray-50" dir={dir}>
 
         {/* ══ POS Header ═══════════════════════════════════════════════════ */}
         <div className="bg-white border-b border-gray-200 px-5 py-3 flex items-center justify-between gap-4 shrink-0 shadow-sm">

@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import AdminLayout from "./AdminLayout";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAdminLang } from "@/context/AdminLangContext";
 
 interface TopProductRow {
   productId: string | null;
@@ -37,6 +38,7 @@ function getFromDate(days: number): string {
 }
 
 export default function AdminReports() {
+  const { dir } = useAdminLang();
   const [preset, setPreset] = useState(30);
   const [showPresets, setShowPresets] = useState(false);
   const [customFrom, setCustomFrom] = useState("");
@@ -70,7 +72,7 @@ export default function AdminReports() {
 
   return (
     <AdminLayout>
-      <div className="space-y-5" dir="rtl">
+      <div className="space-y-5" dir={dir}>
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-lg font-black text-gray-900 flex items-center gap-2">

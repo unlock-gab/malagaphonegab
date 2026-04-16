@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import AdminLayout from "./AdminLayout";
+import { useAdminLang } from "@/context/AdminLangContext";
 import OrderInvoice from "@/components/OrderInvoice";
 import BonDeLivraison from "@/components/BonDeLivraison";
 import type { Order, Product } from "@shared/schema";
@@ -203,7 +204,7 @@ function NewOrderDialog({ onClose, onSuccess }: { onClose: () => void; onSuccess
 
   return (
     <Dialog open onOpenChange={o => { if (!o) onClose(); }}>
-      <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-2xl max-h-[92vh] overflow-y-auto shadow-xl" dir="rtl">
+      <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-2xl max-h-[92vh] overflow-y-auto shadow-xl" dir={dir}>
         <DialogHeader className="border-b border-gray-100 pb-3 sticky top-0 bg-white z-10">
           <DialogTitle className="text-gray-900 flex items-center gap-2 text-sm font-bold">
             <PackagePlus className="w-4 h-4 text-blue-600" />
@@ -434,6 +435,7 @@ function StatusTimeline({ current }: { current: string }) {
 }
 
 export default function AdminOrders() {
+  const { dir } = useAdminLang();
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -512,7 +514,7 @@ export default function AdminOrders() {
 
   return (
     <AdminLayout>
-      <div className="space-y-4" dir="rtl">
+      <div className="space-y-4" dir={dir}>
         {/* New Order Dialog */}
         {showNewOrder && (
           <NewOrderDialog
@@ -674,7 +676,7 @@ export default function AdminOrders() {
         {/* Return Dialog */}
         {viewOrder && (
           <Dialog open={returnDialogOpen} onOpenChange={o => { if (!o) setReturnDialogOpen(false); }}>
-            <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-md shadow-xl" dir="rtl">
+            <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-md shadow-xl" dir={dir}>
               <DialogHeader className="border-b border-gray-100 pb-3">
                 <DialogTitle className="text-gray-900 text-sm font-bold flex items-center gap-2">
                   <RotateCcw className="w-4 h-4 text-orange-600" />
@@ -753,7 +755,7 @@ export default function AdminOrders() {
 
         {viewOrder && (
           <Dialog open={!!viewOrder} onOpenChange={o => { if (!o) setViewOrder(null); }}>
-            <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-xl max-h-[92vh] overflow-y-auto shadow-xl" dir="rtl">
+            <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-xl max-h-[92vh] overflow-y-auto shadow-xl" dir={dir}>
               <DialogHeader className="border-b border-gray-100 pb-3">
                 <DialogTitle className="text-gray-900 flex items-center gap-2 text-sm font-bold">
                   <Package className="w-4 h-4 text-blue-600" />

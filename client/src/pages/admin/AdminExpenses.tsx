@@ -13,24 +13,26 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import AdminLayout from "./AdminLayout";
 import type { Expense } from "@shared/schema";
 import { EXPENSE_TYPES } from "@shared/schema";
+import { useAdminLang } from "@/context/AdminLangContext";
 
 function formatCurrency(v: number) {
   return new Intl.NumberFormat("ar-DZ").format(v) + " د.ج";
 }
 
 const EXPENSE_TYPE_COLORS: Record<string, string> = {
-  general: "bg-gray-100 text-gray-600 border-gray-200",
-  rent: "bg-blue-50 text-blue-700 border-blue-200",
-  salary: "bg-indigo-50 text-indigo-700 border-indigo-200",
-  shipping: "bg-orange-50 text-orange-700 border-orange-200",
+  general:   "bg-gray-100 text-gray-600 border-gray-200",
+  rent:      "bg-blue-50 text-blue-700 border-blue-200",
+  salary:    "bg-indigo-50 text-indigo-700 border-indigo-200",
+  shipping:  "bg-orange-50 text-orange-700 border-orange-200",
   marketing: "bg-purple-50 text-purple-700 border-purple-200",
   utilities: "bg-teal-50 text-teal-700 border-teal-200",
-  other: "bg-gray-100 text-gray-600 border-gray-200",
+  other:     "bg-gray-100 text-gray-600 border-gray-200",
 };
 
 function ExpenseForm({ initial, onSave, onCancel, loading }: {
   initial?: Partial<Expense>; onSave: (d: any) => void; onCancel: () => void; loading: boolean;
 }) {
+  const { t, dir } = useAdminLang();
   const [form, setForm] = useState({
     title: initial?.title ?? "",
     amount: initial?.amount?.toString() ?? "",
@@ -41,46 +43,47 @@ function ExpenseForm({ initial, onSave, onCancel, loading }: {
   const set = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }));
 
   return (
-    <div className="space-y-4" dir="rtl">
+    <div className="space-y-4" dir={dir}>
       <div className="space-y-1.5">
-        <Label className="text-gray-600 text-sm font-semibold">عنوان المصروف *</Label>
+        <Label className="text-gray-600 text-sm font-semibold">{t("expense_title_field")}</Label>
         <Input value={form.title} onChange={e => set("title", e.target.value)}
-          className="bg-white border-gray-200 text-gray-900 placeholder:text-gray-400" placeholder="إيجار محل" data-testid="input-expense-title" />
+          className="bg-white border-gray-200 text-gray-900 placeholder:text-gray-400"
+          placeholder={t("expense_title_field")} data-testid="input-expense-title" />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <Label className="text-gray-600 text-sm font-semibold">المبلغ (د.ج) *</Label>
+          <Label className="text-gray-600 text-sm font-semibold">{t("expense_amount")}</Label>
           <Input type="number" value={form.amount} onChange={e => set("amount", e.target.value)}
             className="bg-white border-gray-200 text-gray-900 placeholder:text-gray-400" placeholder="0" data-testid="input-expense-amount" />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-gray-600 text-sm font-semibold">نوع المصروف</Label>
+          <Label className="text-gray-600 text-sm font-semibold">{t("expense_type_field")}</Label>
           <Select value={form.expenseType} onValueChange={v => set("expenseType", v)}>
             <SelectTrigger className="bg-white border-gray-200 text-gray-900" data-testid="select-expense-type">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-white border-gray-200 shadow-lg">
-              {EXPENSE_TYPES.map(t => <SelectItem key={t.key} value={t.key} className="text-gray-800">{t.label}</SelectItem>)}
+              {EXPENSE_TYPES.map(et => <SelectItem key={et.key} value={et.key} className="text-gray-800">{et.label}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
       </div>
       <div className="space-y-1.5">
-        <Label className="text-gray-600 text-sm font-semibold">التاريخ</Label>
+        <Label className="text-gray-600 text-sm font-semibold">{t("date")}</Label>
         <Input type="date" value={form.expenseDate} onChange={e => set("expenseDate", e.target.value)}
           className="bg-white border-gray-200 text-gray-900" data-testid="input-expense-date" />
       </div>
       <div className="space-y-1.5">
-        <Label className="text-gray-600 text-sm font-semibold">ملاحظات</Label>
+        <Label className="text-gray-600 text-sm font-semibold">{t("notes")}</Label>
         <Textarea value={form.notes} onChange={e => set("notes", e.target.value)}
           className="bg-white border-gray-200 text-gray-900 placeholder:text-gray-400 resize-none" rows={2} />
       </div>
       <DialogFooter>
-        <Button variant="outline" onClick={onCancel} className="border-gray-200 text-gray-600 hover:bg-gray-50">إلغاء</Button>
+        <Button variant="outline" onClick={onCancel} className="border-gray-200 text-gray-600 hover:bg-gray-50">{t("cancel")}</Button>
         <Button onClick={() => onSave({ ...form, amount: parseFloat(form.amount) || 0, expenseDate: new Date(form.expenseDate) })}
           disabled={loading || !form.title || !form.amount}
           className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm" data-testid="button-save-expense">
-          {loading ? "جاري الحفظ..." : "حفظ"}
+          {loading ? t("saving") : t("save")}
         </Button>
       </DialogFooter>
     </div>
@@ -89,6 +92,7 @@ function ExpenseForm({ initial, onSave, onCancel, loading }: {
 
 export default function AdminExpenses() {
   const { toast } = useToast();
+  const { t, dir } = useAdminLang();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Expense | null>(null);
   const [search, setSearch] = useState("");
@@ -97,20 +101,20 @@ export default function AdminExpenses() {
 
   const createMutation = useMutation({
     mutationFn: (data: any) => apiRequest("POST", "/api/expenses", data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/expenses"] }); setOpen(false); toast({ title: "تم إضافة المصروف" }); },
-    onError: () => toast({ title: "فشل", variant: "destructive" }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/expenses"] }); setOpen(false); toast({ title: t("success") }); },
+    onError: () => toast({ title: t("failed"), variant: "destructive" }),
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) => apiRequest("PATCH", `/api/expenses/${id}`, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/expenses"] }); setOpen(false); setEditing(null); toast({ title: "تم التحديث" }); },
-    onError: () => toast({ title: "فشل", variant: "destructive" }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/expenses"] }); setOpen(false); setEditing(null); toast({ title: t("success") }); },
+    onError: () => toast({ title: t("failed"), variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => apiRequest("DELETE", `/api/expenses/${id}`),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/expenses"] }); toast({ title: "تم الحذف" }); },
-    onError: () => toast({ title: "فشل", variant: "destructive" }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/expenses"] }); toast({ title: t("success") }); },
+    onError: () => toast({ title: t("failed"), variant: "destructive" }),
   });
 
   const handleSave = (data: any) => editing ? updateMutation.mutate({ id: editing.id, data }) : createMutation.mutate(data);
@@ -119,28 +123,28 @@ export default function AdminExpenses() {
   const filtered = expenses.filter(e => e.title.toLowerCase().includes(search.toLowerCase()));
   const totalAmount = filtered.reduce((sum, e) => sum + parseFloat(e.amount as string || "0"), 0);
 
-  const getTypeLabel = (key: string) => EXPENSE_TYPES.find(t => t.key === key)?.label ?? key;
+  const getTypeLabel = (key: string) => EXPENSE_TYPES.find(et => et.key === key)?.label ?? key;
   const getTypeCls = (key: string) => EXPENSE_TYPE_COLORS[key] ?? EXPENSE_TYPE_COLORS.general;
 
   return (
     <AdminLayout>
-      <div className="space-y-5" dir="rtl">
+      <div className="space-y-5">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-black text-gray-900">المصاريف</h1>
+            <h1 className="text-lg font-black text-gray-900">{t("expenses_title")}</h1>
             <p className="text-gray-500 text-xs mt-0.5">
-              إجمالي: <span className="text-red-600 font-semibold">{formatCurrency(totalAmount)}</span>
+              {t("expenses_total")}: <span className="text-red-600 font-semibold">{formatCurrency(totalAmount)}</span>
             </p>
           </div>
           <Button onClick={() => { setEditing(null); setOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white gap-2 shadow-sm" data-testid="button-add-expense">
-            <Plus className="w-4 h-4" /> مصروف جديد
+            <Plus className="w-4 h-4" /> {t("add_expense")}
           </Button>
         </div>
 
         <div className="relative">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث..."
-            className="bg-white border-gray-200 text-gray-900 placeholder:text-gray-400 pr-10" data-testid="input-expense-search" />
+          <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder={t("search")}
+            className="bg-white border-gray-200 text-gray-900 placeholder:text-gray-400 ps-10" data-testid="input-expense-search" />
         </div>
 
         {isLoading ? (
@@ -150,8 +154,8 @@ export default function AdminExpenses() {
             <div className="w-14 h-14 bg-gray-50 border border-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
               <Wallet className="w-7 h-7 text-gray-300" />
             </div>
-            <p className="text-gray-500 font-semibold">لا توجد مصاريف</p>
-            <p className="text-gray-400 text-sm mt-1">أضف مصروفاً لبدء تتبع النفقات</p>
+            <p className="text-gray-500 font-semibold">{t("no_expenses")}</p>
+            <p className="text-gray-400 text-sm mt-1">{t("no_expenses_sub")}</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -176,7 +180,7 @@ export default function AdminExpenses() {
                       className="border-gray-200 text-gray-400 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-200 text-xs" data-testid={`button-edit-expense-${exp.id}`}>
                       <Pencil className="w-3 h-3" />
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => { if (confirm("حذف المصروف؟")) deleteMutation.mutate(exp.id); }}
+                    <Button size="sm" variant="outline" onClick={() => { if (confirm(t("confirm_delete"))) deleteMutation.mutate(exp.id); }}
                       className="border-gray-200 text-gray-400 hover:text-red-500 hover:bg-red-50 hover:border-red-200 text-xs" disabled={deleteMutation.isPending} data-testid={`button-delete-expense-${exp.id}`}>
                       <Trash2 className="w-3 h-3" />
                     </Button>
@@ -188,9 +192,9 @@ export default function AdminExpenses() {
         )}
 
         <Dialog open={open} onOpenChange={o => { setOpen(o); if (!o) setEditing(null); }}>
-          <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-md shadow-xl" dir="rtl">
+          <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-md shadow-xl" dir={dir}>
             <DialogHeader className="border-b border-gray-100 pb-3">
-              <DialogTitle className="text-gray-900 font-bold">{editing ? "تعديل المصروف" : "مصروف جديد"}</DialogTitle>
+              <DialogTitle className="text-gray-900 font-bold">{editing ? t("edit_expense") : t("add_expense")}</DialogTitle>
             </DialogHeader>
             <div className="pt-1">
               <ExpenseForm initial={editing ?? undefined} onSave={handleSave} onCancel={() => { setOpen(false); setEditing(null); }} loading={isMutating} />

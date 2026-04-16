@@ -54,6 +54,14 @@
 | `/admin/delivery` | أسعار التوصيل |
 | `/admin/settings` | الإعدادات |
 
+## نظام الترجمة (i18n) - اكتمل بالكامل
+- **ملف الترجمات**: `client/src/lib/adminTranslations.ts` — قاموس FR/AR شامل بجميع المفاتيح
+- **Context**: `client/src/context/AdminLangContext.tsx` — يوفر `useAdminLang()` hook لـ `t(key)` و `dir`
+- **اللغة الافتراضية**: فرنسية (FR)، يُحفظ الاختيار في localStorage
+- **جميع صفحات الإدارة**: تستخدم `useAdminLang()` و `dir={dir}` بدلاً من `dir="rtl"` المُضمَّن
+- **الصفحات المترجمة بالكامل**: AdminDashboard, AdminLogin, AdminExpenses, AdminSuppliers, AdminCategories, AdminBrands, AdminProfit, AdminCustomers, AdminDelivery
+- **الصفحات المدعومة بالـ dir الديناميكي**: AdminOrders, AdminProducts, AdminPOS, AdminInventory, AdminPurchases, AdminSettings, AdminAfterSale, AdminReports, AdminConfirmateurs, AdminShippers, AdminAbandoned, AdminIPBlocker
+
 ## تحسينات UI/UX (Phase 2)
 - **Sidebar**: تنظيم أقسام ERP نظيف، حذف ip-blocker وabandoned من التنقل الرئيسي
 - **Products**: الجدول افتراضي، toggle card view، sort بكل column، bulk publish/hide/delete، status filter، inline toggles

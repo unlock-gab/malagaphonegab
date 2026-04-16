@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import AdminLayout from "./AdminLayout";
+import { useAdminLang } from "@/context/AdminLangContext";
 import type { Product, Category, Brand } from "@shared/schema";
 
 function formatCurrency(v: number) {
@@ -243,7 +244,7 @@ function ProductFormDialog({ initial, onSave, onCancel, loading, categories, bra
   const isUsed = form.condition !== "new";
 
   return (
-    <div dir="rtl">
+    <div dir={dir}>
       <Tabs defaultValue="basic">
         <TabsList className="bg-gray-100 border border-gray-200 mb-4 w-full">
           <TabsTrigger value="basic" className="flex-1 data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-sm text-gray-500 text-xs">الأساسي</TabsTrigger>
@@ -545,7 +546,7 @@ function ProductVariantsDialog({ product, onClose }: { product: Product; onClose
 
   return (
     <Dialog open onOpenChange={o => { if (!o) onClose(); }}>
-      <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-2xl max-h-[88vh] overflow-y-auto shadow-xl" dir="rtl">
+      <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-2xl max-h-[88vh] overflow-y-auto shadow-xl" dir={dir}>
         <DialogHeader className="border-b border-gray-100 pb-3">
           <DialogTitle className="text-gray-900 flex items-center gap-2 text-sm font-bold">
             <Cpu className="w-4 h-4 text-blue-600" />
@@ -670,6 +671,7 @@ function ProductVariantsDialog({ product, onClose }: { product: Product; onClose
 }
 
 export default function AdminProducts() {
+  const { dir } = useAdminLang();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
@@ -757,7 +759,7 @@ export default function AdminProducts() {
 
   return (
     <AdminLayout>
-      <div className="space-y-4" dir="rtl">
+      <div className="space-y-4" dir={dir}>
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -1014,7 +1016,7 @@ export default function AdminProducts() {
         )}
 
         <Dialog open={open} onOpenChange={o => { setOpen(o); if (!o) setEditing(null); }}>
-          <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-2xl max-h-[92vh] overflow-y-auto shadow-xl" dir="rtl">
+          <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-2xl max-h-[92vh] overflow-y-auto shadow-xl" dir={dir}>
             <DialogHeader className="border-b border-gray-100 pb-3">
               <DialogTitle className="text-gray-900 flex items-center gap-2 font-bold">
                 <Layers className="w-4 h-4 text-blue-600" />

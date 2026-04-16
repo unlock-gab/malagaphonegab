@@ -5,11 +5,13 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import AdminLayout from "./AdminLayout";
 import { Button } from "@/components/ui/button";
+import { useAdminLang } from "@/context/AdminLangContext";
 
 type ConfirmateurStats = { total: number; pending: number; processing: number; shipped: number; delivered: number; cancelled: number };
 type Confirmateur = { id: string; username: string; name: string; role: string; createdAt: string; stats: ConfirmateurStats };
 
 export default function AdminConfirmateurs() {
+  const { dir } = useAdminLang();
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -81,7 +83,7 @@ export default function AdminConfirmateurs() {
 
   return (
     <AdminLayout>
-      <div className="space-y-5" dir="rtl">
+      <div className="space-y-5" dir={dir}>
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-lg font-black text-gray-900">المؤكدون</h1>

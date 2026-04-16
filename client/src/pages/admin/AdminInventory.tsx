@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import AdminLayout from "./AdminLayout";
+import { useAdminLang } from "@/context/AdminLangContext";
 import type { Product, InventoryMovement, PhoneUnit } from "@shared/schema";
 
 function formatCurrency(v: number) {
@@ -72,7 +73,7 @@ function EditPhoneUnitForm({ unit, products, onSave, onCancel, saving }: {
   const inputCls = "bg-white border-gray-200 text-gray-900 text-sm";
 
   return (
-    <div className="space-y-3 pt-1" dir="rtl">
+    <div className="space-y-3 pt-1" dir={dir}>
       <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 text-xs">
         <p className="text-blue-600 font-mono">{unit.imei}</p>
         <p className="text-blue-500 mt-0.5">{products.find(p => p.id === unit.productId)?.name ?? unit.productId}</p>
@@ -129,6 +130,7 @@ function EditPhoneUnitForm({ unit, products, onSave, onCancel, saving }: {
 }
 
 export default function AdminInventory() {
+  const { dir } = useAdminLang();
   const { toast } = useToast();
   const [adjustOpen, setAdjustOpen] = useState(false);
   const [productSearch, setProductSearch] = useState("");
@@ -253,7 +255,7 @@ export default function AdminInventory() {
 
   return (
     <AdminLayout>
-      <div className="space-y-4" dir="rtl">
+      <div className="space-y-4" dir={dir}>
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -584,7 +586,7 @@ export default function AdminInventory() {
         {/* Edit Phone Unit Dialog */}
         {editingUnit && (
           <Dialog open onOpenChange={o => { if (!o) setEditingUnit(null); }}>
-            <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-sm shadow-xl" dir="rtl">
+            <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-sm shadow-xl" dir={dir}>
               <DialogHeader className="border-b border-gray-100 pb-3">
                 <DialogTitle className="text-gray-900 font-bold text-sm flex items-center gap-2">
                   <Smartphone className="w-4 h-4 text-blue-600" />
@@ -604,7 +606,7 @@ export default function AdminInventory() {
 
         {/* Adjust Dialog */}
         <Dialog open={adjustOpen} onOpenChange={setAdjustOpen}>
-          <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-md shadow-xl" dir="rtl">
+          <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-md shadow-xl" dir={dir}>
             <DialogHeader className="border-b border-gray-100 pb-3">
               <DialogTitle className="text-gray-900 font-bold">تعديل المخزون يدوياً</DialogTitle>
             </DialogHeader>

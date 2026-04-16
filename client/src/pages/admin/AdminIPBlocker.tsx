@@ -5,11 +5,13 @@ import { Shield, ShieldOff, Trash2, Plus, AlertTriangle, Globe, Clock, X } from 
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import AdminLayout from "./AdminLayout";
+import { useAdminLang } from "@/context/AdminLangContext";
 
 type BlockedIp = { id: string; ip: string; reason: string | null; createdAt: string | null };
 type Order = { id: string; customerName: string; ip: string | null; createdAt: string | null };
 
 export default function AdminIPBlocker() {
+  const { dir } = useAdminLang();
   const { toast } = useToast();
   const [newIp, setNewIp] = useState("");
   const [newReason, setNewReason] = useState("");
@@ -62,7 +64,7 @@ export default function AdminIPBlocker() {
 
   return (
     <AdminLayout>
-      <div>
+      <div dir={dir}>
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-black text-white mb-1 flex items-center gap-3">

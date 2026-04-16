@@ -835,6 +835,28 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json({ success: true });
   });
 
+  // ── Purchase Payments (Versements) ───────────────────────────────────────────
+  app.get("/api/purchases/:id/payments", requireAdmin, async (req, res) => {
+    const payments = await storage.getPurchasePayments(req.params.id);
+    res.json(payments);
+  });
+  app.post("/api/purchases/:id/payments", requireAdmin, async (req, res) => {
+    try {
+      const payment = await storage.createPurchasePayment({
+        purchaseId: req.params.id,
+        amount: req.body.amount,
+        paymentDate: req.body.paymentDate ? new Date(req.body.paymentDate) : new Date(),
+        notes: req.body.notes || null,
+      });
+      res.status(201).json(payment);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+  app.delete("/api/purchase-payments/:id", requireAdmin, async (req, res) => {
+    const ok = await storage.deletePurchasePayment(req.params.id);
+    if (!ok) return res.status(404).json({ message: "Versement introuvable" });
+    res.json({ success: true });
+  });
+
   // ── Partners ─────────────────────────────────────────────────────────────────
   app.get("/api/partners", requireAdmin, async (_req, res) => {
     res.json(await storage.getPartners());

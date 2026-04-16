@@ -138,6 +138,16 @@ export const purchases = pgTable("purchases", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// ===================== PURCHASE PAYMENTS (Versements) =====================
+export const purchasePayments = pgTable("purchase_payments", {
+  id: varchar("id").primaryKey(),
+  purchaseId: varchar("purchase_id").notNull(),
+  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+  paymentDate: timestamp("payment_date").defaultNow(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // ===================== PURCHASE ITEMS =====================
 export const purchaseItems = pgTable("purchase_items", {
   id: varchar("id").primaryKey(),
@@ -343,6 +353,7 @@ export const insertAfterSaleSchema = createInsertSchema(afterSaleRecords).omit({
 export const insertPhoneUnitSchema = createInsertSchema(phoneUnits).omit({ id: true, createdAt: true });
 export const insertInvoiceTemplateSchema = createInsertSchema(invoiceTemplates).omit({ id: true, createdAt: true });
 export const insertPartnerSchema = createInsertSchema(partners).omit({ id: true, createdAt: true });
+export const insertPurchasePaymentSchema = createInsertSchema(purchasePayments).omit({ id: true, createdAt: true });
 
 // ===================== TYPES =====================
 export type InsertUser = { username: string; password: string; role: string; name: string };
@@ -383,6 +394,8 @@ export type InvoiceTemplate = typeof invoiceTemplates.$inferSelect;
 export type InsertInvoiceTemplate = z.infer<typeof insertInvoiceTemplateSchema>;
 export type Partner = typeof partners.$inferSelect;
 export type InsertPartner = z.infer<typeof insertPartnerSchema>;
+export type PurchasePayment = typeof purchasePayments.$inferSelect;
+export type InsertPurchasePayment = z.infer<typeof insertPurchasePaymentSchema>;
 
 // CartItem type for storefront cart
 export type CartItem = {

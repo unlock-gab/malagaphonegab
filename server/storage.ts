@@ -18,11 +18,12 @@ import {
   type PhoneUnit, type InsertPhoneUnit,
   type InvoiceTemplate, type InsertInvoiceTemplate,
   type Partner, type InsertPartner,
+  type PurchasePayment, type InsertPurchasePayment,
   DEFAULT_DELIVERY_PRICES,
   users, products, categories, brands, suppliers, purchases, purchaseItems,
   inventoryMovements, orders, orderItems, expenses, profitRecords,
   blockedIps, abandonedCarts, appSettings, deliveryCompanies, productVariants,
-  afterSaleRecords, phoneUnits, invoiceTemplates, partners,
+  afterSaleRecords, phoneUnits, invoiceTemplates, partners, purchasePayments,
 } from "@shared/schema";
 import { randomUUID, createHash, scryptSync, randomBytes, timingSafeEqual } from "crypto";
 import { db } from "./db";
@@ -198,6 +199,11 @@ export interface IStorage {
   createPartner(data: InsertPartner): Promise<Partner>;
   updatePartner(id: string, data: Partial<InsertPartner>): Promise<Partner | undefined>;
   deletePartner(id: string): Promise<boolean>;
+
+  // Purchase Payments (Versements)
+  getPurchasePayments(purchaseId: string): Promise<PurchasePayment[]>;
+  createPurchasePayment(data: InsertPurchasePayment): Promise<PurchasePayment>;
+  deletePurchasePayment(id: string): Promise<boolean>;
 }
 
 export interface TopProductRow {
@@ -1518,6 +1524,22 @@ export class DatabaseStorage implements IStorage {
 
   async deleteInvoiceTemplate(id: string): Promise<boolean> {
     const result = await db.delete(invoiceTemplates).where(eq(invoiceTemplates.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // ── Purchase Payments (Versements) ──────────────────────────────────────────
+  async getPurchasePayments(purchaseId: string): Promise<PurchasePayment[]> {
+    return db.select().from(purchasePayments)
+      .where(eq(purchasePayments.purchaseId, purchaseId))
+      .orderBy(desc(purchasePayments.paymentDate));
+  }
+  async createPurchasePayment(data: InsertPurchasePayment): Promise<PurchasePayment> {
+    const id = randomUUID();
+    const [r] = await db.insert(purchasePayments).values({ id, ...data }).returning();
+    return r;
+  }
+  async deletePurchasePayment(id: string): Promise<boolean> {
+    const result = await db.delete(purchasePayments).where(eq(purchasePayments.id, id)).returning();
     return result.length > 0;
   }
 

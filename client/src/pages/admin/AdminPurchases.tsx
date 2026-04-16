@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Plus, ShoppingBag, Trash2, Check, X, Building2, Calendar, Search, ChevronRight,
   Loader2, PackagePlus, Package, Smartphone, ChevronDown, UserRound, Save,
-  Handshake, Percent,
+  Handshake, Percent, Banknote, CreditCard, CircleDollarSign, AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

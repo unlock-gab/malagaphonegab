@@ -311,7 +311,9 @@ function ProductFormDialog({ initial, onSave, onCancel, loading, categories, bra
               <Input type="number" value={form.originalPrice} onChange={e => set("originalPrice", e.target.value)} className={cls.input} placeholder="0" />
             </Field>
             <Field label={t("cost_price_field")} help={t("cost_price_help")}>
-              <Input type="number" value={form.costPrice} onChange={e => set("costPrice", e.target.value)} className={cls.input} placeholder="0" data-testid="input-product-cost" />
+              <Input type="number" value={form.costPrice} onChange={e => set("costPrice", e.target.value)}
+                className={`${cls.input} ${(!form.costPrice || parseFloat(form.costPrice) <= 0) ? "border-red-300 focus-visible:ring-red-400" : ""}`}
+                placeholder="0" data-testid="input-product-cost" />
             </Field>
           </div>
           <div className="flex items-center gap-6 pt-1">
@@ -454,7 +456,7 @@ function ProductFormDialog({ initial, onSave, onCancel, loading, categories, bra
 
       <DialogFooter className="mt-4 gap-2 border-t border-gray-100 pt-4">
         <Button variant="outline" onClick={onCancel} className="border-gray-200 text-gray-600 hover:bg-gray-50">{t("cancel")}</Button>
-        <Button onClick={() => onSave(toPayload(form))} disabled={loading || !form.name || !form.price}
+        <Button onClick={() => onSave(toPayload(form))} disabled={loading || !form.name || !form.price || !form.costPrice || parseFloat(form.costPrice) <= 0}
           className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm" data-testid="button-save-product">
           {loading ? <><Loader2 className="w-4 h-4 animate-spin ml-2" />{t("saving")}</> : t("save_product")}
         </Button>

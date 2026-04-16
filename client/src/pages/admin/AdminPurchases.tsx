@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
-  Plus, ShoppingBag, Trash2, Check, X, Building2, Calendar, Search, ChevronRight, Loader2, PackagePlus, Smartphone,
+  Plus, ShoppingBag, Trash2, Check, X, Building2, Calendar, Search, ChevronRight,
+  Loader2, PackagePlus, Smartphone, ChevronDown, UserRound, Save,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -247,6 +248,119 @@ function ProductSearchPicker({ products, onSelect, onAddNew }: {
   );
 }
 
+// ─── Supplier Combobox with search & quick-save ────────────────────────────────
+function SupplierCombobox({ suppliers, supplierId, supplierName, onSelect }: {
+  suppliers: Supplier[];
+  supplierId: string;
+  supplierName: string;
+  onSelect: (supplierId: string | null, supplierName: string) => void;
+}) {
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [saving, setSaving] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const filtered = search.trim()
+    ? suppliers.filter(s => s.name.toLowerCase().includes(search.toLowerCase()))
+    : suppliers;
+
+  const exactMatch = suppliers.find(s => s.name.toLowerCase() === search.trim().toLowerCase());
+  const showCreate = search.trim().length > 0 && !exactMatch;
+
+  const displayValue = supplierId
+    ? (suppliers.find(s => s.id === supplierId)?.name ?? supplierName)
+    : supplierName;
+
+  const handleCreate = async () => {
+    if (!search.trim() || saving) return;
+    setSaving(true);
+    try {
+      const res = await apiRequest("POST", "/api/suppliers", { name: search.trim() });
+      const newS: Supplier = await res.json();
+      await queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
+      onSelect(newS.id, newS.name);
+      setSearch("");
+      setOpen(false);
+      toast({ title: `✓ تم حفظ "${newS.name}" في قاعدة البيانات` });
+    } catch {
+      toast({ title: "فشل حفظ المورد", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="relative" ref={ref}>
+      <div className="relative">
+        <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+        <input
+          value={open ? search : displayValue}
+          onChange={e => { setSearch(e.target.value); setOpen(true); if (!e.target.value) onSelect("", ""); }}
+          onFocus={() => { setOpen(true); setSearch(""); }}
+          placeholder="ابحث عن مورد أو اكتب اسماً جديداً..."
+          className="w-full h-9 pr-8 pl-8 text-sm rounded-md border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+          data-testid="input-supplier-search"
+        />
+        <ChevronDown className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+      </div>
+      {/* Selected tag */}
+      {!open && displayValue && (
+        <div className="absolute left-8 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none">
+          {supplierId ? (
+            <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-semibold">محفوظ</span>
+          ) : (
+            <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-semibold">يدوي</span>
+          )}
+        </div>
+      )}
+      {open && (
+        <div className="absolute z-50 top-full right-0 left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
+          <div className="max-h-52 overflow-y-auto">
+            {filtered.length === 0 && !showCreate && (
+              <div className="px-3 py-3 text-xs text-gray-400 text-center">لا يوجد موردون. اكتب اسماً لإضافته</div>
+            )}
+            {filtered.map(s => (
+              <button key={s.id} type="button"
+                onClick={() => { onSelect(s.id, s.name); setSearch(""); setOpen(false); }}
+                className={`w-full text-right px-3 py-2.5 text-sm transition-colors flex items-center gap-2 ${
+                  s.id === supplierId ? "bg-blue-50 text-blue-700 font-semibold" : "text-gray-800 hover:bg-gray-50"
+                }`}>
+                <Building2 className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                <span className="flex-1 truncate">{s.name}</span>
+                {s.id === supplierId && <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
+              </button>
+            ))}
+          </div>
+          {showCreate && (
+            <div className="border-t border-gray-100 p-1.5 space-y-1">
+              <button type="button" onClick={handleCreate} disabled={saving}
+                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors font-semibold border border-emerald-200">
+                {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                حفظ "{search.trim()}" كمورد في قاعدة البيانات
+              </button>
+              <button type="button"
+                onClick={() => { onSelect("", search.trim()); setOpen(false); }}
+                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-500 hover:bg-gray-50 rounded-lg transition-colors">
+                <UserRound className="w-3.5 h-3.5" />
+                استخدام "{search.trim()}" بدون حفظ (مؤقت)
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initialProducts }: {
   onSave: (d: any) => void; onCancel: () => void; loading: boolean;
   suppliers: Supplier[]; products: Product[];
@@ -299,29 +413,24 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
   const extraCosts = parseFloat(form.extraCosts) || 0;
   const total = subtotal + extraCosts;
 
-  const handleSupplierChange = (id: string) => {
-    setF("supplierId", id);
-    if (id !== "other") setF("supplierName", suppliers.find(s => s.id === id)?.name ?? "");
-    else setF("supplierName", "");
-  };
-
   return (
     <div className="space-y-4" dir="rtl">
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label className="text-gray-600 text-sm font-semibold">المورد *</Label>
-          <Select value={form.supplierId} onValueChange={handleSupplierChange}>
-            <SelectTrigger className="bg-white border-gray-200 text-gray-900 text-sm" data-testid="select-purchase-supplier">
-              <SelectValue placeholder="اختر مورداً" />
-            </SelectTrigger>
-            <SelectContent className="bg-white border-gray-200 shadow-lg">
-              {suppliers.map(s => <SelectItem key={s.id} value={s.id} className="text-gray-800 text-sm">{s.name}</SelectItem>)}
-              <SelectItem value="other" className="text-gray-500 text-sm">مورد آخر (يدوي)</SelectItem>
-            </SelectContent>
-          </Select>
-          {form.supplierId === "other" && (
-            <Input value={form.supplierName} onChange={e => setF("supplierName", e.target.value)}
-              placeholder="اسم المورد" className="bg-white border-gray-200 text-gray-900 text-sm mt-1.5" />
+          <SupplierCombobox
+            suppliers={suppliers}
+            supplierId={form.supplierId}
+            supplierName={form.supplierName}
+            onSelect={(id, name) => {
+              setF("supplierId", id ?? "");
+              setF("supplierName", name);
+            }}
+          />
+          {form.supplierName && !form.supplierId && (
+            <p className="text-[10px] text-amber-600 flex items-center gap-1">
+              <UserRound className="w-3 h-3" /> مورد يدوي — لن يُحفظ في قاعدة البيانات
+            </p>
           )}
         </div>
         <div className="space-y-1.5">
@@ -506,7 +615,7 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
         <Button variant="outline" onClick={onCancel} className="border-gray-200 text-gray-600 hover:bg-gray-50 text-sm">إلغاء</Button>
         <Button onClick={() => onSave({
             ...form,
-            supplierId: form.supplierId === "other" ? null : form.supplierId || null,
+            supplierId: form.supplierId || null,
             supplierName: form.supplierName || suppliers.find(s => s.id === form.supplierId)?.name || "",
             subtotal: subtotal.toFixed(2), extraCosts: extraCosts.toFixed(2), total: total.toFixed(2),
             purchaseDate: new Date(form.purchaseDate),

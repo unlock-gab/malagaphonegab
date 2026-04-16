@@ -689,7 +689,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.patch("/api/settings", requireAdmin, rateLimit(30, 60 * 1000, req => `settings:${req.session.userId}`), async (req, res) => {
     const ALLOWED = [
       "facebookPixelId", "tiktokPixelId", "googleSheetsWebhookUrl", "deliveryPrices",
-      "storeName", "storeAddress", "storePhone", "storeEmail", "storeDescription", "storeLogo",
+      "storeName", "storeAddress", "storePhone", "storePhone2", "storeEmail", "storeDescription", "storeLogo",
       "heroBannerImage",
       "whatsappNumber", "whatsappDefaultMessage", "facebookUrl", "instagramUrl", "tiktokUrl",
       "orderPrefix", "invoicePrefix", "defaultOrderNote",

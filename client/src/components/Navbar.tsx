@@ -1,15 +1,9 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Menu, X, MessageCircle } from "lucide-react";
+import { Search, Menu, X, MessageCircle, Phone } from "lucide-react";
 import { Input } from "@/components/ui/input";
-
-const STORE_PHONE = "0555123456";
-
-function whatsapp(msg?: string) {
-  const num = STORE_PHONE.replace(/^0/, "213");
-  return `https://wa.me/${num}${msg ? `?text=${encodeURIComponent(msg)}` : ""}`;
-}
+import { useStoreSettings, buildWhatsAppUrl } from "@/hooks/use-store-settings";
 
 const navLinks = [
   { href: "/", label: "الرئيسية" },
@@ -25,6 +19,12 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const settings = useStoreSettings();
+
+  const phone1 = settings.storePhone || "";
+  const phone2 = settings.storePhone2 || "";
+  const waPhone = settings.whatsappNumber || phone1 || "0555123456";
+  const wa = (msg?: string) => buildWhatsAppUrl(waPhone, msg);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,19 +36,43 @@ export default function Navbar() {
     }
   };
 
-  const bg = "bg-white/98 backdrop-blur-xl shadow-sm border-b border-gray-100";
-  const textColor = "text-gray-700";
-  const activeColor = "text-blue-600";
-
   return (
     <>
       <motion.nav
         initial={{ y: -80 }}
         animate={{ y: 0 }}
         transition={{ duration: 0.4 }}
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${bg}`}
+        className="fixed top-0 left-0 right-0 z-50 bg-white/98 backdrop-blur-xl shadow-sm border-b border-gray-100"
         dir="rtl"
       >
+        {/* ── Top phone bar ─────────────────────────────────────────────── */}
+        {(phone1 || phone2) && (
+          <div className="border-b border-gray-100 bg-gray-50/60 px-4">
+            <div className="max-w-7xl mx-auto flex items-center justify-end gap-4 py-1.5">
+              {phone1 && (
+                <a href={`tel:${phone1}`}
+                  className="flex items-center gap-1.5 text-sm font-bold text-blue-600 hover:text-blue-700 transition-colors"
+                  data-testid="link-phone1">
+                  <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-100">
+                    <Phone className="w-3 h-3" />
+                  </span>
+                  <span className="font-mono tracking-wide">{phone1}</span>
+                </a>
+              )}
+              {phone2 && (
+                <a href={`tel:${phone2}`}
+                  className="flex items-center gap-1.5 text-sm font-bold text-amber-500 hover:text-amber-600 transition-colors"
+                  data-testid="link-phone2">
+                  <span className="flex items-center justify-center w-5 h-5 rounded-full bg-amber-100">
+                    <Phone className="w-3 h-3" />
+                  </span>
+                  <span className="font-mono tracking-wide">{phone2}</span>
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 lg:h-[66px]">
             {/* Logo */}
@@ -69,7 +93,7 @@ export default function Navbar() {
                     <motion.span
                       whileHover={{ y: -1 }}
                       className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer block ${
-                        active ? `${activeColor} bg-blue-50` : `${textColor} hover:text-blue-600 hover:bg-blue-50/60`
+                        active ? "text-blue-600 bg-blue-50" : "text-gray-700 hover:text-blue-600 hover:bg-blue-50/60"
                       }`}
                     >
                       {link.label}
@@ -95,7 +119,7 @@ export default function Navbar() {
               </motion.button>
 
               {/* WhatsApp button desktop */}
-              <a href={whatsapp("مرحباً، أريد الاستفسار عن منتج")} target="_blank" rel="noopener noreferrer"
+              <a href={wa("مرحباً، أريد الاستفسار عن منتج")} target="_blank" rel="noopener noreferrer"
                 className="hidden lg:flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl text-sm transition-all shadow-md shadow-green-500/25"
                 data-testid="button-whatsapp-nav">
                 <MessageCircle className="w-4 h-4" />
@@ -135,6 +159,27 @@ export default function Navbar() {
                     data-testid="input-mobile-search"
                   />
                 </form>
+
+                {/* Mobile phone numbers */}
+                {(phone1 || phone2) && (
+                  <div className="flex gap-2 mb-2">
+                    {phone1 && (
+                      <a href={`tel:${phone1}`}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-blue-50 border border-blue-200 text-blue-700 font-bold rounded-xl text-sm"
+                        data-testid="link-mobile-phone1">
+                        <Phone className="w-4 h-4" />{phone1}
+                      </a>
+                    )}
+                    {phone2 && (
+                      <a href={`tel:${phone2}`}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-amber-50 border border-amber-200 text-amber-600 font-bold rounded-xl text-sm"
+                        data-testid="link-mobile-phone2">
+                        <Phone className="w-4 h-4" />{phone2}
+                      </a>
+                    )}
+                  </div>
+                )}
+
                 {navLinks.map((link) => (
                   <Link key={link.href} href={link.href}>
                     <span onClick={() => setMenuOpen(false)}
@@ -143,7 +188,7 @@ export default function Navbar() {
                     </span>
                   </Link>
                 ))}
-                <a href={whatsapp("مرحباً، أريد الاستفسار عن منتج")} target="_blank" rel="noopener noreferrer"
+                <a href={wa("مرحباً، أريد الاستفسار عن منتج")} target="_blank" rel="noopener noreferrer"
                   className="flex items-center gap-2 px-4 py-3 bg-green-500 text-white font-bold rounded-xl text-sm mt-2">
                   <MessageCircle className="w-4 h-4" /> تواصل معنا واتساب
                 </a>

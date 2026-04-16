@@ -4,6 +4,7 @@ export interface StoreSettings {
   storeName?: string;
   storeAddress?: string;
   storePhone?: string;
+  storePhone2?: string;
   storeEmail?: string;
   storeDescription?: string;
   storeLogo?: string;

@@ -33,7 +33,7 @@ const TABS = [
 
 // ─── Keys per tab ─────────────────────────────────────────────────────────────
 const TAB_KEYS: Record<string, string[]> = {
-  general:      ["storeName", "storeAddress", "storePhone", "storeEmail", "storeDescription", "heroBannerImage"],
+  general:      ["storeName", "storeAddress", "storePhone", "storePhone2", "storeEmail", "storeDescription", "heroBannerImage"],
   contact:      ["whatsappNumber", "whatsappDefaultMessage", "facebookUrl", "instagramUrl", "tiktokUrl"],
   orders:       ["orderPrefix", "invoicePrefix", "defaultOrderNote"],
   delivery:     ["defaultDeliveryFee", "defaultShippingCompany"],
@@ -288,6 +288,22 @@ export default function AdminSettings() {
                     </Field>
                     <Field label="رقم الهاتف">
                       <SettingInput value={val("storePhone")} onChange={set("storePhone")} placeholder="0555 123 456" prefix={<Phone className="w-3.5 h-3.5" />} mono />
+                    </Field>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Field label="رقم الهاتف الأزرق (الهيدر)" hint="يظهر في أعلى الموقع بلون أزرق">
+                      <div className="relative">
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-blue-500 border-2 border-blue-300" />
+                        <input type="tel" value={val("storePhone")} onChange={e => set("storePhone")(e.target.value)} placeholder="0555 000 001"
+                          className="w-full bg-gray-50 border border-blue-200 text-gray-900 placeholder:text-gray-400 pr-9 px-3 py-2.5 rounded-xl text-sm font-mono focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100 transition-colors" />
+                      </div>
+                    </Field>
+                    <Field label="رقم الهاتف الأصفر (الهيدر)" hint="يظهر في أعلى الموقع بلون أصفر/ذهبي">
+                      <div className="relative">
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-yellow-400 border-2 border-yellow-300" />
+                        <input type="tel" value={val("storePhone2")} onChange={e => set("storePhone2")(e.target.value)} placeholder="0555 000 002"
+                          className="w-full bg-gray-50 border border-yellow-200 text-gray-900 placeholder:text-gray-400 pr-9 px-3 py-2.5 rounded-xl text-sm font-mono focus:outline-none focus:border-yellow-400 focus:ring-1 focus:ring-yellow-100 transition-colors" />
+                      </div>
                     </Field>
                   </div>
                   <Field label="البريد الإلكتروني">

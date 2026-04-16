@@ -756,6 +756,11 @@ export class DatabaseStorage implements IStorage {
           if (!item.productId) continue;
           // If this item has a linked phone unit, mark it sold instead of adjustStock
           if ((item as any).phoneUnitId) {
+            // Validate unit is still available before selling (prevent duplicate IMEI sale)
+            const unitToSell = await db.select().from(phoneUnits).where(eq(phoneUnits.id, (item as any).phoneUnitId)).limit(1);
+            if (unitToSell[0] && unitToSell[0].status !== "available") {
+              throw new Error(`وحدة الهاتف IMEI ${unitToSell[0].imei} غير متاحة للبيع — الحالة الحالية: ${unitToSell[0].status}`);
+            }
             await this.updatePhoneUnit((item as any).phoneUnitId, { status: "sold", soldOrderId: id });
             await this.syncPhoneStock(item.productId);
           } else {
@@ -783,7 +788,7 @@ export class DatabaseStorage implements IStorage {
           // Lock this specific IMEI unit and mark it sold
           await this.updatePhoneUnit(availableUnit.id, { status: "sold", soldOrderId: id });
           // Save the phoneUnitId on the order for future reference (returns, etc.)
-          await db.update(orders).set({ phoneUnitId: availableUnit.id } as any).where(eq(orders.id, id));
+          await db.update(orders).set({ phoneUnitId: availableUnit.id }).where(eq(orders.id, id));
           await this.syncPhoneStock(existing.productId);
         } else {
           // Non-IMEI product or phone with no tracked units — fallback to quantity adjustment
@@ -821,7 +826,7 @@ export class DatabaseStorage implements IStorage {
               .limit(1))[0];
             if (availableUnit) {
               await this.updatePhoneUnit(availableUnit.id, { status: "sold", soldOrderId: id });
-              await db.update(orders).set({ phoneUnitId: availableUnit.id } as any).where(eq(orders.id, id));
+              await db.update(orders).set({ phoneUnitId: availableUnit.id }).where(eq(orders.id, id));
               await this.syncPhoneStock(existing.productId);
             } else {
               await this.adjustStock(existing.productId, existing.quantity ?? 1, "order_out", "order", id, `طلب مسلَّم: ${existing.customerName}`);

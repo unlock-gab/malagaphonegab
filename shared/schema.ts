@@ -177,6 +177,7 @@ export const orders = pgTable("orders", {
   price: numeric("price", { precision: 10, scale: 2 }),
   stockDeducted: boolean("stock_deducted").notNull().default(false),
   stockRestored: boolean("stock_restored").notNull().default(false),
+  phoneUnitId: varchar("phone_unit_id"), // auto-assigned phone_unit for storefront single-product orders
   returnReason: text("return_reason"),
   returnCondition: text("return_condition"),
   returnNotes: text("return_notes"),

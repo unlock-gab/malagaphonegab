@@ -10,7 +10,7 @@ import { execSync } from "child_process";
 
 // Auto-setup git credentials on startup
 try {
-  const gitToken = process.env.GIT_TOKEN;
+  const gitToken = process.env.GITHUB_PERSONAL_ACCESS_TOKEN;
   const gitUsername = process.env.GIT_USERNAME || "unlock-gab";
   if (gitToken) {
     fs.writeFileSync(`${process.env.HOME || "/home/runner"}/.git-credentials`, `https://${gitUsername}:${gitToken}@github.com\n`, { mode: 0o600 });

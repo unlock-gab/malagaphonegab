@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Plus, ShoppingBag, Trash2, Check, X, Building2, Calendar, Search, ChevronRight,
-  Loader2, PackagePlus, Smartphone, ChevronDown, UserRound, Save,
+  Loader2, PackagePlus, Package, Smartphone, ChevronDown, UserRound, Save,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -668,18 +668,29 @@ function ViewPurchaseDialog({ purchase, onClose, onComplete, onCancel: onCancelP
   purchase: any; onClose: () => void;
   onComplete: () => void; onCancel: () => void; onDelete: () => void;
 }) {
-  const sc = STATUS_CONFIG[purchase.status] ?? STATUS_CONFIG.pending;
-  const items = (purchase.items ?? []) as PurchaseItem[];
+  const { data: full, isLoading } = useQuery<any>({
+    queryKey: ["/api/purchases", purchase.id],
+    queryFn: () => fetch(`/api/purchases/${purchase.id}`, { credentials: "include" }).then(r => r.json()),
+  });
+
+  const data = full ?? purchase;
+  const sc = STATUS_CONFIG[data.status] ?? STATUS_CONFIG.pending;
+  const items = (data.items ?? []) as PurchaseItem[];
+  const extraCosts = parseFloat(data.extraCosts || "0");
+
   return (
     <Dialog open onOpenChange={o => { if (!o) onClose(); }}>
       <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-lg max-h-[90vh] overflow-y-auto shadow-xl" dir="rtl">
         <DialogHeader className="border-b border-gray-100 pb-3">
           <DialogTitle className="text-gray-900 flex items-center gap-2 text-sm font-bold">
             <ShoppingBag className="w-4 h-4 text-blue-600" />
-            {purchase.supplierName} — {purchase.referenceNumber ?? ""}
+            تفاصيل الشراء — {data.supplierName}
+            {data.referenceNumber ? <span className="text-gray-400 font-mono text-xs">#{data.referenceNumber}</span> : null}
           </DialogTitle>
         </DialogHeader>
+
         <div className="space-y-3 text-sm pt-1">
+          {/* ── Summary cards ── */}
           <div className="grid grid-cols-3 gap-2 text-xs">
             <div className="bg-gray-50 border border-gray-100 rounded-lg p-2.5">
               <p className="text-gray-400 mb-1">الحالة</p>
@@ -687,18 +698,28 @@ function ViewPurchaseDialog({ purchase, onClose, onComplete, onCancel: onCancelP
             </div>
             <div className="bg-gray-50 border border-gray-100 rounded-lg p-2.5">
               <p className="text-gray-400 mb-1">التاريخ</p>
-              <p className="text-gray-700">{formatDate(purchase.purchaseDate)}</p>
+              <p className="text-gray-700">{formatDate(data.purchaseDate)}</p>
             </div>
             <div className="bg-gray-50 border border-gray-100 rounded-lg p-2.5">
               <p className="text-gray-400 mb-1">الإجمالي</p>
-              <p className="text-blue-700 font-bold">{formatCurrency(parseFloat(purchase.total || "0"))}</p>
+              <p className="text-blue-700 font-bold">{formatCurrency(parseFloat(data.total || "0"))}</p>
             </div>
           </div>
-          {items.length > 0 && (
+
+          {/* ── Items table ── */}
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8 gap-2 text-gray-400 text-xs">
+              <Loader2 className="w-4 h-4 animate-spin" /> جاري تحميل المنتجات…
+            </div>
+          ) : items.length > 0 ? (
             <div className="border border-gray-200 rounded-xl overflow-hidden">
+              <div className="bg-gray-50 border-b border-gray-100 px-3 py-2 flex items-center gap-2">
+                <Package className="w-3.5 h-3.5 text-blue-600" />
+                <span className="text-xs font-semibold text-gray-600">المنتجات المشتراة ({items.length})</span>
+              </div>
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="bg-gray-50 border-b border-gray-100 text-gray-500">
+                  <tr className="border-b border-gray-100 text-gray-500">
                     <th className="text-right p-2.5 font-semibold">المنتج</th>
                     <th className="text-center p-2.5 font-semibold">الكمية</th>
                     <th className="text-right p-2.5 font-semibold">سعر الوحدة</th>
@@ -706,25 +727,64 @@ function ViewPurchaseDialog({ purchase, onClose, onComplete, onCancel: onCancelP
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((item: any, i: number) => (
-                    <tr key={i} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/70">
-                      <td className="p-2.5 text-gray-800">{item.productName}</td>
-                      <td className="p-2.5 text-center text-gray-600">{item.quantity}</td>
-                      <td className="p-2.5 text-gray-600">{formatCurrency(parseFloat(item.unitCost || "0"))}</td>
-                      <td className="p-2.5 text-emerald-700 font-bold">{formatCurrency(parseFloat(item.total || "0"))}</td>
-                    </tr>
-                  ))}
+                  {items.map((item: any, i: number) => {
+                    const imeis: string[] = item.imeis ?? [];
+                    return (
+                      <tr key={i} className="border-b border-gray-50 last:border-0">
+                        <td className="p-2.5">
+                          <p className="text-gray-800 font-medium">{item.productName}</p>
+                          {imeis.length > 0 && (
+                            <div className="mt-1 space-y-0.5">
+                              {imeis.map((imei, j) => (
+                                <span key={j} className="inline-block font-mono text-[10px] bg-blue-50 text-blue-700 border border-blue-100 rounded px-1.5 py-0.5 ml-1">
+                                  {imei}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-2.5 text-center text-gray-600">{item.quantity}</td>
+                        <td className="p-2.5 text-gray-600">{formatCurrency(parseFloat(item.unitCost || "0"))}</td>
+                        <td className="p-2.5 text-emerald-700 font-bold">{formatCurrency(parseFloat(item.total || "0"))}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
+              {/* Subtotal / extra costs / total footer */}
+              <div className="bg-gray-50 border-t border-gray-100 px-3 py-2 space-y-1 text-xs">
+                <div className="flex justify-between text-gray-500">
+                  <span>المجموع الفرعي</span>
+                  <span>{formatCurrency(parseFloat(data.subtotal || "0"))}</span>
+                </div>
+                {extraCosts > 0 && (
+                  <div className="flex justify-between text-gray-500">
+                    <span>تكاليف إضافية</span>
+                    <span>{formatCurrency(extraCosts)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-bold text-gray-800 border-t border-gray-200 pt-1 mt-1">
+                  <span>الإجمالي الكلي</span>
+                  <span className="text-blue-700">{formatCurrency(parseFloat(data.total || "0"))}</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="border border-dashed border-gray-200 rounded-xl p-6 text-center text-gray-400 text-xs">
+              لا توجد منتجات مسجّلة لهذا الشراء
             </div>
           )}
-          {purchase.notes && (
+
+          {/* ── Notes ── */}
+          {data.notes && (
             <div className="bg-gray-50 border border-gray-100 rounded-lg p-3">
               <p className="text-gray-400 text-xs mb-1">ملاحظات</p>
-              <p className="text-gray-700 text-xs">{purchase.notes}</p>
+              <p className="text-gray-700 text-xs">{data.notes}</p>
             </div>
           )}
-          {purchase.status === "pending" && (
+
+          {/* ── Actions ── */}
+          {data.status === "pending" && (
             <div className="flex gap-2">
               <Button onClick={onComplete} className="flex-1 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 text-sm shadow-none">
                 <Check className="w-4 h-4 ml-2" /> إتمام (يحدّث المخزون)

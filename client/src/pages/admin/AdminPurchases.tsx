@@ -188,8 +188,9 @@ function QuickAddProductDialog({ onCreated, onClose }: {
   );
 }
 
-function ProductSearchPicker({ products, onSelect, onAddNew, selectedName }: {
-  products: Product[]; onSelect: (productId: string) => void; onAddNew: () => void; selectedName?: string;
+function ProductSearchPicker({ products, onSelect, onAddNew, selectedName, onClear }: {
+  products: Product[]; onSelect: (productId: string) => void; onAddNew: () => void;
+  selectedName?: string; onClear?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -218,7 +219,13 @@ function ProductSearchPicker({ products, onSelect, onAddNew, selectedName }: {
         <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
         <input
           value={search}
-          onChange={e => { setSearch(e.target.value); setOpen(true); }}
+          onChange={e => {
+            const val = e.target.value;
+            setSearch(val);
+            setOpen(true);
+            // Clear parent selection when text is fully removed
+            if (!val.trim()) onClear?.();
+          }}
           onClick={() => setOpen(true)}
           placeholder="ابحث عن منتج..."
           className="w-full h-8 pr-8 pl-3 text-xs rounded-md border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
@@ -500,6 +507,10 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
             onSelect={id => {
               const prod = products.find(p => p.id === id);
               setNewItem(i => ({ ...i, productId: id, productName: prod?.name ?? "", productType: prod?.productType ?? "" }));
+              setNewItemImeiText("");
+            }}
+            onClear={() => {
+              setNewItem(i => ({ ...i, productId: "", productName: "", productType: "" }));
               setNewItemImeiText("");
             }}
             onAddNew={() => setShowAddProduct(true)}

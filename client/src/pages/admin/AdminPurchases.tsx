@@ -371,7 +371,8 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
   });
   const [items, setItems] = useState<PurchaseItem[]>([]);
   const [newItem, setNewItem] = useState({ productId: "", productName: "", productType: "", quantity: "1", unitCost: "" });
-  const [newItemImeiText, setNewItemImeiText] = useState(""); // one IMEI per line
+  const [newItemImeiText, setNewItemImeiText] = useState("");
+  const [pickerKey, setPickerKey] = useState(0); // changes on each add to reset ProductSearchPicker
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [showAddProduct, setShowAddProduct] = useState(false);
   const setF = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }));
@@ -398,6 +399,7 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
     }]);
     setNewItem({ productId: "", productName: "", productType: "", quantity: "1", unitCost: "" });
     setNewItemImeiText("");
+    setPickerKey(k => k + 1);
   };
   const removeItem = (idx: number) => setItems(i => i.filter((_, j) => j !== idx));
   const updateItem = (idx: number, key: "quantity" | "unitCost", val: string) => {
@@ -487,6 +489,7 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
         </div>
         <div className="grid grid-cols-[1fr_72px_100px_36px] gap-2 items-center">
           <ProductSearchPicker
+            key={pickerKey}
             products={products}
             onSelect={id => {
               const prod = products.find(p => p.id === id);

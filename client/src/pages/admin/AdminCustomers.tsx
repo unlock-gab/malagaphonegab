@@ -44,7 +44,7 @@ function CustomerOrders({ phone }: { phone: string }) {
       <div className="grid grid-cols-3 gap-3">
         {[
           { label: t("orders_count"), value: orders.length, icon: ShoppingCart, color: "text-blue-600", bg: "bg-blue-50" },
-          { label: t("status_delivered"), value: orders.filter(o => o.status === "delivered").length, icon: Package, color: "text-emerald-600", bg: "bg-emerald-50" },
+          { label: "Payé", value: orders.filter(o => o.status === "paid").length, icon: Package, color: "text-violet-600", bg: "bg-violet-50" },
           { label: t("total_spent"), value: formatCurrency(totalSpent), icon: DollarSign, color: "text-violet-600", bg: "bg-violet-50" },
         ].map(s => (
           <div key={s.label} className="bg-gray-50 border border-gray-100 rounded-xl p-3 text-center">

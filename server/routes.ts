@@ -55,9 +55,7 @@ function requireAdmin(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
-const ALLOWED_ORDER_STATUSES = ["new", "confirmed", "preparing", "shipped", "with_delivery",
-  "delivered", "returned_by_delivery", "delivery_failed", "customer_refused", "cancelled",
-  "pending", "processing", "dispatched", "in_delivery", "returned"];
+const ALLOWED_ORDER_STATUSES = ["new", "confirmed", "delivered", "paid", "returned"];
 
 const isBase64 = (s: string) => typeof s === "string" && s.startsWith("data:");
 

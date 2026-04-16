@@ -833,7 +833,7 @@ export class DatabaseStorage implements IStorage {
       await db.update(orders).set({ stockDeducted: true }).where(eq(orders.id, id));
     }
 
-    // Also deduct stock at "delivered" if somehow it was never deducted (e.g. order skipped "confirmed")
+    // Safety net: deduct stock at "delivered" if it was never deducted
     if (status === "delivered" && existing.status !== "delivered") {
       if (!existing.stockDeducted) {
         const items = await this.getOrderItems(id);
@@ -844,7 +844,6 @@ export class DatabaseStorage implements IStorage {
             }
           }
         } else if (existing.productId) {
-          // FIX 3 fallback at delivered: auto-assign phone unit if not already done
           const product = await this.getProduct(existing.productId);
           const isPhone = product?.productType === "phone" || product?.productType === "tablet";
           const alreadyLinked = (existing as any).phoneUnitId;
@@ -865,11 +864,35 @@ export class DatabaseStorage implements IStorage {
         }
         await db.update(orders).set({ stockDeducted: true }).where(eq(orders.id, id));
       }
-      await this.createProfitSnapshotForOrder(id);
+      // No profit snapshot at delivered — profit is recorded at "paid"
     }
 
-    // Fix 1: Restore stock at "cancelled" — same dual-path logic
-    if (status === "cancelled" && existing.status !== "cancelled") {
+    // "paid" → create profit snapshot + mark payment as paid
+    if (status === "paid" && existing.status !== "paid") {
+      // Safety net: ensure stock is deducted if somehow it wasn't
+      if (!existing.stockDeducted) {
+        const items = await this.getOrderItems(id);
+        if (items.length > 0) {
+          for (const item of items) {
+            if (!item.productId) continue;
+            if ((item as any).phoneUnitId) {
+              await this.updatePhoneUnit((item as any).phoneUnitId, { status: "sold", soldOrderId: id });
+              await this.syncPhoneStock(item.productId);
+            } else {
+              await this.adjustStock(item.productId, item.quantity, "order_out", "order", id, `طلب مدفوع: ${existing.customerName}`);
+            }
+          }
+        } else if (existing.productId) {
+          await this.adjustStock(existing.productId, existing.quantity ?? 1, "order_out", "order", id, `طلب مدفوع: ${existing.customerName}`);
+        }
+        await db.update(orders).set({ stockDeducted: true }).where(eq(orders.id, id));
+      }
+      await this.createProfitSnapshotForOrder(id);
+      await db.update(orders).set({ paymentStatus: "paid" }).where(eq(orders.id, id));
+    }
+
+    // "returned" → restore stock automatically (always sellable) + mark as refunded
+    if (status === "returned" && existing.status !== "returned") {
       if (existing.stockDeducted) {
         const items = await this.getOrderItems(id);
         if (items.length > 0) {
@@ -885,12 +908,11 @@ export class DatabaseStorage implements IStorage {
                 "return_in",
                 "order_cancelled",
                 id,
-                `إلغاء طلب: ${existing.customerName}`,
+                `مرتجع: ${existing.customerName}`,
               );
             }
           }
         } else if (existing.productId) {
-          // Restore phone_unit if linked, otherwise adjustStock
           const linkedUnitId = (existing as any).phoneUnitId;
           if (linkedUnitId) {
             await this.updatePhoneUnit(linkedUnitId, { status: "available", soldOrderId: null });
@@ -902,11 +924,11 @@ export class DatabaseStorage implements IStorage {
               "return_in",
               "order_cancelled",
               id,
-              `إلغاء طلب: ${existing.customerName}`,
+              `مرتجع: ${existing.customerName}`,
             );
           }
         }
-        await db.update(orders).set({ stockDeducted: false }).where(eq(orders.id, id));
+        await db.update(orders).set({ stockDeducted: false, stockRestored: true, paymentStatus: "refunded" }).where(eq(orders.id, id));
       }
     }
 
@@ -1070,8 +1092,8 @@ export class DatabaseStorage implements IStorage {
     const lowStockCount = lowStockProducts.length;
     const newOrdersCount = allOrders.filter(o => o.status === "new").length;
 
-    const deliveredOrders = allOrders.filter(o => o.status === "delivered");
-    const totalRevenue = deliveredOrders.reduce((sum, o) => sum + parseFloat(o.total as string || "0"), 0);
+    const paidOrders = allOrders.filter(o => o.status === "paid");
+    const totalRevenue = paidOrders.reduce((sum, o) => sum + parseFloat(o.total as string || "0"), 0);
 
     // General expenses (not linked to a specific order) must be deducted from total profit
     const generalExpenses = allExpenses.filter(e => !e.relatedOrderId);
@@ -1207,8 +1229,8 @@ export class DatabaseStorage implements IStorage {
       wilaya: orders.wilaya,
     }).from(orders);
 
-    const VALID_SPENT_STATUSES = ["delivered"];
-    const NON_COUNTED_STATUSES = ["cancelled", "returned_by_delivery", "delivery_failed", "customer_refused"];
+    const VALID_SPENT_STATUSES = ["paid"];
+    const NON_COUNTED_STATUSES = ["returned"];
 
     const phoneMap = new Map<string, CustomerSummary>();
     for (const r of allRows) {

@@ -455,16 +455,11 @@ export const DELIVERY_SHIPPERS: ShipperInfo[] = [
 ];
 
 export const ORDER_STATUSES = [
-  { key: "new",                  label: "جديد",                 color: "text-sky-600",     dot: "bg-sky-500",     badge: "bg-sky-50 text-sky-700 border-sky-200" },
-  { key: "confirmed",            label: "مؤكد",                 color: "text-emerald-600", dot: "bg-emerald-500", badge: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  { key: "preparing",            label: "قيد التجهيز",          color: "text-amber-600",   dot: "bg-amber-500",   badge: "bg-amber-50 text-amber-700 border-amber-200" },
-  { key: "shipped",              label: "تم الشحن",             color: "text-blue-600",    dot: "bg-blue-500",    badge: "bg-blue-50 text-blue-700 border-blue-200" },
-  { key: "with_delivery",        label: "مع شركة التوصيل",      color: "text-violet-600",  dot: "bg-violet-500",  badge: "bg-violet-50 text-violet-700 border-violet-200" },
-  { key: "delivered",            label: "تم التسليم",           color: "text-teal-600",    dot: "bg-teal-500",    badge: "bg-teal-50 text-teal-700 border-teal-200" },
-  { key: "returned_by_delivery", label: "مرتجع من التوصيل",    color: "text-orange-600",  dot: "bg-orange-500",  badge: "bg-orange-50 text-orange-700 border-orange-200" },
-  { key: "delivery_failed",      label: "فشل التوصيل",          color: "text-rose-600",    dot: "bg-rose-500",    badge: "bg-rose-50 text-rose-700 border-rose-200" },
-  { key: "customer_refused",     label: "رفض المستقبل",         color: "text-red-600",     dot: "bg-red-500",     badge: "bg-red-50 text-red-700 border-red-200" },
-  { key: "cancelled",            label: "ملغي",                 color: "text-gray-600",    dot: "bg-gray-400",    badge: "bg-gray-50 text-gray-600 border-gray-200" },
+  { key: "new",       label: "Nouvelle commande", color: "text-sky-600",      dot: "bg-sky-500",      badge: "bg-sky-50 text-sky-700 border-sky-200" },
+  { key: "confirmed", label: "Confirmé",           color: "text-emerald-600",  dot: "bg-emerald-500",  badge: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  { key: "delivered", label: "Livré",              color: "text-blue-600",     dot: "bg-blue-500",     badge: "bg-blue-50 text-blue-700 border-blue-200" },
+  { key: "paid",      label: "Payé",               color: "text-violet-600",   dot: "bg-violet-500",   badge: "bg-violet-50 text-violet-700 border-violet-200" },
+  { key: "returned",  label: "Retour",             color: "text-orange-600",   dot: "bg-orange-500",   badge: "bg-orange-50 text-orange-700 border-orange-200" },
 ];
 
 export const AFTER_SALE_TYPES = [

@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Search, Eye, Package, Trash2, Loader2, Plus,
   ShoppingCart, Globe, MessageCircle, User, CheckCircle2,
-  Printer, RotateCcw, Truck, AlertTriangle, PackagePlus,
+  Printer, RotateCcw, Truck, PackagePlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +19,7 @@ import { useAdminLang } from "@/context/AdminLangContext";
 import OrderInvoice from "@/components/OrderInvoice";
 import BonDeLivraison from "@/components/BonDeLivraison";
 import type { Order, Product } from "@shared/schema";
-import { ORDER_STATUSES, RETURN_CONDITIONS, ALGERIAN_WILAYAS, DEFAULT_DELIVERY_PRICES } from "@shared/schema";
+import { ORDER_STATUSES, ALGERIAN_WILAYAS, DEFAULT_DELIVERY_PRICES } from "@shared/schema";
 
 function formatCurrency(v: number) {
   return new Intl.NumberFormat("ar-DZ").format(Math.round(v)) + " د.ج";
@@ -77,8 +77,8 @@ function SourceBadge({ source }: { source?: string | null }) {
   return <span className="inline-flex items-center gap-1 text-[10px] text-gray-500"><User className="w-3 h-3" /> يدوي</span>;
 }
 
-const STATUS_FLOW_MAIN = ["new", "confirmed", "preparing", "shipped", "with_delivery", "delivered"];
-const RETURN_STATUSES = ["returned_by_delivery", "delivery_failed", "customer_refused", "cancelled"];
+const STATUS_FLOW_MAIN = ["new", "confirmed", "delivered", "paid"];
+const RETURN_STATUSES = ["returned"];
 
 const ORDER_SOURCES = [
   { value: "admin",     label: "يدوي" },
@@ -447,8 +447,6 @@ export default function AdminOrders() {
   const [orderItems, setOrderItems] = useState<any[]>([]);
   const [invoiceOrder, setInvoiceOrder] = useState<Order | null>(null);
   const [bonOrder, setBonOrder] = useState<Order | null>(null);
-  const [returnDialogOpen, setReturnDialogOpen] = useState(false);
-  const [returnForm, setReturnForm] = useState({ condition: "sellable", reason: "", notes: "" });
 
   const { data: orders = [], isLoading } = useQuery<Order[]>({ queryKey: ["/api/orders"], refetchInterval: 30000 });
 
@@ -478,19 +476,6 @@ export default function AdminOrders() {
     onError: () => toast({ title: "فشل الحذف", variant: "destructive" }),
   });
 
-  const returnMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => apiRequest("POST", `/api/orders/${id}/return`, data),
-    onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/inventory/movements"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
-      setReturnDialogOpen(false);
-      setReturnForm({ condition: "sellable", reason: "", notes: "" });
-      if (viewOrder) setViewOrder(v => v ? { ...v, status: "returned_by_delivery" } : null);
-      toast({ title: "✓ تم تسجيل المرتجع وتحديث المخزون" });
-    },
-    onError: (e: any) => toast({ title: e?.message ?? "فشل تسجيل المرتجع", variant: "destructive" }),
-  });
 
   const openOrder = async (order: Order) => {
     setViewOrder(order);
@@ -511,7 +496,7 @@ export default function AdminOrders() {
     return matchSearch && matchStatus;
   });
 
-  const totalRevenue = orders.filter(o => o.status === "delivered").reduce((s, o) => s + parseFloat(o.total?.toString() || "0"), 0);
+  const totalRevenue = orders.filter(o => o.status === "paid").reduce((s, o) => s + parseFloat(o.total?.toString() || "0"), 0);
 
   return (
     <AdminLayout>
@@ -529,8 +514,8 @@ export default function AdminOrders() {
           <div>
             <h1 className="text-lg font-black text-gray-900">الطلبات</h1>
             <p className="text-gray-500 text-xs mt-0.5">
-              {orders.length} طلب إجمالي • إيرادات مسلَّمة:{" "}
-              <span className="text-emerald-600 font-semibold">{formatCurrency(totalRevenue)}</span>
+              {orders.length} طلب إجمالي • رقم الأعمال (Payé):{" "}
+              <span className="text-violet-600 font-semibold">{formatCurrency(totalRevenue)}</span>
             </p>
           </div>
           <Button onClick={() => setShowNewOrder(true)}
@@ -674,85 +659,6 @@ export default function AdminOrders() {
           <BonDeLivraison order={bonOrder} items={orderItems} onClose={() => setBonOrder(null)} />
         )}
 
-        {/* Return Dialog */}
-        {viewOrder && (
-          <Dialog open={returnDialogOpen} onOpenChange={o => { if (!o) setReturnDialogOpen(false); }}>
-            <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-md shadow-xl" dir={dir}>
-              <DialogHeader className="border-b border-gray-100 pb-3">
-                <DialogTitle className="text-gray-900 text-sm font-bold flex items-center gap-2">
-                  <RotateCcw className="w-4 h-4 text-orange-600" />
-                  تسجيل مرتجع توصيل — {viewOrder.customerName}
-                </DialogTitle>
-              </DialogHeader>
-
-              <div className="space-y-4 pt-1">
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 flex items-start gap-2">
-                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <p>اختر حالة المنتج المرتجع بعناية — إذا كان قابلاً للبيع سيُعاد للمخزون تلقائياً، وإذا كان تالفاً أو تحت الفحص لن يُضاف للمخزون.</p>
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-xs text-gray-600 font-semibold">حالة المنتج المرتجع *</Label>
-                  <div className="space-y-2">
-                    {RETURN_CONDITIONS.map(c => (
-                      <label key={c.key} className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
-                        returnForm.condition === c.key
-                          ? c.key === "sellable" ? "bg-emerald-50 border-emerald-400" : c.key === "damaged" ? "bg-red-50 border-red-400" : "bg-amber-50 border-amber-400"
-                          : "border-gray-200 hover:border-gray-300"
-                      }`}>
-                        <input type="radio" name="returnCondition" value={c.key}
-                          checked={returnForm.condition === c.key}
-                          onChange={() => setReturnForm(f => ({ ...f, condition: c.key }))}
-                          className="mt-0.5" />
-                        <div>
-                          <p className="text-sm font-semibold text-gray-800">{c.label}</p>
-                          <p className="text-xs text-gray-500">{c.desc}</p>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-xs text-gray-600 font-semibold">سبب الإرجاع *</Label>
-                  <Select value={returnForm.reason} onValueChange={v => setReturnForm(f => ({ ...f, reason: v }))}>
-                    <SelectTrigger className="bg-white border-gray-200 text-gray-900 text-sm h-9" data-testid="select-return-reason">
-                      <SelectValue placeholder="اختر السبب..." />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white border-gray-200 shadow-lg">
-                      <SelectItem value="لم يرد الزبون" className="text-sm">لم يرد الزبون</SelectItem>
-                      <SelectItem value="رفض الزبون الاستلام" className="text-sm">رفض الزبون الاستلام</SelectItem>
-                      <SelectItem value="العنوان غير صحيح" className="text-sm">العنوان غير صحيح</SelectItem>
-                      <SelectItem value="تعذّر الوصول" className="text-sm">تعذّر الوصول</SelectItem>
-                      <SelectItem value="تغيير الزبون رأيه" className="text-sm">تغيير الزبون رأيه</SelectItem>
-                      <SelectItem value="مشكلة في المنتج" className="text-sm">مشكلة في المنتج</SelectItem>
-                      <SelectItem value="أخرى" className="text-sm">أخرى</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-xs text-gray-600 font-semibold">ملاحظات إضافية</Label>
-                  <Textarea value={returnForm.notes} onChange={e => setReturnForm(f => ({ ...f, notes: e.target.value }))}
-                    placeholder="أي تفاصيل إضافية..."
-                    className="bg-white border-gray-200 text-gray-900 text-sm resize-none placeholder:text-gray-400" rows={2}
-                    data-testid="textarea-return-notes" />
-                </div>
-
-                <Button onClick={() => {
-                    if (!returnForm.reason) { toast({ title: "يرجى اختيار سبب الإرجاع", variant: "destructive" }); return; }
-                    returnMutation.mutate({ id: viewOrder.id, data: returnForm });
-                  }}
-                  disabled={returnMutation.isPending}
-                  className="w-full bg-orange-600 hover:bg-orange-700 text-white text-sm shadow-sm"
-                  data-testid="button-confirm-return">
-                  {returnMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <RotateCcw className="w-4 h-4 ml-2" />}
-                  تأكيد المرتجع
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        )}
 
         {viewOrder && (
           <Dialog open={!!viewOrder} onOpenChange={o => { if (!o) setViewOrder(null); }}>
@@ -846,7 +752,17 @@ export default function AdminOrders() {
                   </Select>
                   {editStatus === "confirmed" && viewOrder.status !== "confirmed" && (
                     <p className="text-amber-600 text-xs flex items-center gap-1.5">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> سيتم خصم المخزون عند التأكيد
+                      <CheckCircle2 className="w-3.5 h-3.5" /> سيتم خصم المخزون تلقائياً
+                    </p>
+                  )}
+                  {editStatus === "paid" && viewOrder.status !== "paid" && (
+                    <p className="text-violet-600 text-xs flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> سيتم تسجيل الربح وإضافته لرقم الأعمال تلقائياً
+                    </p>
+                  )}
+                  {editStatus === "returned" && viewOrder.status !== "returned" && (
+                    <p className="text-orange-600 text-xs flex items-center gap-1.5">
+                      <RotateCcw className="w-3.5 h-3.5" /> سيتم إعادة المخزون للمتجر تلقائياً
                     </p>
                   )}
                   <Button onClick={() => statusMutation.mutate({ id: viewOrder.id, status: editStatus })}
@@ -905,14 +821,6 @@ export default function AdminOrders() {
                     data-testid="button-print-order">
                     <Printer className="w-4 h-4 ml-1" /> فاتورة
                   </Button>
-                  {!RETURN_STATUSES.includes(viewOrder.status) && (
-                    <Button variant="outline"
-                      onClick={() => setReturnDialogOpen(true)}
-                      className="border-orange-200 text-orange-600 hover:bg-orange-50 hover:text-orange-700 text-sm"
-                      data-testid="button-return-order">
-                      <RotateCcw className="w-4 h-4 ml-1" /> مرتجع
-                    </Button>
-                  )}
                   <Button variant="outline" onClick={() => { if (confirm("حذف الطلب نهائياً؟")) deleteMutation.mutate(viewOrder.id); }}
                     className="border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600 text-sm" disabled={deleteMutation.isPending} data-testid="button-delete-order">
                     <Trash2 className="w-4 h-4" />

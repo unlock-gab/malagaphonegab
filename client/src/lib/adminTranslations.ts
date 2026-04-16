@@ -94,7 +94,7 @@ const T = {
   dashboard_sub:            { fr: "Vue d'ensemble des performances", ar: "نظرة شاملة على أداء المتجر اليوم" },
   live:                     { fr: "En direct",                    ar: "مباشر" },
   total_revenue:            { fr: "Revenus totaux",               ar: "إجمالي الإيرادات" },
-  from_delivered:           { fr: "Des commandes livrées",        ar: "من الطلبات المسلَّمة" },
+  from_delivered:           { fr: "Des commandes payées",         ar: "من الطلبات المدفوعة (Payé)" },
   net_profit:               { fr: "Bénéfice net",                 ar: "صافي الربح" },
   new_orders:               { fr: "Nouvelles commandes",          ar: "طلبات جديدة" },
   awaiting_confirmation:    { fr: "En attente de confirmation",   ar: "بانتظار التأكيد" },

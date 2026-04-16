@@ -17,11 +17,12 @@ import {
   type AfterSaleRecord, type InsertAfterSale,
   type PhoneUnit, type InsertPhoneUnit,
   type InvoiceTemplate, type InsertInvoiceTemplate,
+  type Partner, type InsertPartner,
   DEFAULT_DELIVERY_PRICES,
   users, products, categories, brands, suppliers, purchases, purchaseItems,
   inventoryMovements, orders, orderItems, expenses, profitRecords,
   blockedIps, abandonedCarts, appSettings, deliveryCompanies, productVariants,
-  afterSaleRecords, phoneUnits, invoiceTemplates,
+  afterSaleRecords, phoneUnits, invoiceTemplates, partners,
 } from "@shared/schema";
 import { randomUUID, createHash, scryptSync, randomBytes, timingSafeEqual } from "crypto";
 import { db } from "./db";
@@ -190,6 +191,13 @@ export interface IStorage {
   createInvoiceTemplate(data: InsertInvoiceTemplate): Promise<InvoiceTemplate>;
   updateInvoiceTemplate(id: string, data: Partial<InsertInvoiceTemplate>): Promise<InvoiceTemplate | undefined>;
   deleteInvoiceTemplate(id: string): Promise<boolean>;
+
+  // Partners
+  getPartners(): Promise<Partner[]>;
+  getPartner(id: string): Promise<Partner | undefined>;
+  createPartner(data: InsertPartner): Promise<Partner>;
+  updatePartner(id: string, data: Partial<InsertPartner>): Promise<Partner | undefined>;
+  deletePartner(id: string): Promise<boolean>;
 }
 
 export interface TopProductRow {
@@ -1510,6 +1518,28 @@ export class DatabaseStorage implements IStorage {
 
   async deleteInvoiceTemplate(id: string): Promise<boolean> {
     const result = await db.delete(invoiceTemplates).where(eq(invoiceTemplates.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // ── Partners ────────────────────────────────────────────────────────────────
+  async getPartners(): Promise<Partner[]> {
+    return db.select().from(partners).orderBy(desc(partners.createdAt));
+  }
+  async getPartner(id: string): Promise<Partner | undefined> {
+    const [r] = await db.select().from(partners).where(eq(partners.id, id));
+    return r;
+  }
+  async createPartner(data: InsertPartner): Promise<Partner> {
+    const id = randomUUID();
+    const [r] = await db.insert(partners).values({ id, ...data }).returning();
+    return r;
+  }
+  async updatePartner(id: string, data: Partial<InsertPartner>): Promise<Partner | undefined> {
+    const [r] = await db.update(partners).set(data).where(eq(partners.id, id)).returning();
+    return r;
+  }
+  async deletePartner(id: string): Promise<boolean> {
+    const result = await db.delete(partners).where(eq(partners.id, id)).returning();
     return result.length > 0;
   }
 }

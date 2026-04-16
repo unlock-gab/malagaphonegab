@@ -109,6 +109,16 @@ export const suppliers = pgTable("suppliers", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// ===================== PARTNERS =====================
+export const partners = pgTable("partners", {
+  id: varchar("id").primaryKey(),
+  name: text("name").notNull(),
+  phone: text("phone"),
+  notes: text("notes"),
+  defaultShare: numeric("default_share", { precision: 5, scale: 2 }).notNull().default("50"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // ===================== PURCHASES =====================
 export const purchases = pgTable("purchases", {
   id: varchar("id").primaryKey(),
@@ -122,6 +132,9 @@ export const purchases = pgTable("purchases", {
   purchaseStockApplied: boolean("purchase_stock_applied").notNull().default(false),
   purchaseDate: timestamp("purchase_date").defaultNow(),
   notes: text("notes"),
+  partnerId: varchar("partner_id"),
+  partnerName: text("partner_name"),
+  partnerPercentage: numeric("partner_percentage", { precision: 5, scale: 2 }),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -329,6 +342,7 @@ export const insertProductVariantSchema = createInsertSchema(productVariants).om
 export const insertAfterSaleSchema = createInsertSchema(afterSaleRecords).omit({ id: true, createdAt: true });
 export const insertPhoneUnitSchema = createInsertSchema(phoneUnits).omit({ id: true, createdAt: true });
 export const insertInvoiceTemplateSchema = createInsertSchema(invoiceTemplates).omit({ id: true, createdAt: true });
+export const insertPartnerSchema = createInsertSchema(partners).omit({ id: true, createdAt: true });
 
 // ===================== TYPES =====================
 export type InsertUser = { username: string; password: string; role: string; name: string };
@@ -367,6 +381,8 @@ export type PhoneUnit = typeof phoneUnits.$inferSelect;
 export type InsertPhoneUnit = z.infer<typeof insertPhoneUnitSchema>;
 export type InvoiceTemplate = typeof invoiceTemplates.$inferSelect;
 export type InsertInvoiceTemplate = z.infer<typeof insertInvoiceTemplateSchema>;
+export type Partner = typeof partners.$inferSelect;
+export type InsertPartner = z.infer<typeof insertPartnerSchema>;
 
 // CartItem type for storefront cart
 export type CartItem = {

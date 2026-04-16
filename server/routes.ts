@@ -835,5 +835,26 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json({ success: true });
   });
 
+  // ── Partners ─────────────────────────────────────────────────────────────────
+  app.get("/api/partners", requireAdmin, async (_req, res) => {
+    res.json(await storage.getPartners());
+  });
+  app.post("/api/partners", requireAdmin, async (req, res) => {
+    try {
+      const partner = await storage.createPartner(req.body);
+      res.status(201).json(partner);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+  app.patch("/api/partners/:id", requireAdmin, async (req, res) => {
+    const partner = await storage.updatePartner(req.params.id, req.body);
+    if (!partner) return res.status(404).json({ message: "Partenaire introuvable" });
+    res.json(partner);
+  });
+  app.delete("/api/partners/:id", requireAdmin, async (req, res) => {
+    const ok = await storage.deletePartner(req.params.id);
+    if (!ok) return res.status(404).json({ message: "Partenaire introuvable" });
+    res.json({ success: true });
+  });
+
   return httpServer;
 }

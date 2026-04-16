@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Plus, ShoppingBag, Trash2, Check, X, Building2, Calendar, Search, ChevronRight,
   Loader2, PackagePlus, Package, Smartphone, ChevronDown, UserRound, Save,
+  Handshake, Percent,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import AdminLayout from "./AdminLayout";
 import { useAdminLang } from "@/context/AdminLangContext";
-import type { Purchase, Supplier, Product } from "@shared/schema";
+import type { Purchase, Supplier, Product, Partner } from "@shared/schema";
 
 function formatCurrency(v: number) {
   return new Intl.NumberFormat("ar-DZ").format(Math.round(v)) + " د.ج";
@@ -375,22 +376,54 @@ function SupplierCombobox({ suppliers, supplierId, supplierName, onSelect }: {
   );
 }
 
-function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initialProducts }: {
+function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initialProducts, partners }: {
   onSave: (d: any) => void; onCancel: () => void; loading: boolean;
-  suppliers: Supplier[]; products: Product[];
+  suppliers: Supplier[]; products: Product[]; partners: Partner[];
 }) {
   const { dir } = useAdminLang();
   const [form, setForm] = useState({
     supplierId: "", supplierName: "", referenceNumber: "", status: "pending",
     extraCosts: "", purchaseDate: new Date().toISOString().split("T")[0], notes: "",
   });
+  const [partnerId, setPartnerId] = useState<string | null>(null);
+  const [partnerName, setPartnerName] = useState<string>("");
+  const [partnerPercentage, setPartnerPercentage] = useState<string>("");
+  const [partnerSearchOpen, setPartnerSearchOpen] = useState(false);
+  const [partnerSearch, setPartnerSearch] = useState("");
+  const partnerRef = useRef<HTMLDivElement>(null);
   const [items, setItems] = useState<PurchaseItem[]>([]);
   const [newItem, setNewItem] = useState({ productId: "", productName: "", productType: "", quantity: "1", unitCost: "" });
   const [newItemImeiText, setNewItemImeiText] = useState("");
-  const [pickerKey, setPickerKey] = useState(0); // changes on each add to reset ProductSearchPicker
+  const [pickerKey, setPickerKey] = useState(0);
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [showAddProduct, setShowAddProduct] = useState(false);
   const setF = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }));
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (partnerRef.current && !partnerRef.current.contains(e.target as Node)) setPartnerSearchOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const selectPartner = (p: Partner) => {
+    setPartnerId(p.id);
+    setPartnerName(p.name);
+    setPartnerPercentage(parseFloat(p.defaultShare || "50").toString());
+    setPartnerSearch(p.name);
+    setPartnerSearchOpen(false);
+  };
+  const clearPartner = () => {
+    setPartnerId(null);
+    setPartnerName("");
+    setPartnerPercentage("");
+    setPartnerSearch("");
+  };
+
+  const filteredPartners = partnerSearch.trim()
+    ? partners.filter(p => p.name.toLowerCase().includes(partnerSearch.toLowerCase()))
+    : partners;
 
   useEffect(() => { setProducts(initialProducts); }, [initialProducts]);
 
@@ -659,6 +692,85 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
         )}
       </div>
 
+      {/* ── Partner Section ─────────────────────────────────────────── */}
+      <div className="space-y-2">
+        <Label className="text-gray-600 text-sm font-semibold flex items-center gap-1.5">
+          <Handshake className="w-3.5 h-3.5 text-blue-500" />
+          الشريك في هذا الشراء
+          <span className="text-gray-400 font-normal text-xs">(اختياري)</span>
+        </Label>
+        <div className="relative" ref={partnerRef}>
+          <div className="relative">
+            <Handshake className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+            <input
+              value={partnerSearch}
+              onChange={e => { setPartnerSearch(e.target.value); setPartnerSearchOpen(true); if (!e.target.value) clearPartner(); }}
+              onClick={() => setPartnerSearchOpen(true)}
+              placeholder="اختر شريكاً أو ابحث عن اسمه..."
+              className="w-full h-9 pr-8 pl-8 text-sm rounded-md border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+              data-testid="input-partner-search"
+            />
+            {partnerName && (
+              <button type="button" onClick={clearPartner}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+          {partnerSearchOpen && (
+            <div className="absolute z-50 top-full right-0 left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
+              <div className="max-h-40 overflow-y-auto">
+                {filteredPartners.length === 0 && (
+                  <div className="px-3 py-3 text-xs text-gray-400 text-center">
+                    {partners.length === 0 ? "لا يوجد شركاء بعد — أضف شريكاً من صفحة الشركاء" : "لا توجد نتائج"}
+                  </div>
+                )}
+                {filteredPartners.map(p => (
+                  <button key={p.id} type="button" onClick={() => selectPartner(p)}
+                    className="w-full text-right px-3 py-2 text-sm text-gray-800 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center justify-between gap-2">
+                    <span className="font-medium">{p.name}</span>
+                    <span className="text-xs text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-md">
+                      {parseFloat(p.defaultShare || "50").toFixed(0)}%
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Percentage override — shown only when a partner is selected */}
+        {partnerName && (
+          <div className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl p-3">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0">
+                <Handshake className="w-4 h-4 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-blue-900 truncate">{partnerName}</p>
+                <p className="text-xs text-blue-500">شريك في هذا الشراء</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <Label className="text-xs text-blue-700 font-medium whitespace-nowrap">الحصة:</Label>
+              <div className="relative w-20">
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  value={partnerPercentage}
+                  onChange={e => setPartnerPercentage(e.target.value)}
+                  className="bg-white border-blue-200 text-blue-900 text-sm h-8 pl-6 text-right"
+                  data-testid="input-partner-percentage"
+                />
+                <Percent className="absolute left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-blue-400 pointer-events-none" />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="space-y-1.5">
         <Label className="text-gray-600 text-sm font-semibold">ملاحظات</Label>
         <Textarea value={form.notes} onChange={e => setF("notes", e.target.value)}
@@ -673,6 +785,9 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
             supplierName: form.supplierName || suppliers.find(s => s.id === form.supplierId)?.name || "",
             subtotal: subtotal.toFixed(2), extraCosts: extraCosts.toFixed(2), total: total.toFixed(2),
             purchaseDate: new Date(form.purchaseDate),
+            partnerId: partnerId || null,
+            partnerName: partnerName || null,
+            partnerPercentage: partnerName && partnerPercentage ? partnerPercentage : null,
             items: items.map(i => ({ ...i, unitCost: i.unitCost.toFixed(2), total: i.total.toFixed(2) })),
           })}
           disabled={loading || !form.supplierName || items.length === 0}
@@ -686,6 +801,9 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
             supplierName: form.supplierName || suppliers.find(s => s.id === form.supplierId)?.name || "",
             subtotal: subtotal.toFixed(2), extraCosts: extraCosts.toFixed(2), total: total.toFixed(2),
             purchaseDate: new Date(form.purchaseDate),
+            partnerId: partnerId || null,
+            partnerName: partnerName || null,
+            partnerPercentage: partnerName && partnerPercentage ? partnerPercentage : null,
             items: items.map(i => ({ ...i, unitCost: i.unitCost.toFixed(2), total: i.total.toFixed(2) })),
           })}
           disabled={loading || !form.supplierName || items.length === 0}
@@ -739,6 +857,25 @@ function ViewPurchaseDialog({ purchase, onClose, onComplete, onCancel: onCancelP
               <p className="text-blue-700 font-bold">{formatCurrency(parseFloat(data.total || "0"))}</p>
             </div>
           </div>
+
+          {/* ── Partner badge ── */}
+          {data.partnerName && (
+            <div className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl p-3">
+              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0">
+                <Handshake className="w-4 h-4 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-blue-500 mb-0.5">شريك في هذا الشراء</p>
+                <p className="text-sm font-bold text-blue-900">{data.partnerName}</p>
+              </div>
+              {data.partnerPercentage && (
+                <div className="text-center">
+                  <p className="text-2xl font-black text-blue-700">{parseFloat(data.partnerPercentage).toFixed(0)}%</p>
+                  <p className="text-xs text-blue-400">الحصة</p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* ── Items table ── */}
           {isLoading ? (
@@ -848,6 +985,7 @@ export default function AdminPurchases() {
   const { data: purchases = [], isLoading } = useQuery<Purchase[]>({ queryKey: ["/api/purchases"] });
   const { data: suppliers = [] } = useQuery<Supplier[]>({ queryKey: ["/api/suppliers"] });
   const { data: products = [] } = useQuery<Product[]>({ queryKey: ["/api/products"] });
+  const { data: partners = [] } = useQuery<Partner[]>({ queryKey: ["/api/partners"] });
 
   const createMutation = useMutation({
     mutationFn: (data: any) => apiRequest("POST", "/api/purchases", data),
@@ -975,7 +1113,16 @@ export default function AdminPurchases() {
                             <div className="w-8 h-8 bg-blue-50 border border-blue-100 rounded-lg flex items-center justify-center shrink-0">
                               <Building2 className="w-3.5 h-3.5 text-blue-600" />
                             </div>
-                            <p className="text-gray-800 font-semibold text-sm">{pur.supplierName}</p>
+                            <div>
+                              <p className="text-gray-800 font-semibold text-sm">{pur.supplierName}</p>
+                              {(pur as any).partnerName && (
+                                <p className="text-xs text-blue-600 flex items-center gap-1 mt-0.5">
+                                  <Handshake className="w-3 h-3" />
+                                  {(pur as any).partnerName}
+                                  {(pur as any).partnerPercentage && ` — ${parseFloat((pur as any).partnerPercentage).toFixed(0)}%`}
+                                </p>
+                              )}
+                            </div>
                           </div>
                         </td>
                         <td className="p-3 text-gray-400 text-xs font-mono hidden sm:table-cell">{pur.referenceNumber ?? "—"}</td>
@@ -1033,7 +1180,7 @@ export default function AdminPurchases() {
             </DialogHeader>
             <div className="pt-1">
               <NewPurchaseForm onSave={data => createMutation.mutate(data)} onCancel={() => setOpen(false)}
-                loading={createMutation.isPending} suppliers={suppliers} products={products} />
+                loading={createMutation.isPending} suppliers={suppliers} products={products} partners={partners} />
             </div>
           </DialogContent>
         </Dialog>

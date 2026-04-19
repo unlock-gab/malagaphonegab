@@ -33,6 +33,7 @@ import AdminAfterSale from "@/pages/admin/AdminAfterSale";
 import AdminPOS from "@/pages/admin/AdminPOS";
 import AdminInvoices from "@/pages/admin/AdminInvoices";
 import AdminPartners from "@/pages/admin/AdminPartners";
+import AdminSupplierReturns from "@/pages/admin/AdminSupplierReturns";
 import ConfirmateurOrders from "@/pages/confirmateur/ConfirmateurOrders";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -87,6 +88,7 @@ function Router() {
         <Route path="/admin/pos" component={AdminPOS} />
         <Route path="/admin/invoices" component={AdminInvoices} />
         <Route path="/admin/partners" component={AdminPartners} />
+        <Route path="/admin/supplier-returns" component={AdminSupplierReturns} />
         <Route path="/confirmateur/orders">
           <ConfirmateurGuard><ConfirmateurOrders /></ConfirmateurGuard>
         </Route>

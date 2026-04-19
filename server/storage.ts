@@ -19,11 +19,13 @@ import {
   type InvoiceTemplate, type InsertInvoiceTemplate,
   type Partner, type InsertPartner,
   type PurchasePayment, type InsertPurchasePayment,
+  type SupplierReturn, type InsertSupplierReturn,
   DEFAULT_DELIVERY_PRICES,
   users, products, categories, brands, suppliers, purchases, purchaseItems,
   inventoryMovements, orders, orderItems, expenses, profitRecords,
   blockedIps, abandonedCarts, appSettings, deliveryCompanies, productVariants,
   afterSaleRecords, phoneUnits, invoiceTemplates, partners, purchasePayments,
+  supplierReturns,
 } from "@shared/schema";
 import { randomUUID, createHash, scryptSync, randomBytes, timingSafeEqual } from "crypto";
 import { db } from "./db";
@@ -205,6 +207,17 @@ export interface IStorage {
   getAllPurchasePaymentsSummary(): Promise<{ purchaseId: string; totalPaid: number }[]>;
   createPurchasePayment(data: InsertPurchasePayment): Promise<PurchasePayment>;
   deletePurchasePayment(id: string): Promise<boolean>;
+
+  // Supplier Returns / Exchanges
+  getSupplierReturns(): Promise<SupplierReturn[]>;
+  getSupplierReturn(id: string): Promise<SupplierReturn | undefined>;
+  getSupplierReturnsByPurchase(purchaseId: string): Promise<SupplierReturn[]>;
+  getSupplierReturnsBySupplier(supplierId: string): Promise<SupplierReturn[]>;
+  createSupplierReturn(data: InsertSupplierReturn): Promise<SupplierReturn>;
+  applySupplierReturn(id: string): Promise<SupplierReturn>;
+  cancelSupplierReturn(id: string): Promise<SupplierReturn>;
+  getSupplierBalance(supplierId: string): Promise<{ totalPurchases: number; totalPaid: number; totalReturned: number; remaining: number; credit: number }>;
+  getPurchaseBalance(purchaseId: string): Promise<{ total: number; totalPaid: number; totalReturned: number; remaining: number; credit: number }>;
 }
 
 export interface TopProductRow {
@@ -1576,6 +1589,145 @@ export class DatabaseStorage implements IStorage {
   async deletePartner(id: string): Promise<boolean> {
     const result = await db.delete(partners).where(eq(partners.id, id)).returning();
     return result.length > 0;
+  }
+
+  // ── Supplier Returns / Exchanges ─────────────────────────────────────────────
+  async getSupplierReturns(): Promise<SupplierReturn[]> {
+    return db.select().from(supplierReturns).orderBy(desc(supplierReturns.createdAt));
+  }
+  async getSupplierReturn(id: string): Promise<SupplierReturn | undefined> {
+    const [r] = await db.select().from(supplierReturns).where(eq(supplierReturns.id, id));
+    return r;
+  }
+  async getSupplierReturnsByPurchase(purchaseId: string): Promise<SupplierReturn[]> {
+    return db.select().from(supplierReturns).where(eq(supplierReturns.purchaseId, purchaseId)).orderBy(desc(supplierReturns.createdAt));
+  }
+  async getSupplierReturnsBySupplier(supplierId: string): Promise<SupplierReturn[]> {
+    return db.select().from(supplierReturns).where(eq(supplierReturns.supplierId, supplierId)).orderBy(desc(supplierReturns.createdAt));
+  }
+  async createSupplierReturn(data: InsertSupplierReturn): Promise<SupplierReturn> {
+    const id = `sret-${randomUUID()}`;
+    const [r] = await db.insert(supplierReturns).values({ ...data, id }).returning();
+    return r;
+  }
+
+  async applySupplierReturn(id: string): Promise<SupplierReturn> {
+    const ret = await this.getSupplierReturn(id);
+    if (!ret) throw new Error("Retour introuvable");
+    if (ret.status === "cancelled") throw new Error("Retour annulé, impossible de l'appliquer");
+    if (ret.stockApplied && ret.balanceApplied) {
+      await db.update(supplierReturns).set({ status: "completed" }).where(eq(supplierReturns.id, id));
+      const [updated] = await db.select().from(supplierReturns).where(eq(supplierReturns.id, id));
+      return updated;
+    }
+
+    // ── Apply stock effects ──────────────────────────────────────────────────
+    if (!ret.stockApplied) {
+      if (ret.phoneUnitId) {
+        // IMEI-based: mark phone unit as returned_to_supplier
+        await this.updatePhoneUnit(ret.phoneUnitId, { status: "returned_to_supplier" } as any);
+        if (ret.productId) await this.syncPhoneStock(ret.productId);
+        // inventory movement for IMEI return
+        if (ret.productId) {
+          await this.createInventoryMovement({
+            productId: ret.productId,
+            productName: ret.productName,
+            type: "supplier_return_out",
+            quantity: ret.quantity,
+            reference: "supplier_return",
+            referenceId: id,
+            notes: `Retour fournisseur IMEI: ${ret.imei ?? ""} — ${ret.supplierName}`,
+          });
+        }
+      } else if (ret.productId) {
+        // Normal stock: reduce by returned quantity
+        await this.adjustStock(ret.productId, ret.quantity, "supplier_return_out", "supplier_return", id, `Retour fournisseur — ${ret.supplierName}`);
+      }
+
+      // Exchange: replacement item enters stock
+      if (ret.type === "exchange" && ret.replacementProductId) {
+        if (ret.replacementPhoneUnitId) {
+          // Replacement is a phone unit: mark as available
+          await this.updatePhoneUnit(ret.replacementPhoneUnitId, { status: "available", soldOrderId: null } as any);
+          await this.syncPhoneStock(ret.replacementProductId);
+          await this.createInventoryMovement({
+            productId: ret.replacementProductId,
+            productName: ret.replacementProductName ?? "",
+            type: "exchange_in",
+            quantity: ret.replacementQuantity ?? 1,
+            reference: "supplier_exchange",
+            referenceId: id,
+            notes: `Échange fournisseur reçu IMEI: ${ret.replacementImei ?? ""} — ${ret.supplierName}`,
+          });
+        } else {
+          await this.adjustStock(ret.replacementProductId, ret.replacementQuantity ?? 1, "exchange_in", "supplier_exchange", id, `Échange fournisseur reçu — ${ret.supplierName}`);
+        }
+      }
+    }
+
+    // ── Apply balance effects (reduce purchase total effectively) ────────────
+    // We track balance via supplierReturns.totalValue — no direct field on purchases to modify.
+    // Balance is always computed on-the-fly from purchases + payments + returns.
+
+    await db.update(supplierReturns).set({ status: "completed", stockApplied: true, balanceApplied: true }).where(eq(supplierReturns.id, id));
+    const [updated] = await db.select().from(supplierReturns).where(eq(supplierReturns.id, id));
+    return updated;
+  }
+
+  async cancelSupplierReturn(id: string): Promise<SupplierReturn> {
+    const ret = await this.getSupplierReturn(id);
+    if (!ret) throw new Error("Retour introuvable");
+    if (ret.status === "cancelled") throw new Error("Déjà annulé");
+
+    // Reverse stock effects if already applied
+    if (ret.stockApplied) {
+      if (ret.phoneUnitId) {
+        // Re-mark phone unit as available
+        await this.updatePhoneUnit(ret.phoneUnitId, { status: "available" } as any);
+        if (ret.productId) await this.syncPhoneStock(ret.productId);
+      } else if (ret.productId) {
+        // Restore stock
+        await this.adjustStock(ret.productId, ret.quantity, "adjustment", "supplier_return_cancel", id, `Annulation retour fournisseur — ${ret.supplierName}`);
+      }
+      // Reverse exchange replacement
+      if (ret.type === "exchange" && ret.replacementProductId) {
+        if (ret.replacementPhoneUnitId) {
+          await this.updatePhoneUnit(ret.replacementPhoneUnitId, { status: "returned_to_supplier" } as any);
+          await this.syncPhoneStock(ret.replacementProductId);
+        } else {
+          await this.adjustStock(ret.replacementProductId, ret.replacementQuantity ?? 1, "adjustment", "supplier_return_cancel", id, `Annulation échange fournisseur — ${ret.supplierName}`);
+        }
+      }
+    }
+
+    await db.update(supplierReturns).set({ status: "cancelled", stockApplied: false, balanceApplied: false }).where(eq(supplierReturns.id, id));
+    const [updated] = await db.select().from(supplierReturns).where(eq(supplierReturns.id, id));
+    return updated;
+  }
+
+  async getPurchaseBalance(purchaseId: string): Promise<{ total: number; totalPaid: number; totalReturned: number; remaining: number; credit: number }> {
+    const purchase = await this.getPurchase(purchaseId);
+    const total = parseFloat((purchase?.total as string) ?? "0");
+    const payments = await this.getPurchasePayments(purchaseId);
+    const totalPaid = payments.reduce((s, p) => s + parseFloat(p.amount as string), 0);
+    const rets = await db.select().from(supplierReturns)
+      .where(and(eq(supplierReturns.purchaseId, purchaseId), eq(supplierReturns.status, "completed")));
+    const totalReturned = rets.reduce((s, r) => s + parseFloat(r.totalValue as string), 0);
+    const net = total - totalPaid - totalReturned;
+    return { total, totalPaid, totalReturned, remaining: Math.max(0, net), credit: net < 0 ? Math.abs(net) : 0 };
+  }
+
+  async getSupplierBalance(supplierId: string): Promise<{ totalPurchases: number; totalPaid: number; totalReturned: number; remaining: number; credit: number }> {
+    const supplierPurchases = await db.select().from(purchases).where(eq(purchases.supplierId, supplierId));
+    const totalPurchases = supplierPurchases.reduce((s, p) => s + parseFloat(p.total as string), 0);
+    const allPayments = await db.select().from(purchasePayments)
+      .where(sql`${purchasePayments.purchaseId} IN (SELECT id FROM purchases WHERE supplier_id = ${supplierId})`);
+    const totalPaid = allPayments.reduce((s, p) => s + parseFloat(p.amount as string), 0);
+    const allReturns = await db.select().from(supplierReturns)
+      .where(and(eq(supplierReturns.supplierId, supplierId), eq(supplierReturns.status, "completed")));
+    const totalReturned = allReturns.reduce((s, r) => s + parseFloat(r.totalValue as string), 0);
+    const net = totalPurchases - totalPaid - totalReturned;
+    return { totalPurchases, totalPaid, totalReturned, remaining: Math.max(0, net), credit: net < 0 ? Math.abs(net) : 0 };
   }
 }
 

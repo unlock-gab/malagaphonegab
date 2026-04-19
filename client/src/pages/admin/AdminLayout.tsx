@@ -5,7 +5,7 @@ import {
   Menu, Bell, Settings, Truck, Users, LogOut, Loader2,
   ShoppingBag, Building2, Tags, Star, Smartphone,
   TrendingUp, Boxes, Home, Receipt, ChevronRight, BarChart3, Shield, Zap,
-  Languages, FileText, Handshake,
+  Languages, FileText, Handshake, RotateCcw,
 } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -34,8 +34,9 @@ function buildNavSections(t: (k: any) => string) {
       items: [
         { icon: Building2,   label: t("nav_suppliers"),  href: "/admin/suppliers" },
         { icon: Handshake,   label: t("nav_partners"),   href: "/admin/partners" },
-        { icon: ShoppingBag, label: t("nav_purchases"),  href: "/admin/purchases" },
-        { icon: Boxes,       label: t("nav_inventory"),  href: "/admin/inventory" },
+        { icon: ShoppingBag, label: t("nav_purchases"),        href: "/admin/purchases" },
+        { icon: RotateCcw,   label: t("nav_supplier_returns"), href: "/admin/supplier-returns" },
+        { icon: Boxes,       label: t("nav_inventory"),        href: "/admin/inventory" },
       ],
     },
     {

@@ -28,6 +28,7 @@ const T = {
   nav_pos:              { fr: "Vente comptoire",        ar: "نقطة البيع POS" },
   nav_invoices:         { fr: "Factures",              ar: "الفواتير" },
   nav_partners:         { fr: "Partenaires",           ar: "الشركاء" },
+  nav_supplier_returns: { fr: "Retours fournisseur",   ar: "إرجاع / تبديل المورد" },
   nav_back_to_store:    { fr: "Retour boutique",       ar: "العودة للمتجر" },
   nav_logout:           { fr: "Déconnexion",           ar: "تسجيل الخروج" },
   nav_admin_panel:      { fr: "Administration",        ar: "لوحة الإدارة" },

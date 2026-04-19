@@ -902,5 +902,75 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json({ success: true });
   });
 
+  // ── Supplier Returns / Exchanges ─────────────────────────────────────────────
+  app.get("/api/supplier-returns", requireAdmin, async (_req, res) => {
+    res.json(await storage.getSupplierReturns());
+  });
+  app.get("/api/supplier-returns/purchase/:purchaseId", requireAdmin, async (req, res) => {
+    res.json(await storage.getSupplierReturnsByPurchase(req.params.purchaseId));
+  });
+  app.get("/api/supplier-returns/supplier/:supplierId", requireAdmin, async (req, res) => {
+    res.json(await storage.getSupplierReturnsBySupplier(req.params.supplierId));
+  });
+  app.get("/api/supplier-balance/:supplierId", requireAdmin, async (req, res) => {
+    res.json(await storage.getSupplierBalance(req.params.supplierId));
+  });
+  app.get("/api/purchase-balance/:purchaseId", requireAdmin, async (req, res) => {
+    res.json(await storage.getPurchaseBalance(req.params.purchaseId));
+  });
+  app.get("/api/supplier-returns/:id", requireAdmin, async (req, res) => {
+    const r = await storage.getSupplierReturn(req.params.id);
+    if (!r) return res.status(404).json({ message: "Retour introuvable" });
+    res.json(r);
+  });
+  app.post("/api/supplier-returns", requireAdmin, async (req, res) => {
+    try {
+      const b = req.body;
+      const data: any = {
+        purchaseId: b.purchaseId,
+        supplierId: b.supplierId ?? null,
+        supplierName: b.supplierName,
+        type: b.type ?? "return",
+        status: b.status ?? "pending",
+        productId: b.productId ?? null,
+        productName: b.productName,
+        quantity: parseInt(b.quantity) || 1,
+        unitValue: b.unitValue?.toString() ?? "0",
+        totalValue: b.totalValue?.toString() ?? "0",
+        phoneUnitId: b.phoneUnitId ?? null,
+        imei: b.imei ?? null,
+        replacementProductId: b.replacementProductId ?? null,
+        replacementProductName: b.replacementProductName ?? null,
+        replacementQuantity: b.replacementQuantity ? parseInt(b.replacementQuantity) : null,
+        replacementUnitCost: b.replacementUnitCost?.toString() ?? null,
+        replacementTotalCost: b.replacementTotalCost?.toString() ?? null,
+        replacementPhoneUnitId: b.replacementPhoneUnitId ?? null,
+        replacementImei: b.replacementImei ?? null,
+        reason: b.reason ?? null,
+        notes: b.notes ?? null,
+        returnDate: b.returnDate ? new Date(b.returnDate) : new Date(),
+      };
+      const ret = await storage.createSupplierReturn(data);
+      // Auto-apply if status is completed
+      if (b.autoApply) {
+        const applied = await storage.applySupplierReturn(ret.id);
+        return res.status(201).json(applied);
+      }
+      res.status(201).json(ret);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+  app.patch("/api/supplier-returns/:id/apply", requireAdmin, async (req, res) => {
+    try {
+      const r = await storage.applySupplierReturn(req.params.id);
+      res.json(r);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+  app.patch("/api/supplier-returns/:id/cancel", requireAdmin, async (req, res) => {
+    try {
+      const r = await storage.cancelSupplierReturn(req.params.id);
+      res.json(r);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
   return httpServer;
 }

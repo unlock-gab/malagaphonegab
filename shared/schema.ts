@@ -336,6 +336,42 @@ export const invoiceTemplates = pgTable("invoice_templates", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// ===================== SUPPLIER RETURNS / EXCHANGES =====================
+export const supplierReturns = pgTable("supplier_returns", {
+  id: varchar("id").primaryKey(),
+  purchaseId: varchar("purchase_id").notNull(),
+  supplierId: varchar("supplier_id"),
+  supplierName: text("supplier_name").notNull(),
+  type: text("type").notNull().default("return"), // return | exchange
+  status: text("status").notNull().default("pending"), // pending | completed | cancelled
+
+  // Returned item
+  productId: varchar("product_id"),
+  productName: text("product_name").notNull(),
+  quantity: integer("quantity").notNull().default(1),
+  unitValue: numeric("unit_value", { precision: 10, scale: 2 }).notNull().default("0"),
+  totalValue: numeric("total_value", { precision: 10, scale: 2 }).notNull().default("0"),
+  phoneUnitId: varchar("phone_unit_id"),
+  imei: text("imei"),
+
+  // Exchange replacement (only if type=exchange)
+  replacementProductId: varchar("replacement_product_id"),
+  replacementProductName: text("replacement_product_name"),
+  replacementQuantity: integer("replacement_quantity"),
+  replacementUnitCost: numeric("replacement_unit_cost", { precision: 10, scale: 2 }),
+  replacementTotalCost: numeric("replacement_total_cost", { precision: 10, scale: 2 }),
+  replacementPhoneUnitId: varchar("replacement_phone_unit_id"),
+  replacementImei: text("replacement_imei"),
+
+  reason: text("reason"),
+  notes: text("notes"),
+  returnDate: timestamp("return_date").defaultNow(),
+
+  stockApplied: boolean("stock_applied").notNull().default(false),
+  balanceApplied: boolean("balance_applied").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // ===================== INSERT SCHEMAS =====================
 export const insertProductSchema = createInsertSchema(products).omit({ id: true, createdAt: true });
 export const insertOrderSchema = createInsertSchema(orders).omit({ id: true, createdAt: true });
@@ -355,6 +391,7 @@ export const insertPhoneUnitSchema = createInsertSchema(phoneUnits).omit({ id: t
 export const insertInvoiceTemplateSchema = createInsertSchema(invoiceTemplates).omit({ id: true, createdAt: true });
 export const insertPartnerSchema = createInsertSchema(partners).omit({ id: true, createdAt: true });
 export const insertPurchasePaymentSchema = createInsertSchema(purchasePayments).omit({ id: true, createdAt: true });
+export const insertSupplierReturnSchema = createInsertSchema(supplierReturns).omit({ id: true, createdAt: true });
 
 // ===================== TYPES =====================
 export type InsertUser = { username: string; password: string; role: string; name: string };
@@ -397,6 +434,8 @@ export type Partner = typeof partners.$inferSelect;
 export type InsertPartner = z.infer<typeof insertPartnerSchema>;
 export type PurchasePayment = typeof purchasePayments.$inferSelect;
 export type InsertPurchasePayment = z.infer<typeof insertPurchasePaymentSchema>;
+export type SupplierReturn = typeof supplierReturns.$inferSelect;
+export type InsertSupplierReturn = z.infer<typeof insertSupplierReturnSchema>;
 
 // CartItem type for storefront cart
 export type CartItem = {

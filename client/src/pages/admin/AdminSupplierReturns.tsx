@@ -159,6 +159,7 @@ function CreateReturnModal({ onClose, onSuccess }: { onClose: () => void; onSucc
       queryClient.invalidateQueries({ queryKey: ["/api/purchase-balance"] });
       queryClient.invalidateQueries({ queryKey: ["/api/supplier-balance"] });
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/purchases/payments-summary"] });
       toast({ title: "✓ Retour enregistré" });
       onSuccess();
     },
@@ -403,6 +404,7 @@ function ReturnDetailModal({ ret, onClose }: { ret: SupplierReturn; onClose: () 
       queryClient.invalidateQueries({ queryKey: ["/api/purchase-balance"] });
       queryClient.invalidateQueries({ queryKey: ["/api/supplier-balance"] });
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/purchases/payments-summary"] });
       toast({ title: "✓ Retour appliqué" });
       onClose();
     },
@@ -415,6 +417,7 @@ function ReturnDetailModal({ ret, onClose }: { ret: SupplierReturn; onClose: () 
       queryClient.invalidateQueries({ queryKey: ["/api/purchase-balance"] });
       queryClient.invalidateQueries({ queryKey: ["/api/supplier-balance"] });
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/purchases/payments-summary"] });
       toast({ title: "Retour annulé" });
       onClose();
     },

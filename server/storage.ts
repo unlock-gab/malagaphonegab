@@ -204,7 +204,7 @@ export interface IStorage {
 
   // Purchase Payments (Versements)
   getPurchasePayments(purchaseId: string): Promise<PurchasePayment[]>;
-  getAllPurchasePaymentsSummary(): Promise<{ purchaseId: string; totalPaid: number }[]>;
+  getAllPurchasePaymentsSummary(): Promise<{ purchaseId: string; totalPaid: number; totalReturned: number }[]>;
   createPurchasePayment(data: InsertPurchasePayment): Promise<PurchasePayment>;
   deletePurchasePayment(id: string): Promise<boolean>;
 
@@ -1549,15 +1549,37 @@ export class DatabaseStorage implements IStorage {
       .where(eq(purchasePayments.purchaseId, purchaseId))
       .orderBy(desc(purchasePayments.paymentDate));
   }
-  async getAllPurchasePaymentsSummary(): Promise<{ purchaseId: string; totalPaid: number }[]> {
-    const rows = await db
+  async getAllPurchasePaymentsSummary(): Promise<{ purchaseId: string; totalPaid: number; totalReturned: number }[]> {
+    const payRows = await db
       .select({
         purchaseId: purchasePayments.purchaseId,
         totalPaid: sql<number>`coalesce(sum(${purchasePayments.amount}::numeric), 0)`,
       })
       .from(purchasePayments)
       .groupBy(purchasePayments.purchaseId);
-    return rows.map(r => ({ purchaseId: r.purchaseId, totalPaid: Number(r.totalPaid) }));
+
+    const retRows = await db
+      .select({
+        purchaseId: supplierReturns.purchaseId,
+        totalReturned: sql<number>`coalesce(sum(${supplierReturns.totalValue}::numeric), 0)`,
+      })
+      .from(supplierReturns)
+      .where(eq(supplierReturns.status, "completed"))
+      .groupBy(supplierReturns.purchaseId);
+
+    // Merge both sets (a purchase may have returns but no payments or vice-versa)
+    const paidById: Record<string, number> = {};
+    for (const r of payRows) paidById[r.purchaseId] = Number(r.totalPaid);
+
+    const returnedById: Record<string, number> = {};
+    for (const r of retRows) returnedById[r.purchaseId] = Number(r.totalReturned);
+
+    const allIds = new Set([...Object.keys(paidById), ...Object.keys(returnedById)]);
+    return Array.from(allIds).map(purchaseId => ({
+      purchaseId,
+      totalPaid: paidById[purchaseId] ?? 0,
+      totalReturned: returnedById[purchaseId] ?? 0,
+    }));
   }
   async createPurchasePayment(data: InsertPurchasePayment): Promise<PurchasePayment> {
     const id = randomUUID();

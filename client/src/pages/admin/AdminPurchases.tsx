@@ -857,9 +857,14 @@ function VersementModal({ purchase, onClose }: { purchase: any; onClose: () => v
   });
   const payments = Array.isArray(rawPayments) ? rawPayments : [];
 
+  const { data: balanceData } = useQuery<any>({
+    queryKey: [`/api/purchase-balance/${purchase.id}`],
+  });
+
   const totalPaid = payments.reduce((s: number, p: any) => s + parseFloat(p.amount || "0"), 0);
-  const remaining = Math.max(0, total - totalPaid);
-  const payStatus = getPaymentStatus(total, totalPaid);
+  const totalReturned = balanceData?.totalReturned ?? 0;
+  const remaining = Math.max(0, total - totalPaid - totalReturned);
+  const payStatus = getPaymentStatus(total, totalPaid + totalReturned);
   const ps = PAY_STATUS[payStatus];
 
   const localNow = () => { const d = new Date(); const p = (n: number) => n.toString().padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
@@ -909,7 +914,7 @@ function VersementModal({ purchase, onClose }: { purchase: any; onClose: () => v
 
         <div className="space-y-4 pt-1">
           {/* Summary cards */}
-          <div className="grid grid-cols-3 gap-2">
+          <div className={`grid gap-2 ${totalReturned > 0 ? "grid-cols-4" : "grid-cols-3"}`}>
             <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-center">
               <p className="text-xs text-blue-400 mb-1">Total</p>
               <p className="text-sm font-black text-blue-700">{formatCurrency(total)}</p>
@@ -918,6 +923,12 @@ function VersementModal({ purchase, onClose }: { purchase: any; onClose: () => v
               <p className="text-xs text-emerald-400 mb-1">Payé</p>
               <p className="text-sm font-black text-emerald-700">{formatCurrency(totalPaid)}</p>
             </div>
+            {totalReturned > 0 && (
+              <div className="bg-orange-50 border border-orange-100 rounded-xl p-3 text-center">
+                <p className="text-xs text-orange-400 mb-1">Retourné</p>
+                <p className="text-sm font-black text-orange-600">{formatCurrency(totalReturned)}</p>
+              </div>
+            )}
             <div className={`rounded-xl p-3 text-center border ${remaining > 0 ? "bg-red-50 border-red-100" : "bg-gray-50 border-gray-100"}`}>
               <p className={`text-xs mb-1 ${remaining > 0 ? "text-red-400" : "text-gray-400"}`}>Restant</p>
               <p className={`text-sm font-black ${remaining > 0 ? "text-red-600" : "text-gray-400"}`}>{formatCurrency(remaining)}</p>
@@ -1069,14 +1080,19 @@ function ViewPurchaseDialog({ purchase, onClose, onComplete, onCancel: onCancelP
   });
   const vPayments = Array.isArray(rawVPayments) ? rawVPayments : [];
 
+  const { data: vBalance } = useQuery<any>({
+    queryKey: [`/api/purchase-balance/${purchase.id}`],
+  });
+
   const data = full ?? purchase;
   const sc = STATUS_CONFIG[data.status] ?? STATUS_CONFIG.pending;
   const items = (data.items ?? []) as PurchaseItem[];
   const extraCosts = parseFloat(data.extraCosts || "0");
   const purTotal = parseFloat(data.total || "0");
   const purPaid = vPayments.reduce((s: number, p: any) => s + parseFloat(p.amount || "0"), 0);
-  const purRemaining = Math.max(0, purTotal - purPaid);
-  const payStatusKey = getPaymentStatus(purTotal, purPaid);
+  const vTotalReturned = vBalance?.totalReturned ?? 0;
+  const purRemaining = Math.max(0, purTotal - purPaid - vTotalReturned);
+  const payStatusKey = getPaymentStatus(purTotal, purPaid + vTotalReturned);
   const psBadge = PAY_STATUS[payStatusKey];
 
   return (
@@ -1212,7 +1228,7 @@ function ViewPurchaseDialog({ purchase, onClose, onComplete, onCancel: onCancelP
               </div>
               <span className={`text-xs px-2 py-0.5 rounded-full border ${psBadge.cls}`}>{psBadge.label}</span>
             </div>
-            <div className="grid grid-cols-3 divide-x divide-gray-100 rtl:divide-x-reverse text-center">
+            <div className={`grid divide-x divide-gray-100 rtl:divide-x-reverse text-center ${vTotalReturned > 0 ? "grid-cols-4" : "grid-cols-3"}`}>
               <div className="p-2.5">
                 <p className="text-xs text-gray-400 mb-0.5">Total</p>
                 <p className="text-xs font-bold text-blue-700">{formatCurrency(purTotal)}</p>
@@ -1221,6 +1237,12 @@ function ViewPurchaseDialog({ purchase, onClose, onComplete, onCancel: onCancelP
                 <p className="text-xs text-gray-400 mb-0.5">Payé</p>
                 <p className="text-xs font-bold text-emerald-700">{formatCurrency(purPaid)}</p>
               </div>
+              {vTotalReturned > 0 && (
+                <div className="p-2.5">
+                  <p className="text-xs text-orange-400 mb-0.5">Retourné</p>
+                  <p className="text-xs font-bold text-orange-600">{formatCurrency(vTotalReturned)}</p>
+                </div>
+              )}
               <div className="p-2.5">
                 <p className="text-xs text-gray-400 mb-0.5">Restant</p>
                 <p className={`text-xs font-bold ${purRemaining > 0 ? "text-red-600" : "text-gray-400"}`}>{formatCurrency(purRemaining)}</p>
@@ -1296,6 +1318,7 @@ export default function AdminPurchases() {
   const paymentSummaries = Array.isArray(rawSummaries) ? rawSummaries : [];
 
   const paidMap = Object.fromEntries(paymentSummaries.map(s => [s.purchaseId, s.totalPaid]));
+  const returnedMap = Object.fromEntries(paymentSummaries.map(s => [s.purchaseId, (s as any).totalReturned ?? 0]));
 
   const createMutation = useMutation({
     mutationFn: (data: any) => apiRequest("POST", "/api/purchases", data),
@@ -1418,8 +1441,9 @@ export default function AdminPurchases() {
                     const sc = STATUS_CONFIG[pur.status] ?? STATUS_CONFIG.pending;
                     const purTotal = parseFloat(pur.total as string || "0");
                     const purPaid = paidMap[pur.id] ?? 0;
-                    const purRemaining = Math.max(0, purTotal - purPaid);
-                    const payStatusKey = getPaymentStatus(purTotal, purPaid);
+                    const purReturned = returnedMap[pur.id] ?? 0;
+                    const purRemaining = Math.max(0, purTotal - purPaid - purReturned);
+                    const payStatusKey = getPaymentStatus(purTotal, purPaid + purReturned);
                     const ps = PAY_STATUS[payStatusKey];
                     return (
                       <tr key={pur.id} className="border-b border-gray-50 hover:bg-gray-50/70 transition-colors cursor-pointer"

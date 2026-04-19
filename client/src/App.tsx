@@ -3,7 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { AuthProvider } from "@/context/AuthContext";
 import { AdminLangProvider } from "@/context/AdminLangContext";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
@@ -15,7 +15,6 @@ import AdminProducts from "@/pages/admin/AdminProducts";
 import AdminOrders from "@/pages/admin/AdminOrders";
 import AdminSettings from "@/pages/admin/AdminSettings";
 import AdminDelivery from "@/pages/admin/AdminDelivery";
-import AdminConfirmateurs from "@/pages/admin/AdminConfirmateurs";
 import AdminIPBlocker from "@/pages/admin/AdminIPBlocker";
 import AdminAbandoned from "@/pages/admin/AdminAbandoned";
 import AdminShippers from "@/pages/admin/AdminShippers";
@@ -36,7 +35,6 @@ import AdminPartners from "@/pages/admin/AdminPartners";
 import AdminSupplierReturns from "@/pages/admin/AdminSupplierReturns";
 import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminRoles from "@/pages/admin/AdminRoles";
-import ConfirmateurOrders from "@/pages/confirmateur/ConfirmateurOrders";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useEffect } from "react";
@@ -49,17 +47,6 @@ function ScrollToTop() {
 
 function StoreLayout({ children }: { children: React.ReactNode }) {
   return (<><Navbar />{children}<Footer /></>);
-}
-
-function ConfirmateurGuard({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-  const [, navigate] = useLocation();
-  useEffect(() => {
-    if (!loading && !user) navigate("/admin/login");
-    if (!loading && user && user.role !== "confirmateur") navigate("/admin");
-  }, [user, loading]);
-  if (loading || !user || user.role !== "confirmateur") return null;
-  return <>{children}</>;
 }
 
 function Router() {
@@ -80,7 +67,6 @@ function Router() {
         <Route path="/admin/orders" component={AdminOrders} />
         <Route path="/admin/delivery" component={AdminDelivery} />
         <Route path="/admin/settings" component={AdminSettings} />
-        <Route path="/admin/confirmateurs" component={AdminConfirmateurs} />
         <Route path="/admin/ip-blocker" component={AdminIPBlocker} />
         <Route path="/admin/abandoned" component={AdminAbandoned} />
         <Route path="/admin/shippers" component={AdminShippers} />
@@ -93,9 +79,6 @@ function Router() {
         <Route path="/admin/supplier-returns" component={AdminSupplierReturns} />
         <Route path="/admin/users" component={AdminUsers} />
         <Route path="/admin/roles" component={AdminRoles} />
-        <Route path="/confirmateur/orders">
-          <ConfirmateurGuard><ConfirmateurOrders /></ConfirmateurGuard>
-        </Route>
         <Route path="/landing/:id" component={ProductLanding} />
         <Route path="/">
           <StoreLayout><Home /></StoreLayout>

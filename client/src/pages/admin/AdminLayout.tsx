@@ -53,7 +53,6 @@ function buildNavSections(t: (k: any) => string) {
     {
       label: t("nav_admin_section"),
       items: [
-        { icon: Users,     label: t("nav_confirmateurs"), href: "/admin/confirmateurs" },
         { icon: Truck,     label: t("nav_delivery"),      href: "/admin/delivery" },
         { icon: Building2, label: t("nav_shippers"),      href: "/admin/shippers" },
         { icon: FileText,  label: t("nav_invoices"),      href: "/admin/invoices" },
@@ -299,7 +298,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   );
 
   if (!user) { navigate("/admin/login"); return null; }
-  if (user.role !== "admin") { navigate("/confirmateur/orders"); return null; }
 
   const currentLabel = location === "/admin/pos"
     ? t("nav_pos")

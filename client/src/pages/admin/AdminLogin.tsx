@@ -18,7 +18,7 @@ export default function AdminLogin() {
   useEffect(() => {
     if (user) {
       if (user.role === "admin") navigate("/admin");
-      else navigate("/confirmateur/orders");
+      else navigate("/admin/pos");
     }
   }, [user]);
 

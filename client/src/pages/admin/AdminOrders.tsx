@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useSearch } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Search, Eye, Package, Trash2, Loader2, Plus,
@@ -439,7 +440,10 @@ export default function AdminOrders() {
   const { dir } = useAdminLang();
   const { toast } = useToast();
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const searchStr = useSearch();
+  const urlStatus = new URLSearchParams(searchStr).get("status") || "all";
+  const [statusFilter, setStatusFilter] = useState(urlStatus);
+  useEffect(() => { setStatusFilter(urlStatus); }, [urlStatus]);
   const [showNewOrder, setShowNewOrder] = useState(false);
   const [viewOrder, setViewOrder] = useState<Order | null>(null);
   const [editStatus, setEditStatus] = useState("");

@@ -213,6 +213,19 @@ app.use((req, res, next) => {
         undone_at TIMESTAMP,
         undo_meta TEXT
       );
+      CREATE TABLE IF NOT EXISTS roles (
+        id VARCHAR PRIMARY KEY,
+        name TEXT NOT NULL,
+        slug TEXT NOT NULL UNIQUE,
+        permissions TEXT NOT NULL DEFAULT '[]',
+        is_system BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS role_id VARCHAR;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT TRUE;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP;
     `);
     console.log("[db] Critical tables & columns verified ✓");
   } catch (e) {

@@ -306,6 +306,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json(await storage.getPurchases());
   });
 
+  app.get("/api/purchases/payments-summary", requireAdmin, async (_req, res) => {
+    const summary = await storage.getAllPurchasePaymentsSummary();
+    res.json(summary);
+  });
+
   app.get("/api/purchases/:id", requireAdmin, async (req, res) => {
     const p = await storage.getPurchase(req.params.id);
     if (!p) return res.status(404).json({ message: "الشراء غير موجود" });
@@ -836,10 +841,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   // ── Purchase Payments (Versements) ───────────────────────────────────────────
-  app.get("/api/purchases/payments-summary", requireAdmin, async (_req, res) => {
-    const summary = await storage.getAllPurchasePaymentsSummary();
-    res.json(summary);
-  });
   app.get("/api/purchases/:id/payments", requireAdmin, async (req, res) => {
     const payments = await storage.getPurchasePayments(req.params.id);
     res.json(payments);

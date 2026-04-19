@@ -19,37 +19,37 @@ import { useAdminLang } from "@/context/AdminLangContext";
 import type { Purchase, Supplier, Product, Partner } from "@shared/schema";
 
 function formatCurrency(v: number) {
-  return new Intl.NumberFormat("ar-DZ").format(Math.round(v)) + " د.ج";
+  return new Intl.NumberFormat("fr-FR").format(Math.round(v)) + " DA";
 }
 function formatDate(d: string | null | undefined) {
   if (!d) return "—";
-  return new Intl.DateTimeFormat("ar-DZ", { day: "numeric", month: "short", year: "numeric" }).format(new Date(d));
+  return new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric" }).format(new Date(d));
 }
 function formatDateTime(d: string | null | undefined) {
   if (!d) return "—";
-  return new Intl.DateTimeFormat("ar-DZ", {
+  return new Intl.DateTimeFormat("fr-FR", {
     day: "numeric", month: "short", year: "numeric",
     hour: "2-digit", minute: "2-digit",
   }).format(new Date(d));
 }
 
 const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
-  pending:   { label: "معلق",   cls: "bg-amber-50 text-amber-700 border-amber-200" },
-  completed: { label: "مكتمل", cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  cancelled: { label: "ملغي",  cls: "bg-red-50 text-red-600 border-red-200" },
+  pending:   { label: "En attente", cls: "bg-amber-50 text-amber-700 border-amber-200" },
+  completed: { label: "Complété",   cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  cancelled: { label: "Annulé",     cls: "bg-red-50 text-red-600 border-red-200" },
 };
 
 const PAY_STATUS: Record<string, { label: string; cls: string }> = {
-  unpaid:          { label: "غير مدفوع",    cls: "bg-red-50 text-red-600 border-red-200" },
-  partially_paid:  { label: "مدفوع جزئياً", cls: "bg-amber-50 text-amber-700 border-amber-200" },
-  paid:            { label: "مدفوع كامل",   cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  unpaid:          { label: "Non payé",     cls: "bg-red-50 text-red-600 border-red-200" },
+  partially_paid:  { label: "Part. payé",   cls: "bg-amber-50 text-amber-700 border-amber-200" },
+  paid:            { label: "Payé",         cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
 };
 
 const PAYMENT_METHODS: { value: string; label: string }[] = [
-  { value: "cash",     label: "نقداً" },
-  { value: "transfer", label: "تحويل بنكي" },
-  { value: "cheque",   label: "شيك" },
-  { value: "other",    label: "أخرى" },
+  { value: "cash",     label: "Espèces" },
+  { value: "transfer", label: "Virement" },
+  { value: "cheque",   label: "Chèque" },
+  { value: "other",    label: "Autre" },
 ];
 
 function getPaymentStatus(total: number, paid: number) {
@@ -69,18 +69,18 @@ interface PurchaseItem {
 }
 
 const PRODUCT_TYPES = [
-  { value: "phone", label: "هاتف" },
-  { value: "accessory", label: "إكسسوار" },
-  { value: "tablet", label: "تابلت" },
-  { value: "watch", label: "ساعة" },
-  { value: "earphone", label: "سماعات" },
-  { value: "other", label: "أخرى" },
+  { value: "phone", label: "Téléphone" },
+  { value: "accessory", label: "Accessoire" },
+  { value: "tablet", label: "Tablette" },
+  { value: "watch", label: "Montre" },
+  { value: "earphone", label: "Écouteurs" },
+  { value: "other", label: "Autre" },
 ];
 const CONDITIONS = [
-  { value: "new", label: "جديد" },
-  { value: "used_good", label: "مستعمل جيد" },
-  { value: "used_acceptable", label: "مستعمل مقبول" },
-  { value: "refurbished", label: "مجدد" },
+  { value: "new", label: "Neuf" },
+  { value: "used_good", label: "Bon état" },
+  { value: "used_acceptable", label: "Acceptable" },
+  { value: "refurbished", label: "Reconditionné" },
 ];
 
 function QuickAddProductDialog({ onCreated, onClose }: {
@@ -114,10 +114,10 @@ function QuickAddProductDialog({ onCreated, onClose }: {
       });
       const newProd: Product = await res.json();
       await queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-      toast({ title: `✓ تمت إضافة ${newProd.name}` });
+      toast({ title: `✓ Produit "${newProd.name}" ajouté` });
       onCreated(newProd, needsImei ? imeiList : []);
     } catch {
-      toast({ title: "فشل إنشاء المنتج", variant: "destructive" });
+      toast({ title: "Échec création produit", variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -129,17 +129,17 @@ function QuickAddProductDialog({ onCreated, onClose }: {
         <DialogHeader className="border-b border-gray-100 pb-3">
           <DialogTitle className="text-gray-900 flex items-center gap-2 text-sm font-bold">
             <PackagePlus className="w-4 h-4 text-blue-600" />
-            إضافة منتج جديد للمخزون
+            Ajouter un produit au stock
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-3 pt-1">
           <div>
-            <Label className="text-gray-600 text-xs font-semibold mb-1.5 block">اسم المنتج *</Label>
-            <Input value={form.name} onChange={e => setF("name", e.target.value)} className={inputCls} placeholder="مثال: iPhone 14 Pro 128GB" autoFocus />
+            <Label className="text-gray-600 text-xs font-semibold mb-1.5 block">Nom du produit *</Label>
+            <Input value={form.name} onChange={e => setF("name", e.target.value)} className={inputCls} placeholder="Ex: iPhone 14 Pro 128GB" autoFocus />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-gray-600 text-xs font-semibold mb-1.5 block">النوع</Label>
+              <Label className="text-gray-600 text-xs font-semibold mb-1.5 block">Type</Label>
               <Select value={form.productType} onValueChange={v => { setF("productType", v); setImeiText(""); }}>
                 <SelectTrigger className={inputCls}><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-white border-gray-200 shadow-lg">
@@ -148,7 +148,7 @@ function QuickAddProductDialog({ onCreated, onClose }: {
               </Select>
             </div>
             <div>
-              <Label className="text-gray-600 text-xs font-semibold mb-1.5 block">الحالة</Label>
+              <Label className="text-gray-600 text-xs font-semibold mb-1.5 block">État</Label>
               <Select value={form.condition} onValueChange={v => setF("condition", v)}>
                 <SelectTrigger className={inputCls}><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-white border-gray-200 shadow-lg">
@@ -159,21 +159,21 @@ function QuickAddProductDialog({ onCreated, onClose }: {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-gray-600 text-xs font-semibold mb-1.5 block">سعر البيع * (د.ج)</Label>
+              <Label className="text-gray-600 text-xs font-semibold mb-1.5 block">Prix de vente * (DA)</Label>
               <Input type="number" value={form.price} onChange={e => setF("price", e.target.value)} className={inputCls} placeholder="0" />
             </div>
             <div>
-              <Label className="text-gray-600 text-xs font-semibold mb-1.5 block">سعر التكلفة (د.ج)</Label>
+              <Label className="text-gray-600 text-xs font-semibold mb-1.5 block">Prix de revient (DA)</Label>
               <Input type="number" value={form.costPrice} onChange={e => setF("costPrice", e.target.value)} className={inputCls} placeholder="0" />
             </div>
           </div>
 
-          {/* IMEI — إجباري للهواتف والتابلتات */}
+          {/* IMEI — requis pour téléphones et tablettes */}
           {needsImei && (
             <div>
               <Label className="text-xs font-semibold mb-1.5 flex items-center gap-1.5 text-orange-600">
                 <Smartphone className="w-3.5 h-3.5" />
-                رقم IMEI * <span className="text-[10px] text-gray-400 font-normal">(سطر واحد لكل IMEI)</span>
+                N° IMEI * <span className="text-[10px] text-gray-400 font-normal">(un par ligne)</span>
               </Label>
               <textarea
                 value={imeiText}
@@ -191,25 +191,25 @@ function QuickAddProductDialog({ onCreated, onClose }: {
               />
               <div className="flex items-center justify-between mt-1">
                 {imeiList.length > 0 ? (
-                  <span className="text-[10px] text-green-600 font-semibold">✓ {imeiList.length} IMEI مُدخل</span>
+                  <span className="text-[10px] text-green-600 font-semibold">✓ {imeiList.length} IMEI saisi(s)</span>
                 ) : (
-                  <span className="text-[10px] text-orange-500">أدخل رقم IMEI واحد على الأقل</span>
+                  <span className="text-[10px] text-orange-500">Saisir au moins un IMEI</span>
                 )}
               </div>
             </div>
           )}
 
-          <p className="text-[10px] text-gray-400">المخزون يُضاف تلقائياً عند اكتمال الشراء.</p>
+          <p className="text-[10px] text-gray-400">Le stock est ajouté automatiquement à la complétion de l'achat.</p>
         </div>
         <DialogFooter className="gap-2 border-t border-gray-100 pt-3">
-          <Button variant="outline" onClick={onClose} className="border-gray-200 text-gray-600 text-sm">إلغاء</Button>
+          <Button variant="outline" onClick={onClose} className="border-gray-200 text-gray-600 text-sm">Annuler</Button>
           <Button
             onClick={handleSave}
             disabled={saving || !form.name || !form.price || imeiMissing}
             className="bg-blue-600 hover:bg-blue-700 text-white text-sm shadow-sm disabled:opacity-50"
             data-testid="btn-quick-product-save"
           >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "إضافة للمخزون"}
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Ajouter au stock"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -256,7 +256,7 @@ function ProductSearchPicker({ products, onSelect, onAddNew, selectedName, onCle
             if (!val.trim()) onClear?.();
           }}
           onClick={() => setOpen(true)}
-          placeholder="ابحث عن منتج..."
+          placeholder="Rechercher un produit..."
           className="w-full h-8 pr-8 pl-3 text-xs rounded-md border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
           data-testid="input-product-search"
         />
@@ -265,14 +265,14 @@ function ProductSearchPicker({ products, onSelect, onAddNew, selectedName, onCle
         <div className="absolute z-50 top-full right-0 left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
           <div className="max-h-52 overflow-y-auto">
             {filtered.length === 0 && search && (
-              <div className="px-3 py-2 text-xs text-gray-400 text-center">لا توجد نتائج</div>
+              <div className="px-3 py-2 text-xs text-gray-400 text-center">Aucun résultat</div>
             )}
             {filtered.map(p => (
               <button key={p.id} type="button"
                 onClick={() => { onSelect(p.id); setSearch(p.name); setOpen(false); }}
                 className="w-full text-right px-3 py-2 text-xs text-gray-800 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center justify-between gap-2">
                 <span className="font-medium truncate">{p.name}</span>
-                <span className="text-gray-400 shrink-0">{p.stock} مخزون</span>
+                <span className="text-gray-400 shrink-0">{p.stock} en stock</span>
               </button>
             ))}
           </div>
@@ -280,7 +280,7 @@ function ProductSearchPicker({ products, onSelect, onAddNew, selectedName, onCle
             <button type="button" onClick={() => { setOpen(false); onAddNew(); }}
               className="w-full flex items-center gap-2 px-3 py-2 text-xs text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-semibold">
               <PackagePlus className="w-3.5 h-3.5" />
-              إضافة منتج جديد للمخزون
+              Ajouter un nouveau produit
             </button>
           </div>
         </div>
@@ -331,9 +331,9 @@ function SupplierCombobox({ suppliers, supplierId, supplierName, onSelect }: {
       onSelect(newS.id, newS.name);
       setSearch("");
       setOpen(false);
-      toast({ title: `✓ تم حفظ "${newS.name}" في قاعدة البيانات` });
+      toast({ title: `✓ Fournisseur "${newS.name}" enregistré` });
     } catch {
-      toast({ title: "فشل حفظ المورد", variant: "destructive" });
+      toast({ title: "Échec enregistrement fournisseur", variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -347,7 +347,7 @@ function SupplierCombobox({ suppliers, supplierId, supplierName, onSelect }: {
           value={open ? search : displayValue}
           onChange={e => { setSearch(e.target.value); setOpen(true); if (!e.target.value) onSelect("", ""); }}
           onClick={() => { setOpen(true); setSearch(""); }}
-          placeholder="ابحث عن مورد أو اكتب اسماً جديداً..."
+          placeholder="Rechercher un fournisseur ou saisir un nom..."
           className="w-full h-9 pr-8 pl-8 text-sm rounded-md border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
           data-testid="input-supplier-search"
         />
@@ -357,9 +357,9 @@ function SupplierCombobox({ suppliers, supplierId, supplierName, onSelect }: {
       {!open && displayValue && (
         <div className="absolute left-8 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none">
           {supplierId ? (
-            <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-semibold">محفوظ</span>
+            <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-semibold">Enregistré</span>
           ) : (
-            <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-semibold">يدوي</span>
+            <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-semibold">Manuel</span>
           )}
         </div>
       )}
@@ -367,7 +367,7 @@ function SupplierCombobox({ suppliers, supplierId, supplierName, onSelect }: {
         <div className="absolute z-50 top-full right-0 left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
           <div className="max-h-52 overflow-y-auto">
             {filtered.length === 0 && !showCreate && (
-              <div className="px-3 py-3 text-xs text-gray-400 text-center">لا يوجد موردون. اكتب اسماً لإضافته</div>
+              <div className="px-3 py-3 text-xs text-gray-400 text-center">Aucun fournisseur. Saisissez un nom pour en ajouter un</div>
             )}
             {filtered.map(s => (
               <button key={s.id} type="button"
@@ -386,13 +386,13 @@ function SupplierCombobox({ suppliers, supplierId, supplierName, onSelect }: {
               <button type="button" onClick={handleCreate} disabled={saving}
                 className="w-full flex items-center gap-2 px-3 py-2 text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors font-semibold border border-emerald-200">
                 {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                حفظ "{search.trim()}" كمورد في قاعدة البيانات
+                Enregistrer "{search.trim()}" comme fournisseur
               </button>
               <button type="button"
                 onClick={() => { onSelect("", search.trim()); setOpen(false); }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-500 hover:bg-gray-50 rounded-lg transition-colors">
                 <UserRound className="w-3.5 h-3.5" />
-                استخدام "{search.trim()}" بدون حفظ (مؤقت)
+                Utiliser "{search.trim()}" sans enregistrer (temporaire)
               </button>
             </div>
           )}
@@ -493,7 +493,7 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
     <div className="space-y-4" dir={dir}>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label className="text-gray-600 text-sm font-semibold">المورد *</Label>
+          <Label className="text-gray-600 text-sm font-semibold">Fournisseur *</Label>
           <SupplierCombobox
             suppliers={suppliers}
             supplierId={form.supplierId}
@@ -505,12 +505,12 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
           />
           {form.supplierName && !form.supplierId && (
             <p className="text-[10px] text-amber-600 flex items-center gap-1">
-              <UserRound className="w-3 h-3" /> مورد يدوي — لن يُحفظ في قاعدة البيانات
+              <UserRound className="w-3 h-3" /> Fournisseur manuel — non enregistré en base de données
             </p>
           )}
         </div>
         <div className="space-y-1.5">
-          <Label className="text-gray-600 text-sm font-semibold">رقم المرجع</Label>
+          <Label className="text-gray-600 text-sm font-semibold">N° Référence</Label>
           <Input value={form.referenceNumber} onChange={e => setF("referenceNumber", e.target.value)}
             className="bg-white border-gray-200 text-gray-900 text-sm font-mono" placeholder="INV-001" data-testid="input-purchase-ref" />
         </div>
@@ -518,18 +518,18 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label className="text-gray-600 text-sm font-semibold">تاريخ الشراء</Label>
+          <Label className="text-gray-600 text-sm font-semibold">Date d'achat</Label>
           <Input type="date" value={form.purchaseDate} onChange={e => setF("purchaseDate", e.target.value)}
             className="bg-white border-gray-200 text-gray-900 text-sm" />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-gray-600 text-sm font-semibold">الحالة</Label>
+          <Label className="text-gray-600 text-sm font-semibold">Statut</Label>
           <Select value={form.status} onValueChange={v => setF("status", v)}>
             <SelectTrigger className="bg-white border-gray-200 text-gray-900 text-sm"><SelectValue /></SelectTrigger>
             <SelectContent className="bg-white border-gray-200 shadow-lg">
-              <SelectItem value="pending" className="text-amber-700 text-sm">معلق</SelectItem>
-              <SelectItem value="completed" className="text-emerald-700 text-sm">مكتمل (يحدّث المخزون)</SelectItem>
-              <SelectItem value="cancelled" className="text-red-600 text-sm">ملغي</SelectItem>
+              <SelectItem value="pending" className="text-amber-700 text-sm">En attente</SelectItem>
+              <SelectItem value="completed" className="text-emerald-700 text-sm">Complété (met à jour le stock)</SelectItem>
+              <SelectItem value="cancelled" className="text-red-600 text-sm">Annulé</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -553,12 +553,12 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
       )}
 
       <div className="space-y-2">
-        <Label className="text-gray-600 text-sm font-semibold">المنتجات</Label>
-        {/* Column headers */}
+        <Label className="text-gray-600 text-sm font-semibold">Produits</Label>
+        {/* En-têtes colonnes */}
         <div className="grid grid-cols-[1fr_72px_100px_36px] gap-2">
-          <span className="text-[10px] text-gray-400 font-semibold pr-1">المنتج</span>
-          <span className="text-[10px] text-gray-400 font-semibold text-center">الكمية</span>
-          <span className="text-[10px] text-gray-400 font-semibold">سعر الوحدة (د.ج)</span>
+          <span className="text-[10px] text-gray-400 font-semibold pr-1">Produit</span>
+          <span className="text-[10px] text-gray-400 font-semibold text-center">Qté</span>
+          <span className="text-[10px] text-gray-400 font-semibold">Prix unitaire (DA)</span>
           <span />
         </div>
         <div className="grid grid-cols-[1fr_72px_100px_36px] gap-2 items-center">
@@ -591,14 +591,14 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
             value={newItem.unitCost}
             onChange={e => setNewItem(i => ({ ...i, unitCost: e.target.value }))}
             className={`bg-white text-gray-900 text-xs h-8 ${!newItem.unitCost && newItem.productId ? "border-orange-300 focus-visible:ring-orange-400" : "border-gray-200"}`}
-            placeholder="أدخل السعر"
+            placeholder="Saisir le prix"
             data-testid="input-purchase-item-cost"
           />
           <Button
             size="sm"
             onClick={addItem}
             disabled={!newItem.productId || !newItem.unitCost}
-            title={!newItem.productId ? "اختر منتجاً أولاً" : !newItem.unitCost ? "أدخل سعر الوحدة" : "إضافة للقائمة"}
+            title={!newItem.productId ? "Choisir un produit d'abord" : !newItem.unitCost ? "Saisir le prix unitaire" : "Ajouter à la liste"}
             className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 px-2 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
             data-testid="button-add-purchase-item"
           >
@@ -608,7 +608,7 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
         {/* Helper hint */}
         {newItem.productId && !newItem.unitCost && (
           <p className="text-[11px] text-orange-500 flex items-center gap-1 mt-0.5">
-            ↑ أدخل سعر الوحدة لتفعيل زر الإضافة
+            ↑ Saisir le prix unitaire pour activer le bouton d'ajout
           </p>
         )}
 
@@ -617,7 +617,7 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-1.5">
             <Label className="text-blue-700 text-xs font-bold flex items-center gap-1.5">
               <span className="bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded font-mono">IMEI</span>
-              أرقام IMEI (رقم واحد لكل سطر)
+              Numéros IMEI (un par ligne)
             </Label>
             <Textarea
               value={newItemImeiText}
@@ -628,9 +628,9 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
               data-testid="textarea-purchase-item-imeis"
             />
             <p className="text-blue-600 text-[11px]">
-              {newItemImeiText.split("\n").filter(s => s.trim()).length} رقم IMEI مُدخل
+              {newItemImeiText.split("\n").filter(s => s.trim()).length} IMEI saisi(s)
               {newItem.quantity && parseInt(newItem.quantity) > 0 && parseInt(newItem.quantity) !== newItemImeiText.split("\n").filter(s => s.trim()).length && (
-                <span className="text-amber-600 mr-2">⚠ الكمية {newItem.quantity} لا تتطابق مع عدد IMEI</span>
+                <span className="text-amber-600 mr-2">⚠ La quantité {newItem.quantity} ne correspond pas au nombre d'IMEI</span>
               )}
             </p>
           </div>
@@ -641,10 +641,10 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
             <table className="w-full text-xs">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100 text-gray-500">
-                  <th className="text-right p-2.5 font-semibold">المنتج</th>
-                  <th className="text-center p-2.5 font-semibold w-20">الكمية</th>
-                  <th className="text-right p-2.5 font-semibold w-28">سعر الوحدة</th>
-                  <th className="text-right p-2.5 font-semibold w-28">الإجمالي</th>
+                  <th className="text-right p-2.5 font-semibold">Produit</th>
+                  <th className="text-center p-2.5 font-semibold w-20">Qté</th>
+                  <th className="text-right p-2.5 font-semibold w-28">Prix unitaire</th>
+                  <th className="text-right p-2.5 font-semibold w-28">Total</th>
                   <th className="w-8 p-2.5"></th>
                 </tr>
               </thead>
@@ -696,16 +696,16 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
         {items.length > 0 && (
           <div className="bg-gray-50 border border-gray-100 rounded-xl p-3 space-y-2">
             <div className="flex justify-between text-xs text-gray-500">
-              <span>المجموع الفرعي ({items.length} منتج)</span>
+              <span>Sous-total ({items.length} produit{items.length > 1 ? "s" : ""})</span>
               <span className="text-gray-800 font-semibold">{formatCurrency(subtotal)}</span>
             </div>
             <div className="flex items-center justify-between text-xs">
-              <Label className="text-gray-500">تكاليف إضافية (شحن، جمارك...)</Label>
+              <Label className="text-gray-500">Frais supplémentaires (transport, douane...)</Label>
               <Input type="number" value={form.extraCosts} onChange={e => setF("extraCosts", e.target.value)}
                 className="bg-white border-gray-200 text-gray-900 text-xs h-7 w-28 text-right" placeholder="0" />
             </div>
             <div className="flex justify-between text-sm font-black text-gray-900 border-t border-gray-200 pt-2">
-              <span>الإجمالي الكلي</span>
+              <span>Total général</span>
               <span className="text-blue-700">{formatCurrency(total)}</span>
             </div>
           </div>
@@ -713,7 +713,7 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
 
         {items.length === 0 && (
           <div className="border border-dashed border-gray-200 rounded-xl p-6 text-center text-gray-400 text-xs">
-            أضف منتجات لهذا الشراء باستخدام القائمة أعلاه
+            Ajoutez des produits à cet achat via la liste ci-dessus
           </div>
         )}
       </div>
@@ -722,8 +722,8 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
       <div className="space-y-2">
         <Label className="text-gray-600 text-sm font-semibold flex items-center gap-1.5">
           <Handshake className="w-3.5 h-3.5 text-blue-500" />
-          الشريك في هذا الشراء
-          <span className="text-gray-400 font-normal text-xs">(اختياري)</span>
+          Associé dans cet achat
+          <span className="text-gray-400 font-normal text-xs">(optionnel)</span>
         </Label>
         <div className="relative" ref={partnerRef}>
           <div className="relative">
@@ -732,7 +732,7 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
               value={partnerSearch}
               onChange={e => { setPartnerSearch(e.target.value); setPartnerSearchOpen(true); if (!e.target.value) clearPartner(); }}
               onClick={() => setPartnerSearchOpen(true)}
-              placeholder="اختر شريكاً أو ابحث عن اسمه..."
+              placeholder="Choisir un associé ou rechercher..."
               className="w-full h-9 pr-8 pl-8 text-sm rounded-md border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
               data-testid="input-partner-search"
             />
@@ -748,7 +748,7 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
               <div className="max-h-40 overflow-y-auto">
                 {filteredPartners.length === 0 && (
                   <div className="px-3 py-3 text-xs text-gray-400 text-center">
-                    {partners.length === 0 ? "لا يوجد شركاء بعد — أضف شريكاً من صفحة الشركاء" : "لا توجد نتائج"}
+                    {partners.length === 0 ? "Aucun associé — Ajoutez-en depuis la page Partenaires" : "Aucun résultat"}
                   </div>
                 )}
                 {filteredPartners.map(p => (
@@ -774,11 +774,11 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-blue-900 truncate">{partnerName}</p>
-                <p className="text-xs text-blue-500">شريك في هذا الشراء</p>
+                <p className="text-xs text-blue-500">Associé dans cet achat</p>
               </div>
             </div>
             <div className="flex items-center gap-1.5 flex-shrink-0">
-              <Label className="text-xs text-blue-700 font-medium whitespace-nowrap">الحصة:</Label>
+              <Label className="text-xs text-blue-700 font-medium whitespace-nowrap">Part :</Label>
               <div className="relative w-20">
                 <Input
                   type="number"
@@ -798,13 +798,13 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-gray-600 text-sm font-semibold">ملاحظات</Label>
+        <Label className="text-gray-600 text-sm font-semibold">Notes</Label>
         <Textarea value={form.notes} onChange={e => setF("notes", e.target.value)}
           className="bg-white border-gray-200 text-gray-900 placeholder:text-gray-400 resize-none text-sm" rows={2} />
       </div>
 
       <DialogFooter className="gap-2 flex-wrap">
-        <Button variant="outline" onClick={onCancel} className="border-gray-200 text-gray-600 hover:bg-gray-50 text-sm">إلغاء</Button>
+        <Button variant="outline" onClick={onCancel} className="border-gray-200 text-gray-600 hover:bg-gray-50 text-sm">Annuler</Button>
         <Button onClick={() => onSave({
             ...form, status: "pending",
             supplierId: form.supplierId || null,
@@ -819,7 +819,7 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
           disabled={loading || !form.supplierName || items.length === 0}
           variant="outline"
           className="border-gray-200 text-gray-600 hover:bg-gray-50 text-sm" data-testid="button-save-purchase-pending">
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "حفظ معلق"}
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Sauvegarder (En attente)"}
         </Button>
         <Button onClick={() => onSave({
             ...form, status: "completed",
@@ -834,7 +834,7 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
           })}
           disabled={loading || !form.supplierName || items.length === 0}
           className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm shadow-sm" data-testid="button-save-purchase-complete">
-          {loading ? <><Loader2 className="w-4 h-4 animate-spin ml-2" />جاري الحفظ...</> : <><Check className="w-4 h-4 ml-2" />حفظ وإتمام ← يضيف للمخزون</>}
+          {loading ? <><Loader2 className="w-4 h-4 animate-spin ml-2" />Enregistrement...</> : <><Check className="w-4 h-4 ml-2" />Enregistrer et compléter ← Ajoute au stock</>}
         </Button>
       </DialogFooter>
     </div>
@@ -850,7 +850,7 @@ function VersementModal({ purchase, onClose }: { purchase: any; onClose: () => v
     queryKey: ["/api/purchases", purchase.id, "payments"],
     queryFn: async () => {
       const r = await fetch(`/api/purchases/${purchase.id}/payments`, { credentials: "include" });
-      if (!r.ok) throw new Error("فشل تحميل الدفعات");
+      if (!r.ok) throw new Error("Échec chargement des paiements");
       const data = await r.json();
       return Array.isArray(data) ? data : [];
     },
@@ -877,9 +877,9 @@ function VersementModal({ purchase, onClose }: { purchase: any; onClose: () => v
       queryClient.invalidateQueries({ queryKey: ["/api/purchases/payments-summary"] });
       refetch();
       setForm(f => ({ ...f, amount: "", notes: "" }));
-      toast({ title: "✓ تم تسجيل الدفعة" });
+      toast({ title: "✓ Paiement enregistré" });
     },
-    onError: (e: any) => toast({ title: "فشل", description: e.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Échec", description: e.message, variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
@@ -888,7 +888,7 @@ function VersementModal({ purchase, onClose }: { purchase: any; onClose: () => v
       queryClient.invalidateQueries({ queryKey: ["/api/purchases", purchase.id, "payments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/purchases/payments-summary"] });
       refetch();
-      toast({ title: "تم الحذف" });
+      toast({ title: "Supprimé" });
     },
   });
 
@@ -901,7 +901,7 @@ function VersementModal({ purchase, onClose }: { purchase: any; onClose: () => v
         <DialogHeader className="border-b border-gray-100 pb-3">
           <DialogTitle className="text-gray-900 flex items-center gap-2 text-sm font-bold">
             <Wallet className="w-4 h-4 text-blue-600" />
-            دفعات المورد — {purchase.supplierName}
+            Paiements fournisseur — {purchase.supplierName}
             {purchase.referenceNumber && <span className="text-gray-400 font-mono text-xs">#{purchase.referenceNumber}</span>}
           </DialogTitle>
         </DialogHeader>
@@ -910,15 +910,15 @@ function VersementModal({ purchase, onClose }: { purchase: any; onClose: () => v
           {/* Summary cards */}
           <div className="grid grid-cols-3 gap-2">
             <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-center">
-              <p className="text-xs text-blue-400 mb-1">الإجمالي</p>
+              <p className="text-xs text-blue-400 mb-1">Total</p>
               <p className="text-sm font-black text-blue-700">{formatCurrency(total)}</p>
             </div>
             <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-center">
-              <p className="text-xs text-emerald-400 mb-1">مدفوع</p>
+              <p className="text-xs text-emerald-400 mb-1">Payé</p>
               <p className="text-sm font-black text-emerald-700">{formatCurrency(totalPaid)}</p>
             </div>
             <div className={`rounded-xl p-3 text-center border ${remaining > 0 ? "bg-red-50 border-red-100" : "bg-gray-50 border-gray-100"}`}>
-              <p className={`text-xs mb-1 ${remaining > 0 ? "text-red-400" : "text-gray-400"}`}>متبقي</p>
+              <p className={`text-xs mb-1 ${remaining > 0 ? "text-red-400" : "text-gray-400"}`}>Restant</p>
               <p className={`text-sm font-black ${remaining > 0 ? "text-red-600" : "text-gray-400"}`}>{formatCurrency(remaining)}</p>
             </div>
           </div>
@@ -932,21 +932,21 @@ function VersementModal({ purchase, onClose }: { purchase: any; onClose: () => v
           {remaining > 0.01 && (
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-3">
               <p className="text-xs font-bold text-gray-600 flex items-center gap-1.5">
-                <BadgeDollarSign className="w-3.5 h-3.5 text-blue-600" /> إضافة دفعة جديدة
+                <BadgeDollarSign className="w-3.5 h-3.5 text-blue-600" /> Ajouter un nouveau paiement
               </p>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <Label className="text-gray-500 text-xs mb-1 block">المبلغ * (د.ج)</Label>
+                  <Label className="text-gray-500 text-xs mb-1 block">Montant * (DA)</Label>
                   <Input
                     type="number" min="1" step="1"
                     value={form.amount} onChange={e => setF("amount", e.target.value)}
-                    placeholder={`أقصى: ${Math.round(remaining)}`}
+                    placeholder={`Max: ${Math.round(remaining)}`}
                     className="bg-white border-gray-200 text-gray-900 text-sm h-8"
                     data-testid="input-versement-amount"
                   />
                 </div>
                 <div>
-                  <Label className="text-gray-500 text-xs mb-1 block">طريقة الدفع</Label>
+                  <Label className="text-gray-500 text-xs mb-1 block">Mode de paiement</Label>
                   <Select value={form.paymentMethod} onValueChange={v => setF("paymentMethod", v)}>
                     <SelectTrigger className="bg-white border-gray-200 text-gray-900 text-sm h-8">
                       <SelectValue />
@@ -961,23 +961,23 @@ function VersementModal({ purchase, onClose }: { purchase: any; onClose: () => v
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <Label className="text-gray-500 text-xs mb-1 block">التاريخ</Label>
+                  <Label className="text-gray-500 text-xs mb-1 block">Date</Label>
                   <Input type="date" value={form.date} onChange={e => setF("date", e.target.value)}
                     className="bg-white border-gray-200 text-gray-900 text-sm h-8" />
                 </div>
                 <div>
-                  <Label className="text-gray-500 text-xs mb-1 block">ملاحظة (اختياري)</Label>
+                  <Label className="text-gray-500 text-xs mb-1 block">Note (optionnel)</Label>
                   <Input value={form.notes} onChange={e => setF("notes", e.target.value)}
-                    className="bg-white border-gray-200 text-gray-900 text-sm h-8" placeholder="ملاحظة..." />
+                    className="bg-white border-gray-200 text-gray-900 text-sm h-8" placeholder="Note..." />
                 </div>
               </div>
               {amountVal > 0 && amountVal > remaining + 0.01 && (
-                <p className="text-xs text-red-500">المبلغ أكبر من المتبقي ({formatCurrency(remaining)})</p>
+                <p className="text-xs text-red-500">Le montant dépasse le restant ({formatCurrency(remaining)})</p>
               )}
               <Button onClick={() => addMutation.mutate()} disabled={!canSubmit || addMutation.isPending}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm h-8 shadow-sm"
                 data-testid="button-add-versement">
-                {addMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-3.5 h-3.5 ml-2" />تسجيل الدفعة</>}
+                {addMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-3.5 h-3.5 ml-2" />Enregistrer le paiement</>}
               </Button>
             </div>
           )}
@@ -985,25 +985,25 @@ function VersementModal({ purchase, onClose }: { purchase: any; onClose: () => v
           {/* Versement history */}
           <div>
             <p className="text-xs font-bold text-gray-600 flex items-center gap-1.5 mb-2">
-              <History className="w-3.5 h-3.5 text-blue-600" /> سجل الدفعات
+              <History className="w-3.5 h-3.5 text-blue-600" /> Historique des paiements
             </p>
             {isLoading ? (
               <div className="flex items-center gap-2 text-gray-400 text-xs py-4 justify-center">
-                <Loader2 className="w-4 h-4 animate-spin" /> جاري التحميل...
+                <Loader2 className="w-4 h-4 animate-spin" /> Chargement...
               </div>
             ) : payments.length === 0 ? (
               <div className="border border-dashed border-gray-200 rounded-xl p-6 text-center text-gray-400 text-xs">
-                لا توجد دفعات مسجّلة بعد
+                Aucun paiement enregistré pour l'instant
               </div>
             ) : (
               <div className="border border-gray-200 rounded-xl overflow-hidden">
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-100 text-gray-500">
-                      <th className="text-right p-2.5 font-semibold">التاريخ</th>
-                      <th className="text-right p-2.5 font-semibold">المبلغ</th>
-                      <th className="text-right p-2.5 font-semibold hidden sm:table-cell">الطريقة</th>
-                      <th className="text-right p-2.5 font-semibold hidden sm:table-cell">ملاحظة</th>
+                      <th className="text-right p-2.5 font-semibold">Date</th>
+                      <th className="text-right p-2.5 font-semibold">Montant</th>
+                      <th className="text-right p-2.5 font-semibold hidden sm:table-cell">Mode</th>
+                      <th className="text-right p-2.5 font-semibold hidden sm:table-cell">Note</th>
                       <th className="w-8"></th>
                     </tr>
                   </thead>
@@ -1017,7 +1017,7 @@ function VersementModal({ purchase, onClose }: { purchase: any; onClose: () => v
                               <span>{formatDate(p.paymentDate)}</span>
                             </div>
                             <span className="text-gray-400 text-[10px] pr-4">
-                              {new Date(p.paymentDate).toLocaleTimeString("ar-DZ", { hour: "2-digit", minute: "2-digit" })}
+                              {new Date(p.paymentDate).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </span>
                           </div>
                         </td>
@@ -1029,7 +1029,7 @@ function VersementModal({ purchase, onClose }: { purchase: any; onClose: () => v
                         </td>
                         <td className="p-2.5 text-gray-400 hidden sm:table-cell">{p.notes || "—"}</td>
                         <td className="p-2.5">
-                          <button onClick={() => { if (confirm("حذف؟")) deleteMutation.mutate(p.id); }}
+                          <button onClick={() => { if (confirm("Supprimer ce paiement ?")) deleteMutation.mutate(p.id); }}
                             className="p-1 text-gray-300 hover:text-red-500 rounded transition-colors">
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -1084,7 +1084,7 @@ function ViewPurchaseDialog({ purchase, onClose, onComplete, onCancel: onCancelP
         <DialogHeader className="border-b border-gray-100 pb-3">
           <DialogTitle className="text-gray-900 flex items-center gap-2 text-sm font-bold">
             <ShoppingBag className="w-4 h-4 text-blue-600" />
-            تفاصيل الشراء — {data.supplierName}
+            Détails de l'achat — {data.supplierName}
             {data.referenceNumber ? <span className="text-gray-400 font-mono text-xs">#{data.referenceNumber}</span> : null}
           </DialogTitle>
         </DialogHeader>
@@ -1093,15 +1093,15 @@ function ViewPurchaseDialog({ purchase, onClose, onComplete, onCancel: onCancelP
           {/* ── Summary cards ── */}
           <div className="grid grid-cols-3 gap-2 text-xs">
             <div className="bg-gray-50 border border-gray-100 rounded-lg p-2.5">
-              <p className="text-gray-400 mb-1">الحالة</p>
+              <p className="text-gray-400 mb-1">Statut</p>
               <span className={`inline-block text-xs px-1.5 py-0.5 rounded-full border ${sc.cls}`}>{sc.label}</span>
             </div>
             <div className="bg-gray-50 border border-gray-100 rounded-lg p-2.5">
-              <p className="text-gray-400 mb-1">التاريخ</p>
+              <p className="text-gray-400 mb-1">Date</p>
               <p className="text-gray-700">{formatDate(data.purchaseDate)}</p>
             </div>
             <div className="bg-gray-50 border border-gray-100 rounded-lg p-2.5">
-              <p className="text-gray-400 mb-1">الإجمالي</p>
+              <p className="text-gray-400 mb-1">Total</p>
               <p className="text-blue-700 font-bold">{formatCurrency(parseFloat(data.total || "0"))}</p>
             </div>
           </div>
@@ -1113,13 +1113,13 @@ function ViewPurchaseDialog({ purchase, onClose, onComplete, onCancel: onCancelP
                 <Handshake className="w-4 h-4 text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-blue-500 mb-0.5">شريك في هذا الشراء</p>
+                <p className="text-xs text-blue-500 mb-0.5">Associé dans cet achat</p>
                 <p className="text-sm font-bold text-blue-900">{data.partnerName}</p>
               </div>
               {data.partnerPercentage && (
                 <div className="text-center">
                   <p className="text-2xl font-black text-blue-700">{parseFloat(data.partnerPercentage).toFixed(0)}%</p>
-                  <p className="text-xs text-blue-400">الحصة</p>
+                  <p className="text-xs text-blue-400">Part</p>
                 </div>
               )}
             </div>
@@ -1128,21 +1128,21 @@ function ViewPurchaseDialog({ purchase, onClose, onComplete, onCancel: onCancelP
           {/* ── Items table ── */}
           {isLoading ? (
             <div className="flex items-center justify-center py-8 gap-2 text-gray-400 text-xs">
-              <Loader2 className="w-4 h-4 animate-spin" /> جاري تحميل المنتجات…
+              <Loader2 className="w-4 h-4 animate-spin" /> Chargement des produits...
             </div>
           ) : items.length > 0 ? (
             <div className="border border-gray-200 rounded-xl overflow-hidden">
               <div className="bg-gray-50 border-b border-gray-100 px-3 py-2 flex items-center gap-2">
                 <Package className="w-3.5 h-3.5 text-blue-600" />
-                <span className="text-xs font-semibold text-gray-600">المنتجات المشتراة ({items.length})</span>
+                <span className="text-xs font-semibold text-gray-600">Produits achetés ({items.length})</span>
               </div>
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-gray-100 text-gray-500">
-                    <th className="text-right p-2.5 font-semibold">المنتج</th>
-                    <th className="text-center p-2.5 font-semibold">الكمية</th>
-                    <th className="text-right p-2.5 font-semibold">سعر الوحدة</th>
-                    <th className="text-right p-2.5 font-semibold">الإجمالي</th>
+                    <th className="text-right p-2.5 font-semibold">Produit</th>
+                    <th className="text-center p-2.5 font-semibold">Qté</th>
+                    <th className="text-right p-2.5 font-semibold">Prix unit.</th>
+                    <th className="text-right p-2.5 font-semibold">Total</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1173,31 +1173,31 @@ function ViewPurchaseDialog({ purchase, onClose, onComplete, onCancel: onCancelP
               {/* Subtotal / extra costs / total footer */}
               <div className="bg-gray-50 border-t border-gray-100 px-3 py-2 space-y-1 text-xs">
                 <div className="flex justify-between text-gray-500">
-                  <span>المجموع الفرعي</span>
+                  <span>Sous-total</span>
                   <span>{formatCurrency(parseFloat(data.subtotal || "0"))}</span>
                 </div>
                 {extraCosts > 0 && (
                   <div className="flex justify-between text-gray-500">
-                    <span>تكاليف إضافية</span>
+                    <span>Frais supplémentaires</span>
                     <span>{formatCurrency(extraCosts)}</span>
                   </div>
                 )}
                 <div className="flex justify-between font-bold text-gray-800 border-t border-gray-200 pt-1 mt-1">
-                  <span>الإجمالي الكلي</span>
+                  <span>Total général</span>
                   <span className="text-blue-700">{formatCurrency(parseFloat(data.total || "0"))}</span>
                 </div>
               </div>
             </div>
           ) : (
             <div className="border border-dashed border-gray-200 rounded-xl p-6 text-center text-gray-400 text-xs">
-              لا توجد منتجات مسجّلة لهذا الشراء
+              Aucun produit enregistré pour cet achat
             </div>
           )}
 
           {/* ── Notes ── */}
           {data.notes && (
             <div className="bg-gray-50 border border-gray-100 rounded-lg p-3">
-              <p className="text-gray-400 text-xs mb-1">ملاحظات</p>
+              <p className="text-gray-400 text-xs mb-1">Notes</p>
               <p className="text-gray-700 text-xs">{data.notes}</p>
             </div>
           )}
@@ -1207,21 +1207,21 @@ function ViewPurchaseDialog({ purchase, onClose, onComplete, onCancel: onCancelP
             <div className="bg-gray-50 border-b border-gray-100 px-3 py-2 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Wallet className="w-3.5 h-3.5 text-blue-600" />
-                <span className="text-xs font-semibold text-gray-600">الدفعات</span>
+                <span className="text-xs font-semibold text-gray-600">Paiements</span>
               </div>
               <span className={`text-xs px-2 py-0.5 rounded-full border ${psBadge.cls}`}>{psBadge.label}</span>
             </div>
             <div className="grid grid-cols-3 divide-x divide-gray-100 rtl:divide-x-reverse text-center">
               <div className="p-2.5">
-                <p className="text-xs text-gray-400 mb-0.5">الإجمالي</p>
+                <p className="text-xs text-gray-400 mb-0.5">Total</p>
                 <p className="text-xs font-bold text-blue-700">{formatCurrency(purTotal)}</p>
               </div>
               <div className="p-2.5">
-                <p className="text-xs text-gray-400 mb-0.5">مدفوع</p>
+                <p className="text-xs text-gray-400 mb-0.5">Payé</p>
                 <p className="text-xs font-bold text-emerald-700">{formatCurrency(purPaid)}</p>
               </div>
               <div className="p-2.5">
-                <p className="text-xs text-gray-400 mb-0.5">متبقي</p>
+                <p className="text-xs text-gray-400 mb-0.5">Restant</p>
                 <p className={`text-xs font-bold ${purRemaining > 0 ? "text-red-600" : "text-gray-400"}`}>{formatCurrency(purRemaining)}</p>
               </div>
             </div>
@@ -1239,7 +1239,7 @@ function ViewPurchaseDialog({ purchase, onClose, onComplete, onCancel: onCancelP
                   </div>
                 ))}
                 {vPayments.length > 3 && (
-                  <p className="text-xs text-gray-400 text-center py-2">+ {vPayments.length - 3} دفعات أخرى</p>
+                  <p className="text-xs text-gray-400 text-center py-2">+ {vPayments.length - 3} autre(s) paiement(s)</p>
                 )}
               </div>
             )}
@@ -1248,21 +1248,21 @@ function ViewPurchaseDialog({ purchase, onClose, onComplete, onCancel: onCancelP
           {/* ── Actions ── */}
           {onVersement && (
             <Button onClick={onVersement} className="w-full bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 text-sm shadow-none" data-testid="button-view-versements">
-              <Wallet className="w-4 h-4 ml-2" /> إدارة الدفعات
+              <Wallet className="w-4 h-4 ml-2" /> Gérer les paiements
             </Button>
           )}
           {data.status === "pending" && (
             <div className="flex gap-2">
               <Button onClick={onComplete} className="flex-1 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 text-sm shadow-none">
-                <Check className="w-4 h-4 ml-2" /> إتمام (يحدّث المخزون)
+                <Check className="w-4 h-4 ml-2" /> Compléter (màj stock)
               </Button>
               <Button onClick={onCancelPur} variant="outline" className="border-gray-200 text-gray-500 hover:text-red-500 hover:bg-red-50 text-sm">
-                <X className="w-4 h-4 ml-1" /> إلغاء
+                <X className="w-4 h-4 ml-1" /> Annuler
               </Button>
             </div>
           )}
           <Button onClick={onDelete} variant="outline" className="w-full border-gray-200 text-gray-400 hover:text-red-500 hover:bg-red-50 hover:border-red-200 text-sm">
-            <Trash2 className="w-4 h-4 ml-2" /> حذف الشراء
+            <Trash2 className="w-4 h-4 ml-2" /> Supprimer l'achat
           </Button>
         </div>
       </DialogContent>
@@ -1305,9 +1305,9 @@ export default function AdminPurchases() {
       queryClient.invalidateQueries({ queryKey: ["/api/phone-units"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
       setOpen(false);
-      toast({ title: "✓ تم حفظ الشراء" });
+      toast({ title: "✓ Achat enregistré" });
     },
-    onError: (e: any) => toast({ title: "فشل إنشاء الشراء", description: e.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Échec de la création", description: e.message, variant: "destructive" }),
   });
 
   const statusMutation = useMutation({
@@ -1319,9 +1319,9 @@ export default function AdminPurchases() {
       queryClient.invalidateQueries({ queryKey: ["/api/phone-units"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
       setViewPurchase(null);
-      toast({ title: "✓ تم الإتمام وتحديث المخزون" });
+      toast({ title: "✓ Complété et stock mis à jour" });
     },
-    onError: () => toast({ title: "فشل التحديث", variant: "destructive" }),
+    onError: () => toast({ title: "Échec de la mise à jour", variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
@@ -1329,9 +1329,9 @@ export default function AdminPurchases() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/purchases"] });
       setViewPurchase(null);
-      toast({ title: "تم الحذف" });
+      toast({ title: "Achat supprimé" });
     },
-    onError: () => toast({ title: "فشل الحذف", variant: "destructive" }),
+    onError: () => toast({ title: "Échec de la suppression", variant: "destructive" }),
   });
 
   const filtered = purchases.filter(p => {
@@ -1349,15 +1349,15 @@ export default function AdminPurchases() {
       <div className="space-y-4" dir={dir}>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-black text-gray-900">المشتريات</h1>
+            <h1 className="text-lg font-black text-gray-900">Achats</h1>
             <p className="text-gray-500 text-xs mt-0.5">
-              {purchases.length} عملية • قيمة مكتملة:{" "}
+              {purchases.length} achat(s) • Valeur complétée :{" "}
               <span className="text-emerald-700 font-semibold">{formatCurrency(totalCompleted)}</span>
-              {pendingCount > 0 && <> • <span className="text-amber-600">{pendingCount} معلق</span></>}
+              {pendingCount > 0 && <> • <span className="text-amber-600">{pendingCount} en attente</span></>}
             </p>
           </div>
           <Button onClick={() => setOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white gap-2 text-sm shadow-sm" data-testid="button-add-purchase">
-            <Plus className="w-4 h-4" /> شراء جديد
+            <Plus className="w-4 h-4" /> Nouvel achat
           </Button>
         </div>
 
@@ -1365,10 +1365,10 @@ export default function AdminPurchases() {
           <div className="relative flex-1 min-w-40">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
             <Input value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="بحث بالمورد أو المرجع..." className="bg-white border-gray-200 text-gray-900 pr-9 text-sm h-9" />
+              placeholder="Rechercher par fournisseur ou référence..." className="bg-white border-gray-200 text-gray-900 pr-9 text-sm h-9" />
           </div>
           <div className="flex gap-1.5">
-            {[{ k: "all", l: "الكل" }, { k: "pending", l: "معلق" }, { k: "completed", l: "مكتمل" }, { k: "cancelled", l: "ملغي" }].map(btn => (
+            {[{ k: "all", l: "Tout" }, { k: "pending", l: "En attente" }, { k: "completed", l: "Complété" }, { k: "cancelled", l: "Annulé" }].map(btn => (
               <button key={btn.k} onClick={() => setStatusFilter(btn.k)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
                   statusFilter === btn.k ? "bg-blue-600 text-white border-blue-600" : "bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:bg-gray-50"
@@ -1385,16 +1385,16 @@ export default function AdminPurchases() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-100 text-gray-500 text-xs">
-                    <th className="text-right p-3 font-semibold">المورد</th>
-                    <th className="text-right p-3 font-semibold w-24 hidden sm:table-cell">المرجع</th>
-                    <th className="text-right p-3 font-semibold w-28 hidden md:table-cell">التاريخ</th>
-                    <th className="text-right p-3 font-semibold w-28">الإجمالي</th>
-                    <th className="text-right p-3 font-semibold w-24 hidden md:table-cell">مدفوع</th>
-                    <th className="text-right p-3 font-semibold w-24 hidden md:table-cell">متبقي</th>
-                    <th className="text-center p-3 font-semibold w-28 hidden lg:table-cell">حالة الدفع</th>
-                    <th className="text-center p-3 font-semibold w-24">الحالة</th>
-                    <th className="text-center p-3 font-semibold w-36 hidden sm:table-cell">إجراء</th>
-                    <th className="text-center p-3 font-semibold w-10 sm:hidden">عرض</th>
+                    <th className="text-right p-3 font-semibold">Fournisseur</th>
+                    <th className="text-right p-3 font-semibold w-24 hidden sm:table-cell">Référence</th>
+                    <th className="text-right p-3 font-semibold w-28 hidden md:table-cell">Date</th>
+                    <th className="text-right p-3 font-semibold w-28">Total</th>
+                    <th className="text-right p-3 font-semibold w-24 hidden md:table-cell">Payé</th>
+                    <th className="text-right p-3 font-semibold w-24 hidden md:table-cell">Restant</th>
+                    <th className="text-center p-3 font-semibold w-28 hidden lg:table-cell">Statut paiement</th>
+                    <th className="text-center p-3 font-semibold w-24">Statut</th>
+                    <th className="text-center p-3 font-semibold w-36 hidden sm:table-cell">Actions</th>
+                    <th className="text-center p-3 font-semibold w-10 sm:hidden">Voir</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1403,13 +1403,13 @@ export default function AdminPurchases() {
                       <div className="w-14 h-14 bg-gray-50 border border-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
                         <ShoppingBag className="w-7 h-7 text-gray-300" />
                       </div>
-                      <p className="text-gray-500 font-semibold">لا توجد مشتريات</p>
+                      <p className="text-gray-500 font-semibold">Aucun achat</p>
                       <p className="text-gray-400 text-xs mt-1">
-                        {search || statusFilter !== "all" ? "جرب تغيير الفلتر" : "أنشئ أول شراء لزيادة المخزون من الموردين"}
+                        {search || statusFilter !== "all" ? "Essayez de changer le filtre" : "Créez votre premier achat pour alimenter le stock"}
                       </p>
                       {!search && statusFilter === "all" && (
                         <Button onClick={() => setOpen(true)} className="mt-4 bg-blue-600 hover:bg-blue-700 text-white gap-2 text-sm shadow-sm">
-                          <Plus className="w-4 h-4" /> شراء جديد
+                          <Plus className="w-4 h-4" /> Nouvel achat
                         </Button>
                       )}
                     </td></tr>
@@ -1464,14 +1464,14 @@ export default function AdminPurchases() {
                             <Button size="sm" onClick={() => setVersementPurchase(pur)}
                               className="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 shadow-none text-xs h-7 px-2"
                               data-testid={`button-versement-${pur.id}`}>
-                              <Wallet className="w-3 h-3 ml-0.5" /> دفعة
+                              <Wallet className="w-3 h-3 ml-0.5" /> Paiement
                             </Button>
                             {pur.status === "pending" && (
                               <>
                                 <Button size="sm" onClick={() => statusMutation.mutate({ id: pur.id, status: "completed" })}
                                   className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 shadow-none text-xs h-7 px-2"
                                   disabled={statusMutation.isPending} data-testid={`button-complete-purchase-${pur.id}`}>
-                                  <Check className="w-3 h-3 ml-0.5" /> إتمام
+                                  <Check className="w-3 h-3 ml-0.5" /> Compléter
                                 </Button>
                                 <Button size="sm" variant="outline" onClick={() => statusMutation.mutate({ id: pur.id, status: "cancelled" })}
                                   className="border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-200 text-xs h-7 px-2"
@@ -1480,7 +1480,7 @@ export default function AdminPurchases() {
                                 </Button>
                               </>
                             )}
-                            <button onClick={() => { if (confirm("حذف؟")) deleteMutation.mutate(pur.id); }}
+                            <button onClick={() => { if (confirm("Supprimer cet achat ?")) deleteMutation.mutate(pur.id); }}
                               className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                               data-testid={`button-delete-purchase-${pur.id}`}>
                               <Trash2 className="w-3.5 h-3.5" />
@@ -1503,7 +1503,7 @@ export default function AdminPurchases() {
           <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-2xl max-h-[92vh] overflow-y-auto shadow-xl" dir={dir}>
             <DialogHeader className="border-b border-gray-100 pb-3">
               <DialogTitle className="text-gray-900 flex items-center gap-2 font-bold">
-                <ShoppingBag className="w-4 h-4 text-blue-600" /> شراء جديد
+                <ShoppingBag className="w-4 h-4 text-blue-600" /> Nouvel achat
               </DialogTitle>
             </DialogHeader>
             <div className="pt-1">
@@ -1519,7 +1519,7 @@ export default function AdminPurchases() {
             onClose={() => setViewPurchase(null)}
             onComplete={() => statusMutation.mutate({ id: viewPurchase.id, status: "completed" })}
             onCancel={() => statusMutation.mutate({ id: viewPurchase.id, status: "cancelled" })}
-            onDelete={() => { if (confirm("حذف الشراء؟")) deleteMutation.mutate(viewPurchase.id); }}
+            onDelete={() => { if (confirm("Supprimer cet achat ?")) deleteMutation.mutate(viewPurchase.id); }}
             onVersement={() => { setViewPurchase(null); setVersementPurchase(viewPurchase); }}
           />
         )}

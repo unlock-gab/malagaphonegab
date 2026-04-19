@@ -16,8 +16,8 @@ interface Order {
   id: string; customerName: string; customerPhone: string; wilaya: string; status: string; total: string; createdAt: string; productName?: string; paymentMethod: string;
 }
 
-function formatCurrency(v: number) { return new Intl.NumberFormat("ar-DZ").format(Math.round(v)) + " د.ج"; }
-function formatDate(d: string) { return new Intl.DateTimeFormat("ar-DZ", { day: "numeric", month: "short", year: "numeric" }).format(new Date(d)); }
+function formatCurrency(v: number) { return new Intl.NumberFormat("fr-FR").format(Math.round(v)) + " DA"; }
+function formatDate(d: string) { return new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric" }).format(new Date(d)); }
 function shortId(id: string) { return "#" + id.slice(-6).toUpperCase(); }
 function whatsappUrl(phone: string) { const c = phone.replace(/\D/g, "").replace(/^0/, "213"); return `https://wa.me/${c}`; }
 

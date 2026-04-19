@@ -21,14 +21,14 @@ type SettingsMap = Record<string, string>;
 
 // ─── Tab definitions ──────────────────────────────────────────────────────────
 const TABS = [
-  { id: "general",      label: "معلومات المتجر",  icon: Store,        desc: "الاسم والعنوان والتواصل" },
-  { id: "contact",      label: "التواصل",          icon: MessageCircle, desc: "واتساب والشبكات الاجتماعية" },
-  { id: "orders",       label: "الطلبات",          icon: Package,       desc: "بادئات الأرقام والملاحظات" },
-  { id: "delivery",     label: "التوصيل",          icon: Truck,         desc: "الأسعار والشركات الافتراضية" },
-  { id: "invoice",      label: "الفاتورة",         icon: FileText,      desc: "بيانات الطباعة والتذييل" },
-  { id: "pos",          label: "نقطة البيع",       icon: ShoppingBag,   desc: "الدفع والطباعة الفورية" },
-  { id: "security",     label: "الأمان",           icon: Shield,        desc: "تغيير كلمة المرور" },
-  { id: "integrations", label: "التكاملات",        icon: BarChart3,     desc: "بيكسل · Sheets" },
+  { id: "general",      label: "Infos magasin",    icon: Store,        desc: "Nom, adresse et contact" },
+  { id: "contact",      label: "Contact",           icon: MessageCircle, desc: "WhatsApp et réseaux sociaux" },
+  { id: "orders",       label: "Commandes",         icon: Package,       desc: "Préfixes et notes par défaut" },
+  { id: "delivery",     label: "Livraison",         icon: Truck,         desc: "Tarifs et transporteurs" },
+  { id: "invoice",      label: "Facture",           icon: FileText,      desc: "Données d'impression" },
+  { id: "pos",          label: "Point de vente",    icon: ShoppingBag,   desc: "Paiement et impression auto" },
+  { id: "security",     label: "Sécurité",          icon: Shield,        desc: "Changer le mot de passe" },
+  { id: "integrations", label: "Intégrations",      icon: BarChart3,     desc: "Pixel · Sheets" },
 ];
 
 // ─── Keys per tab ─────────────────────────────────────────────────────────────
@@ -48,7 +48,7 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
       className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 text-xs transition-all">
-      {copied ? <><Check className="w-3.5 h-3.5 text-emerald-600" /><span className="text-emerald-700">تم النسخ</span></> : <><Copy className="w-3.5 h-3.5" />نسخ</>}
+      {copied ? <><Check className="w-3.5 h-3.5 text-emerald-600" /><span className="text-emerald-700">Copié</span></> : <><Copy className="w-3.5 h-3.5" />Copier</>}
     </button>
   );
 }
@@ -108,9 +108,9 @@ function SaveBar({ onSave, isPending, saved }: { onSave: () => void; isPending: 
       <Button onClick={onSave} disabled={isPending || saved}
         className={`gap-2 px-6 font-bold transition-all ${saved ? "bg-emerald-600 hover:bg-emerald-600" : "bg-blue-600 hover:bg-blue-700"}`}
         data-testid="button-save-settings">
-        {isPending ? <><Loader2 className="w-4 h-4 animate-spin" />جاري الحفظ...</>
-          : saved ? <><CheckCircle className="w-4 h-4" />تم الحفظ!</>
-          : <><Save className="w-4 h-4" />حفظ التغييرات</>}
+        {isPending ? <><Loader2 className="w-4 h-4 animate-spin" />Enregistrement...</>
+          : saved ? <><CheckCircle className="w-4 h-4" />Enregistré !</>
+          : <><Save className="w-4 h-4" />Enregistrer</>}
       </Button>
     </div>
   );
@@ -129,12 +129,12 @@ function BannerUpload({ value, onChange }: { value: string; onChange: (url: stri
       const formData = new FormData();
       formData.append("image", file);
       const res = await fetch("/api/upload", { method: "POST", body: formData });
-      if (!res.ok) throw new Error("فشل الرفع");
+      if (!res.ok) throw new Error("Échec du téléversement");
       const data = await res.json();
       onChange(data.url);
-      toast({ title: "تم رفع الصورة بنجاح" });
+      toast({ title: "Image téléversée avec succès" });
     } catch {
-      toast({ title: "فشل رفع الصورة", variant: "destructive" });
+      toast({ title: "Échec du téléversement", variant: "destructive" });
     } finally {
       setUploading(false);
       e.target.value = "";
@@ -157,12 +157,12 @@ function BannerUpload({ value, onChange }: { value: string; onChange: (url: stri
       ) : (
         <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 flex flex-col items-center gap-2 bg-gray-50 text-gray-400">
           <ImageIcon className="w-8 h-8" />
-          <p className="text-sm">لا توجد صورة بانر حالياً</p>
+          <p className="text-sm">Aucune image de bannière</p>
         </div>
       )}
       <label className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold cursor-pointer transition-all w-full ${uploading ? "bg-gray-100 text-gray-400 cursor-wait" : "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"}`}
         data-testid="button-upload-banner">
-        {uploading ? <><Loader2 className="w-4 h-4 animate-spin" />جاري الرفع...</> : <><Upload className="w-4 h-4" />رفع صورة البانر</>}
+        {uploading ? <><Loader2 className="w-4 h-4 animate-spin" />Téléversement...</> : <><Upload className="w-4 h-4" />Téléverser la bannière</>}
         <input type="file" accept="image/*" className="hidden" onChange={handleFile} disabled={uploading} />
       </label>
     </div>
@@ -209,9 +209,9 @@ export default function AdminSettings() {
       queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
       setSavedTab(tabId);
       setTimeout(() => setSavedTab(null), 3000);
-      toast({ title: "✓ تم الحفظ بنجاح" });
+      toast({ title: "✓ Enregistré avec succès" });
     },
-    onError: () => toast({ title: "خطأ في الحفظ", variant: "destructive" }),
+    onError: () => toast({ title: "Erreur lors de l'enregistrement", variant: "destructive" }),
   });
 
   // ── Password change mutation ───────────────────────────────────────────────
@@ -225,9 +225,9 @@ export default function AdminSettings() {
     },
     onSuccess: () => {
       setCurPw(""); setNewPw(""); setConfPw("");
-      toast({ title: "✓ تم تغيير كلمة المرور بنجاح" });
+      toast({ title: "✓ Mot de passe modifié avec succès" });
     },
-    onError: (e: any) => toast({ title: e.message || "فشل التغيير", variant: "destructive" }),
+    onError: (e: any) => toast({ title: e.message || "Échec du changement", variant: "destructive" }),
   });
 
   const appsScriptCode = `function doPost(e) {
@@ -247,9 +247,9 @@ export default function AdminSettings() {
         <div>
           <h1 className="text-lg font-black text-gray-900 flex items-center gap-2">
             <Settings className="w-5 h-5 text-blue-600" />
-            الإعدادات
+            Paramètres
           </h1>
-          <p className="text-gray-500 text-xs mt-0.5">إدارة جميع إعدادات متجر MALAGA PHONE</p>
+          <p className="text-gray-500 text-xs mt-0.5">Gérer tous les paramètres de MALAGA PHONE</p>
         </div>
 
         <div className="flex gap-5 items-start">
@@ -281,24 +281,24 @@ export default function AdminSettings() {
             {/* ═══ GENERAL ═══════════════════════════════════════════════ */}
             {activeTab === "general" && (
               <>
-                <SectionCard title="معلومات المتجر الأساسية" icon={<Store className="w-4 h-4" />}>
+                <SectionCard title="Informations générales du magasin" icon={<Store className="w-4 h-4" />}>
                   <div className="grid grid-cols-2 gap-4">
-                    <Field label="اسم المتجر">
+                    <Field label="Nom du magasin">
                       <SettingInput value={val("storeName")} onChange={set("storeName")} placeholder="MALAGA PHONE" prefix={<Store className="w-3.5 h-3.5" />} />
                     </Field>
-                    <Field label="رقم الهاتف">
+                    <Field label="Téléphone">
                       <SettingInput value={val("storePhone")} onChange={set("storePhone")} placeholder="0555 123 456" prefix={<Phone className="w-3.5 h-3.5" />} mono />
                     </Field>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <Field label="رقم الهاتف الأزرق (الهيدر)" hint="يظهر في أعلى الموقع بلون أزرق">
+                    <Field label="Téléphone bleu (en-tête)" hint="Affiché en haut du site en bleu">
                       <div className="relative">
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-blue-500 border-2 border-blue-300" />
                         <input type="tel" value={val("storePhone")} onChange={e => set("storePhone")(e.target.value)} placeholder="0555 000 001"
                           className="w-full bg-gray-50 border border-blue-200 text-gray-900 placeholder:text-gray-400 pr-9 px-3 py-2.5 rounded-xl text-sm font-mono focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100 transition-colors" />
                       </div>
                     </Field>
-                    <Field label="رقم الهاتف الأصفر (الهيدر)" hint="يظهر في أعلى الموقع بلون أصفر/ذهبي">
+                    <Field label="Téléphone jaune (en-tête)" hint="Affiché en haut du site en jaune/doré">
                       <div className="relative">
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-yellow-400 border-2 border-yellow-300" />
                         <input type="tel" value={val("storePhone2")} onChange={e => set("storePhone2")(e.target.value)} placeholder="0555 000 002"
@@ -306,20 +306,20 @@ export default function AdminSettings() {
                       </div>
                     </Field>
                   </div>
-                  <Field label="البريد الإلكتروني">
+                  <Field label="E-mail">
                     <SettingInput value={val("storeEmail")} onChange={set("storeEmail")} placeholder="info@malagaphone.com" type="email" prefix={<Mail className="w-3.5 h-3.5" />} />
                   </Field>
-                  <Field label="العنوان">
-                    <SettingInput value={val("storeAddress")} onChange={set("storeAddress")} placeholder="الجزائر العاصمة، حي المحاور" prefix={<MapPin className="w-3.5 h-3.5" />} />
+                  <Field label="Adresse">
+                    <SettingInput value={val("storeAddress")} onChange={set("storeAddress")} placeholder="Alger, quartier..." prefix={<MapPin className="w-3.5 h-3.5" />} />
                   </Field>
-                  <Field label="وصف المتجر (يظهر في الصفحة الرئيسية)">
+                  <Field label="Description du magasin (page d'accueil)">
                     <textarea value={val("storeDescription")} onChange={e => set("storeDescription")(e.target.value)}
-                      rows={3} placeholder="متجر متخصص في بيع الهواتف الذكية والإكسسوارات..."
+                      rows={3} placeholder="Boutique spécialisée en smartphones et accessoires..."
                       className="w-full bg-gray-50 border border-gray-200 text-gray-900 placeholder:text-gray-400 px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100 resize-none" />
                   </Field>
                 </SectionCard>
-                <SectionCard title="صورة البانر الرئيسي" icon={<ImageIcon className="w-4 h-4" />}>
-                  <p className="text-xs text-gray-500">تظهر هذه الصورة في القسم الرئيسي من الصفحة الرئيسية. الأبعاد المثلى: 800×600 أو 16:9.</p>
+                <SectionCard title="Image bannière principale" icon={<ImageIcon className="w-4 h-4" />}>
+                  <p className="text-xs text-gray-500">Cette image s'affiche dans la section principale de la page d'accueil. Dimensions idéales : 800×600 ou 16:9.</p>
                   <BannerUpload value={val("heroBannerImage")} onChange={set("heroBannerImage")} />
                 </SectionCard>
                 <SaveBar onSave={() => saveMutation.mutate("general")} isPending={saveMutation.isPending} saved={savedTab === "general"} />
@@ -329,17 +329,17 @@ export default function AdminSettings() {
             {/* ═══ CONTACT ════════════════════════════════════════════════ */}
             {activeTab === "contact" && (
               <>
-                <SectionCard title="واتساب" icon={<SiWhatsapp className="w-4 h-4 text-green-600" />}>
+                <SectionCard title="WhatsApp" icon={<SiWhatsapp className="w-4 h-4 text-green-600" />}>
                   <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-start gap-2.5 text-xs text-green-700">
                     <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    الرقم المحفوظ هنا يُستخدم تلقائياً في زر واتساب على الموقع وصفحات المنتجات.
+                    Le numéro enregistré ici est utilisé automatiquement dans le bouton WhatsApp du site et des pages produit.
                   </div>
-                  <Field label="رقم واتساب" hint="أدخل الرقم بصيغة الجزائرية: 0555 123 456">
+                  <Field label="Numéro WhatsApp" hint="Format algérien : 0555 123 456">
                     <SettingInput value={val("whatsappNumber")} onChange={set("whatsappNumber")} placeholder="0555 123 456" prefix={<SiWhatsapp className="w-3.5 h-3.5 text-green-600" />} mono />
                   </Field>
-                  <Field label="رسالة ترحيب افتراضية (اختياري)">
+                  <Field label="Message d'accueil par défaut (optionnel)">
                     <textarea value={val("whatsappDefaultMessage")} onChange={e => set("whatsappDefaultMessage")(e.target.value)}
-                      rows={2} placeholder="مرحباً، أريد الاستفسار عن..."
+                      rows={2} placeholder="Bonjour, je voudrais me renseigner sur..."
                       className="w-full bg-gray-50 border border-gray-200 text-gray-900 placeholder:text-gray-400 px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100 resize-none" />
                   </Field>
                   {val("whatsappNumber") && (
@@ -347,12 +347,12 @@ export default function AdminSettings() {
                       target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-2 text-xs text-green-700 hover:text-green-800 font-semibold">
                       <ExternalLink className="w-3.5 h-3.5" />
-                      اختبر الرابط
+                      Tester le lien
                     </a>
                   )}
                 </SectionCard>
 
-                <SectionCard title="الشبكات الاجتماعية" icon={<Globe className="w-4 h-4" />}>
+                <SectionCard title="Réseaux sociaux" icon={<Globe className="w-4 h-4" />}>
                   <Field label="Facebook">
                     <SettingInput value={val("facebookUrl")} onChange={set("facebookUrl")} placeholder="https://facebook.com/malagaphone" prefix={<SiFacebook className="w-3.5 h-3.5 text-blue-600" />} />
                   </Field>
@@ -370,18 +370,18 @@ export default function AdminSettings() {
             {/* ═══ ORDERS ═════════════════════════════════════════════════ */}
             {activeTab === "orders" && (
               <>
-                <SectionCard title="ترقيم الطلبات والفواتير" icon={<Package className="w-4 h-4" />}>
+                <SectionCard title="Numérotation des commandes et factures" icon={<Package className="w-4 h-4" />}>
                   <div className="grid grid-cols-2 gap-4">
-                    <Field label="بادئة رقم الطلب" hint="مثال: ORD- → سيظهر: ORD-1001">
+                    <Field label="Préfixe n° commande" hint="Ex : ORD- → donnera : ORD-1001">
                       <SettingInput value={val("orderPrefix")} onChange={set("orderPrefix")} placeholder="ORD-" mono />
                     </Field>
-                    <Field label="بادئة رقم الفاتورة" hint="مثال: INV- → سيظهر: INV-1001">
+                    <Field label="Préfixe n° facture" hint="Ex : INV- → donnera : INV-1001">
                       <SettingInput value={val("invoicePrefix")} onChange={set("invoicePrefix")} placeholder="INV-" mono />
                     </Field>
                   </div>
-                  <Field label="ملاحظة افتراضية للطلبات (اختياري)">
+                  <Field label="Note par défaut pour les commandes (optionnel)">
                     <textarea value={val("defaultOrderNote")} onChange={e => set("defaultOrderNote")(e.target.value)}
-                      rows={2} placeholder="شكراً لطلبك..."
+                      rows={2} placeholder="Merci pour votre commande..."
                       className="w-full bg-gray-50 border border-gray-200 text-gray-900 placeholder:text-gray-400 px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100 resize-none" />
                   </Field>
                 </SectionCard>
@@ -392,18 +392,18 @@ export default function AdminSettings() {
             {/* ═══ DELIVERY ═══════════════════════════════════════════════ */}
             {activeTab === "delivery" && (
               <>
-                <SectionCard title="إعدادات التوصيل" icon={<Truck className="w-4 h-4" />}>
+                <SectionCard title="Paramètres de livraison" icon={<Truck className="w-4 h-4" />}>
                   <div className="grid grid-cols-2 gap-4">
-                    <Field label="سعر التوصيل الافتراضي (دج)" hint="يُطبّق على الولايات غير المحددة">
+                    <Field label="Frais de livraison par défaut (DA)" hint="Appliqué aux wilayas non configurées">
                       <SettingInput value={val("defaultDeliveryFee")} onChange={set("defaultDeliveryFee")} placeholder="500" type="number" mono />
                     </Field>
-                    <Field label="شركة التوصيل الافتراضية">
+                    <Field label="Transporteur par défaut">
                       <SettingInput value={val("defaultShippingCompany")} onChange={set("defaultShippingCompany")} placeholder="Yalidine / Zr Express..." />
                     </Field>
                   </div>
                   <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700 flex items-start gap-2">
                     <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    لضبط أسعار التوصيل لكل ولاية، استخدم صفحة <strong>التوصيل</strong> في القائمة الجانبية.
+                    Pour configurer les tarifs par wilaya, utilisez la page <strong>Livraison</strong> dans le menu latéral.
                   </div>
                 </SectionCard>
                 <SaveBar onSave={() => saveMutation.mutate("delivery")} isPending={saveMutation.isPending} saved={savedTab === "delivery"} />
@@ -413,26 +413,26 @@ export default function AdminSettings() {
             {/* ═══ INVOICE ════════════════════════════════════════════════ */}
             {activeTab === "invoice" && (
               <>
-                <SectionCard title="بيانات الفاتورة والطباعة" icon={<FileText className="w-4 h-4" />}>
+                <SectionCard title="Données de la facture et impression" icon={<FileText className="w-4 h-4" />}>
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700 flex items-start gap-2">
                     <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    هذه البيانات تظهر في رأس الفاتورة عند الطباعة. إذا تركتها فارغة، يُستخدم اسم المتجر الرئيسي.
+                    Ces données apparaissent dans l'en-tête de la facture à l'impression. Si vides, le nom principal du magasin est utilisé.
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <Field label="اسم المتجر في الفاتورة">
+                    <Field label="Nom du magasin sur la facture">
                       <SettingInput value={val("invoiceStoreName")} onChange={set("invoiceStoreName")} placeholder="MALAGA PHONE" prefix={<Store className="w-3.5 h-3.5" />} />
                     </Field>
-                    <Field label="رقم الهاتف في الفاتورة">
+                    <Field label="Téléphone sur la facture">
                       <SettingInput value={val("invoicePhone")} onChange={set("invoicePhone")} placeholder="0555 123 456" prefix={<Phone className="w-3.5 h-3.5" />} mono />
                     </Field>
                   </div>
-                  <Field label="العنوان في الفاتورة">
-                    <SettingInput value={val("invoiceAddress")} onChange={set("invoiceAddress")} placeholder="الجزائر العاصمة..." prefix={<MapPin className="w-3.5 h-3.5" />} />
+                  <Field label="Adresse sur la facture">
+                    <SettingInput value={val("invoiceAddress")} onChange={set("invoiceAddress")} placeholder="Alger..." prefix={<MapPin className="w-3.5 h-3.5" />} />
                   </Field>
-                  <Field label="تذييل الفاتورة" hint="يظهر في أسفل كل فاتورة مطبوعة">
-                    <SettingInput value={val("invoiceFooterNote")} onChange={set("invoiceFooterNote")} placeholder="شكراً لثقتكم — لا يُقبل الإرجاع بعد 48 ساعة" />
+                  <Field label="Pied de page de la facture" hint="Affiché en bas de chaque facture imprimée">
+                    <SettingInput value={val("invoiceFooterNote")} onChange={set("invoiceFooterNote")} placeholder="Merci de votre confiance — Aucun retour après 48h" />
                   </Field>
-                  <Toggle checked={val("invoiceShowLogo") !== "false"} onChange={v => set("invoiceShowLogo")(v ? "true" : "false")} label="إظهار شعار المتجر في الفاتورة" />
+                  <Toggle checked={val("invoiceShowLogo") !== "false"} onChange={v => set("invoiceShowLogo")(v ? "true" : "false")} label="Afficher le logo du magasin sur la facture" />
                 </SectionCard>
                 <SaveBar onSave={() => saveMutation.mutate("invoice")} isPending={saveMutation.isPending} saved={savedTab === "invoice"} />
               </>
@@ -441,16 +441,16 @@ export default function AdminSettings() {
             {/* ═══ POS ════════════════════════════════════════════════════ */}
             {activeTab === "pos" && (
               <>
-                <SectionCard title="إعدادات نقطة البيع (POS)" icon={<ShoppingBag className="w-4 h-4" />}>
-                  <Field label="طريقة الدفع الافتراضية">
+                <SectionCard title="Paramètres du point de vente (POS)" icon={<ShoppingBag className="w-4 h-4" />}>
+                  <Field label="Mode de paiement par défaut">
                     <select value={val("posDefaultPayment") || "cash"} onChange={e => set("posDefaultPayment")(e.target.value)}
                       className="w-full bg-gray-50 border border-gray-200 text-gray-900 px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100">
-                      <option value="cash">نقداً</option>
-                      <option value="transfer">تحويل بنكي / CCP</option>
-                      <option value="card">بطاقة بنكية</option>
+                      <option value="cash">Espèces</option>
+                      <option value="transfer">Virement / CCP</option>
+                      <option value="card">Carte bancaire</option>
                     </select>
                   </Field>
-                  <Toggle checked={val("posAutoPrint") === "true"} onChange={v => set("posAutoPrint")(v ? "true" : "false")} label="طباعة الفاتورة تلقائياً بعد كل عملية بيع" />
+                  <Toggle checked={val("posAutoPrint") === "true"} onChange={v => set("posAutoPrint")(v ? "true" : "false")} label="Imprimer la facture automatiquement après chaque vente" />
                 </SectionCard>
                 <SaveBar onSave={() => saveMutation.mutate("pos")} isPending={saveMutation.isPending} saved={savedTab === "pos"} />
               </>
@@ -458,14 +458,14 @@ export default function AdminSettings() {
 
             {/* ═══ SECURITY ═══════════════════════════════════════════════ */}
             {activeTab === "security" && (
-              <SectionCard title="تغيير كلمة المرور" icon={<Lock className="w-4 h-4" />}>
+              <SectionCard title="Changer le mot de passe" icon={<Lock className="w-4 h-4" />}>
                 <div className="space-y-4 max-w-sm">
                   <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700 flex items-start gap-2">
                     <Shield className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    لتغيير كلمة المرور، يجب إدخال الكلمة الحالية أولاً للتحقق من الهوية.
+                    Pour changer le mot de passe, vous devez d'abord saisir le mot de passe actuel pour vérification.
                   </div>
 
-                  <Field label="كلمة المرور الحالية">
+                  <Field label="Mot de passe actuel">
                     <div className="relative">
                       <input type={showPw ? "text" : "password"} value={curPw} onChange={e => setCurPw(e.target.value)}
                         placeholder="••••••••"
@@ -476,13 +476,13 @@ export default function AdminSettings() {
                     </div>
                   </Field>
 
-                  <Field label="كلمة المرور الجديدة" hint="6 أحرف على الأقل">
+                  <Field label="Nouveau mot de passe" hint="6 caractères minimum">
                     <input type={showPw ? "text" : "password"} value={newPw} onChange={e => setNewPw(e.target.value)}
                       placeholder="••••••••"
                       className="w-full bg-gray-50 border border-gray-200 text-gray-900 px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100" />
                   </Field>
 
-                  <Field label="تأكيد كلمة المرور الجديدة">
+                  <Field label="Confirmer le nouveau mot de passe">
                     <div className="relative">
                       <input type={showPw ? "text" : "password"} value={confPw} onChange={e => setConfPw(e.target.value)}
                         placeholder="••••••••"
@@ -492,7 +492,7 @@ export default function AdminSettings() {
                             : "border-gray-200 focus:border-blue-400 focus:ring-blue-100"
                         }`} />
                       {confPw && newPw && confPw !== newPw && (
-                        <p className="text-red-500 text-[10px] mt-1">كلمتا المرور غير متطابقتين</p>
+                        <p className="text-red-500 text-[10px] mt-1">Les mots de passe ne correspondent pas</p>
                       )}
                     </div>
                   </Field>
@@ -502,8 +502,8 @@ export default function AdminSettings() {
                     className="w-full bg-blue-600 hover:bg-blue-700 gap-2 font-bold"
                     data-testid="button-change-password">
                     {pwMutation.isPending
-                      ? <><Loader2 className="w-4 h-4 animate-spin" />جاري التغيير...</>
-                      : <><RefreshCw className="w-4 h-4" />تغيير كلمة المرور</>}
+                      ? <><Loader2 className="w-4 h-4 animate-spin" />Modification...</>
+                      : <><RefreshCw className="w-4 h-4" />Changer le mot de passe</>}
                   </Button>
                 </div>
               </SectionCard>
@@ -517,16 +517,16 @@ export default function AdminSettings() {
                   <div className="flex items-center gap-3 mb-2">
                     <div className={`text-xs font-semibold px-2.5 py-1 rounded-full border flex items-center gap-1.5 ${val("facebookPixelId") ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-gray-100 text-gray-400 border-gray-200"}`}>
                       <div className={`w-1.5 h-1.5 rounded-full ${val("facebookPixelId") ? "bg-emerald-500 animate-pulse" : "bg-gray-300"}`} />
-                      {val("facebookPixelId") ? "مُفعَّل" : "غير مُفعَّل"}
+                      {val("facebookPixelId") ? "Activé" : "Désactivé"}
                     </div>
                   </div>
-                  <Field label="Pixel ID" hint="من مدير الأعمال ← Events Manager">
+                  <Field label="Pixel ID" hint="Depuis Business Manager ← Events Manager">
                     <SettingInput value={val("facebookPixelId")} onChange={set("facebookPixelId")} placeholder="123456789012345" mono />
                   </Field>
                   {val("facebookPixelId") && (
                     <div className="bg-gray-900 rounded-xl overflow-hidden">
                       <div className="flex items-center justify-between px-4 py-2 border-b border-gray-800">
-                        <span className="text-gray-400 text-xs font-mono">معاينة الكود</span>
+                        <span className="text-gray-400 text-xs font-mono">Aperçu du code</span>
                         <CopyButton text={`fbq('init', '${val("facebookPixelId")}');`} />
                       </div>
                       <code className="block px-4 py-3 text-xs text-emerald-400 font-mono">{`fbq('init', '${val("facebookPixelId")}');`}</code>
@@ -538,15 +538,15 @@ export default function AdminSettings() {
                 <SectionCard title="TikTok Pixel" icon={<SiTiktok className="w-4 h-4" />}>
                   <div className={`text-xs font-semibold px-2.5 py-1 rounded-full border inline-flex items-center gap-1.5 mb-2 ${val("tiktokPixelId") ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-gray-100 text-gray-400 border-gray-200"}`}>
                     <div className={`w-1.5 h-1.5 rounded-full ${val("tiktokPixelId") ? "bg-emerald-500 animate-pulse" : "bg-gray-300"}`} />
-                    {val("tiktokPixelId") ? "مُفعَّل" : "غير مُفعَّل"}
+                    {val("tiktokPixelId") ? "Activé" : "Désactivé"}
                   </div>
-                  <Field label="Pixel ID" hint="من TikTok Ads Manager ← Assets ← Events">
+                  <Field label="Pixel ID" hint="Depuis TikTok Ads Manager ← Assets ← Events">
                     <SettingInput value={val("tiktokPixelId")} onChange={set("tiktokPixelId")} placeholder="C4XXXXXXXXXXXXXXXXXX" mono />
                   </Field>
                   {val("tiktokPixelId") && (
                     <div className="bg-gray-900 rounded-xl overflow-hidden">
                       <div className="flex items-center justify-between px-4 py-2 border-b border-gray-800">
-                        <span className="text-gray-400 text-xs font-mono">معاينة الكود</span>
+                        <span className="text-gray-400 text-xs font-mono">Aperçu du code</span>
                         <CopyButton text={`ttq.load('${val("tiktokPixelId")}');`} />
                       </div>
                       <code className="block px-4 py-3 text-xs text-emerald-400 font-mono">{`ttq.load('${val("tiktokPixelId")}');`}</code>
@@ -558,7 +558,7 @@ export default function AdminSettings() {
                 <SectionCard title="Google Sheets Webhook" icon={<SiGooglesheets className="w-4 h-4 text-emerald-600" />}>
                   <div className={`text-xs font-semibold px-2.5 py-1 rounded-full border inline-flex items-center gap-1.5 mb-2 ${val("googleSheetsWebhookUrl") ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-gray-100 text-gray-400 border-gray-200"}`}>
                     <div className={`w-1.5 h-1.5 rounded-full ${val("googleSheetsWebhookUrl") ? "bg-emerald-500 animate-pulse" : "bg-gray-300"}`} />
-                    {val("googleSheetsWebhookUrl") ? "مُفعَّل" : "غير مُفعَّل"}
+                    {val("googleSheetsWebhookUrl") ? "Activé" : "Désactivé"}
                   </div>
                   <Field label="Webhook URL">
                     <div className="flex gap-2">
@@ -587,7 +587,7 @@ export default function AdminSettings() {
                     <pre className="p-4 text-xs text-emerald-400 font-mono leading-relaxed overflow-x-auto">{appsScriptCode}</pre>
                   </div>
                   <div className="grid grid-cols-5 gap-2">
-                    {["افتح Google Sheets", "Extensions → Apps Script", "الصق الكود واحفظ", "Deploy → Web App", "انسخ الـ URL"].map((s, i) => (
+                    {["Ouvrir Google Sheets", "Extensions → Apps Script", "Coller le code et sauver", "Deploy → Web App", "Copier l'URL"].map((s, i) => (
                       <div key={i} className="bg-gray-50 border border-gray-100 rounded-xl p-2.5 text-center">
                         <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-black flex items-center justify-center mx-auto mb-1.5">{i + 1}</div>
                         <p className="text-gray-500 text-[10px] leading-tight">{s}</p>

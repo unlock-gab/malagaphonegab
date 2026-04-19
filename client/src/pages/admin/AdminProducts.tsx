@@ -30,7 +30,7 @@ const PRODUCT_TYPE_KEYS = ["phone", "accessory", "tablet", "watch", "earphone", 
 const STORAGE_OPTIONS = ["16GB","32GB","64GB","128GB","256GB","512GB","1TB"];
 const RAM_OPTIONS = ["2GB","3GB","4GB","6GB","8GB","12GB","16GB","32GB"];
 const COLOR_OPTIONS_FR = ["Noir","Blanc","Bleu","Rouge","Vert","Or","Argent","Violet","Gris","Rose","Orange"];
-const COLOR_OPTIONS_AR = ["أسود","أبيض","أزرق","أحمر","أخضر","ذهبي","فضي","بنفسجي","رمادي","وردي","برتقالي"];
+const COLOR_OPTIONS_AR = COLOR_OPTIONS_FR;
 
 const PHONE_TYPES: Record<string, boolean> = { phone: true, tablet: true };
 

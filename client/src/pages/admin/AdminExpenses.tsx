@@ -16,7 +16,7 @@ import { EXPENSE_TYPES } from "@shared/schema";
 import { useAdminLang } from "@/context/AdminLangContext";
 
 function formatCurrency(v: number) {
-  return new Intl.NumberFormat("ar-DZ").format(v) + " د.ج";
+  return new Intl.NumberFormat("fr-FR").format(v) + " DA";
 }
 
 const EXPENSE_TYPE_COLORS: Record<string, string> = {

@@ -27,7 +27,7 @@ interface DashboardStats {
 }
 
 function formatCurrency(v: number) {
-  return new Intl.NumberFormat("ar-DZ", { style: "decimal", maximumFractionDigits: 0 }).format(v) + " د.ج";
+  return new Intl.NumberFormat("fr-FR", { style: "decimal", maximumFractionDigits: 0 }).format(v) + " DA";
 }
 
 function KpiCard({ icon: Icon, label, value, sub, iconBg, iconColor, href }: {

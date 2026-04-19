@@ -14,7 +14,7 @@ function formatCurrency(v: number) {
 }
 function formatDate(d: string | null | undefined) {
   if (!d) return "—";
-  return new Intl.DateTimeFormat("ar-DZ", { day: "numeric", month: "short", year: "numeric" }).format(new Date(d));
+  return new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric" }).format(new Date(d));
 }
 function shortId(id: string) { return "#" + id.slice(-6).toUpperCase(); }
 

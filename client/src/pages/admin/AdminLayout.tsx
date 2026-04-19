@@ -60,6 +60,13 @@ function buildNavSections(t: (k: any) => string) {
         { icon: Settings,  label: t("nav_settings"),      href: "/admin/settings" },
       ],
     },
+    {
+      label: t("nav_access_section"),
+      items: [
+        { icon: Users,  label: t("nav_users"), href: "/admin/users" },
+        { icon: Shield, label: t("nav_roles"), href: "/admin/roles" },
+      ],
+    },
   ];
 }
 

@@ -4,8 +4,10 @@ import { apiRequest } from "@/lib/queryClient";
 export type AuthUser = {
   id: string;
   username: string;
-  role: "admin" | "confirmateur";
+  role: string;
   name: string;
+  permissions: string[];
+  roleId?: string | null;
 };
 
 type AuthContextType = {
@@ -13,6 +15,7 @@ type AuthContextType = {
   loading: boolean;
   login: (username: string, password: string) => Promise<AuthUser>;
   logout: () => Promise<void>;
+  hasPermission: (perm: string) => boolean;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -27,6 +30,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then(data => { if (data) setUser(data); })
       .finally(() => setLoading(false));
   }, []);
+
+  const hasPermission = (perm: string): boolean => {
+    if (!user) return false;
+    if (user.role === "admin") return true;
+    if (user.permissions.includes("*")) return true;
+    return user.permissions.includes(perm);
+  };
 
   const login = async (username: string, password: string): Promise<AuthUser> => {
     const res = await apiRequest("POST", "/api/auth/login", { username, password });
@@ -45,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, hasPermission }}>
       {children}
     </AuthContext.Provider>
   );

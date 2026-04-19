@@ -2,13 +2,68 @@ import { pgTable, text, varchar, numeric, integer, boolean, timestamp } from "dr
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// ===================== PERMISSIONS =====================
+export const ALL_PERMISSIONS = [
+  "dashboard.view",
+  "pos.view", "pos.sell", "pos.print",
+  "orders.view", "orders.create", "orders.update", "orders.cancel",
+  "products.view", "products.create", "products.update", "products.delete",
+  "inventory.view", "inventory.adjust",
+  "purchases.view", "purchases.create", "purchases.update", "purchases.delete",
+  "suppliers.view", "suppliers.create", "suppliers.update", "suppliers.delete",
+  "customers.view",
+  "reports.view",
+  "profits.view",
+  "expenses.view", "expenses.create", "expenses.update", "expenses.delete",
+  "aftersale.view", "aftersale.create", "aftersale.update",
+  "settings.view", "settings.update",
+  "users.view", "users.create", "users.update", "users.delete",
+  "roles.view", "roles.create", "roles.update", "roles.delete",
+] as const;
+export type Permission = typeof ALL_PERMISSIONS[number];
+
+export const PERMISSION_GROUPS: { group: string; groupFr: string; perms: Permission[] }[] = [
+  { group: "dashboard", groupFr: "Tableau de bord", perms: ["dashboard.view"] },
+  { group: "pos", groupFr: "Vente comptoir (POS)", perms: ["pos.view", "pos.sell", "pos.print"] },
+  { group: "orders", groupFr: "Commandes", perms: ["orders.view", "orders.create", "orders.update", "orders.cancel"] },
+  { group: "products", groupFr: "Produits", perms: ["products.view", "products.create", "products.update", "products.delete"] },
+  { group: "inventory", groupFr: "Stock", perms: ["inventory.view", "inventory.adjust"] },
+  { group: "purchases", groupFr: "Achats", perms: ["purchases.view", "purchases.create", "purchases.update", "purchases.delete"] },
+  { group: "suppliers", groupFr: "Fournisseurs", perms: ["suppliers.view", "suppliers.create", "suppliers.update", "suppliers.delete"] },
+  { group: "customers", groupFr: "Clients", perms: ["customers.view"] },
+  { group: "reports", groupFr: "Rapports", perms: ["reports.view"] },
+  { group: "profits", groupFr: "Finances & Bénéfices", perms: ["profits.view", "expenses.view", "expenses.create", "expenses.update", "expenses.delete"] },
+  { group: "aftersale", groupFr: "SAV", perms: ["aftersale.view", "aftersale.create", "aftersale.update"] },
+  { group: "settings", groupFr: "Paramètres", perms: ["settings.view", "settings.update"] },
+  { group: "users", groupFr: "Utilisateurs", perms: ["users.view", "users.create", "users.update", "users.delete"] },
+  { group: "roles", groupFr: "Rôles & Permissions", perms: ["roles.view", "roles.create", "roles.update", "roles.delete"] },
+];
+
+// ===================== ROLES =====================
+export const roles = pgTable("roles", {
+  id: varchar("id").primaryKey(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  permissions: text("permissions").notNull().default("[]"),
+  isSystem: boolean("is_system").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export const insertRoleSchema = createInsertSchema(roles).omit({ id: true, createdAt: true });
+export type InsertRole = z.infer<typeof insertRoleSchema>;
+export type Role = typeof roles.$inferSelect;
+
 // ===================== USERS =====================
 export const users = pgTable("users", {
   id: varchar("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   role: text("role").notNull().default("confirmateur"),
+  roleId: varchar("role_id"),
   name: text("name").notNull().default(""),
+  phone: text("phone"),
+  email: text("email"),
+  active: boolean("active").notNull().default(true),
+  lastLogin: timestamp("last_login"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -412,7 +467,17 @@ export const insertSupplierReturnSchema = createInsertSchema(supplierReturns).om
 export const insertOperationHistorySchema = createInsertSchema(operationHistory).omit({ createdAt: true, undoneAt: true });
 
 // ===================== TYPES =====================
-export type InsertUser = { username: string; password: string; role: string; name: string };
+export type InsertUser = {
+  username: string;
+  password: string;
+  role: string;
+  name: string;
+  roleId?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  active?: boolean;
+  lastLogin?: Date | null;
+};
 export type User = typeof users.$inferSelect;
 export type Product = typeof products.$inferSelect;
 export type InsertProduct = z.infer<typeof insertProductSchema>;

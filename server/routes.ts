@@ -55,6 +55,16 @@ function requireAdmin(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+function requirePermission(perm: string) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.session.userId) return res.status(401).json({ message: "غير مصرح" });
+    if (req.session.role === "admin") return next();
+    const perms: string[] = req.session.permissions ?? [];
+    if (!perms.includes(perm)) return res.status(403).json({ message: "لا تملك صلاحية للوصول لهذه البيانات" });
+    next();
+  };
+}
+
 const ALLOWED_ORDER_STATUSES = ["new", "confirmed", "delivered", "paid", "returned"];
 
 async function logOp(
@@ -136,16 +146,28 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     if (username.length > 50 || password.length > 200) return res.status(400).json({ message: "بيانات غير صحيحة" });
     const user = await storage.getUserByUsername(username.toLowerCase().trim());
     if (!user || !verifyPassword(password, user.password)) return res.status(401).json({ message: "اسم المستخدم أو كلمة المرور غير صحيحة" });
+    if (user.active === false) return res.status(403).json({ message: "الحساب غير نشط، تواصل مع المدير" });
     // Auto-upgrade legacy SHA-256 hashes to scrypt on successful login
     if (!user.password.startsWith("v2:")) {
       const upgraded = hashPassword(password);
       await storage.updateUser(user.id, { password: upgraded });
     }
+    // Load permissions from role
+    let permissions: string[] = [];
+    if (user.role === "admin") {
+      permissions = ["*"];
+    } else if (user.roleId) {
+      permissions = await storage.getRolePermissions(user.roleId);
+    }
     req.session.userId = user.id;
-    req.session.role = user.role as "admin" | "confirmateur";
+    req.session.role = user.role;
     req.session.username = user.username;
     req.session.name = user.name;
-    res.json({ id: user.id, username: user.username, role: user.role, name: user.name });
+    req.session.permissions = permissions;
+    req.session.roleId = user.roleId ?? undefined;
+    // Update last login
+    storage.updateLastLogin(user.id).catch(() => {});
+    res.json({ id: user.id, username: user.username, role: user.role, name: user.name, permissions, roleId: user.roleId });
   });
 
   app.post("/api/auth/logout", (req, res) => { req.session.destroy(() => {}); res.json({ message: "تم تسجيل الخروج" }); });
@@ -154,7 +176,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     if (!req.session.userId) return res.status(401).json({ message: "غير مسجل" });
     const user = await storage.getUserById(req.session.userId);
     if (!user) return res.status(401).json({ message: "المستخدم غير موجود" });
-    res.json({ id: user.id, username: user.username, role: user.role, name: user.name });
+    const perms = req.session.permissions ?? (user.role === "admin" ? ["*"] : []);
+    res.json({ id: user.id, username: user.username, role: user.role, name: user.name, permissions: perms, roleId: user.roleId });
   });
 
   // ==================== DASHBOARD ====================
@@ -1090,6 +1113,109 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const r = await storage.cancelSupplierReturn(req.params.id);
       res.json(r);
     } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  // ==================== ROLES ====================
+
+  app.get("/api/roles", requireAdmin, async (_req, res) => {
+    res.json(await storage.getRoles());
+  });
+
+  app.post("/api/roles", requireAdmin, async (req, res) => {
+    try {
+      const { name, permissions } = req.body;
+      if (!name?.trim()) return res.status(400).json({ message: "Nom du rôle requis" });
+      const slug = name.trim().toLowerCase().replace(/[^a-z0-9]/g, "-");
+      const existing = await storage.getRoleBySlug(slug);
+      if (existing) return res.status(400).json({ message: "Un rôle avec ce nom existe déjà" });
+      const role = await storage.createRole({
+        name: name.trim(),
+        slug,
+        permissions: JSON.stringify(Array.isArray(permissions) ? permissions : []),
+        isSystem: false,
+      });
+      res.status(201).json(role);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  app.patch("/api/roles/:id", requireAdmin, async (req, res) => {
+    try {
+      const role = await storage.getRole(req.params.id);
+      if (!role) return res.status(404).json({ message: "Rôle introuvable" });
+      const updates: any = {};
+      if (req.body.name !== undefined) updates.name = req.body.name;
+      if (req.body.permissions !== undefined) updates.permissions = JSON.stringify(Array.isArray(req.body.permissions) ? req.body.permissions : []);
+      const updated = await storage.updateRole(req.params.id, updates);
+      res.json(updated);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  app.delete("/api/roles/:id", requireAdmin, async (req, res) => {
+    const ok = await storage.deleteRole(req.params.id);
+    if (!ok) return res.status(400).json({ message: "Impossible de supprimer ce rôle (système ou utilisé)" });
+    res.json({ success: true });
+  });
+
+  // ==================== ADMIN USERS ====================
+
+  app.get("/api/admin/users", requireAdmin, async (_req, res) => {
+    const allUsers = await storage.getAdminUsers();
+    res.json(allUsers.map(u => ({ ...u, password: undefined })));
+  });
+
+  app.post("/api/admin/users", requireAdmin, async (req, res) => {
+    try {
+      const { name, username, phone, email, password, roleId, active } = req.body;
+      if (!username?.trim() || !password?.trim()) return res.status(400).json({ message: "اسم المستخدم وكلمة المرور مطلوبان" });
+      if (password.length < 6) return res.status(400).json({ message: "كلمة المرور يجب أن تكون 6 أحرف على الأقل" });
+      const role = roleId ? await storage.getRole(roleId) : null;
+      const user = await storage.createUser({
+        username: username.toLowerCase().trim(),
+        password: hashPassword(password),
+        name: name?.trim() ?? "",
+        role: role?.slug === "admin" ? "admin" : "confirmateur",
+        roleId: roleId ?? null,
+        phone: phone ?? null,
+        email: email ?? null,
+        active: active !== false,
+      });
+      res.status(201).json({ ...user, password: undefined });
+    } catch (e: any) {
+      if (e.message?.includes("unique")) return res.status(400).json({ message: "اسم المستخدم مستخدم بالفعل" });
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.patch("/api/admin/users/:id", requireAdmin, async (req, res) => {
+    try {
+      if (req.params.id === "user-admin" && req.body.role && req.body.role !== "admin") {
+        return res.status(400).json({ message: "لا يمكن تغيير دور المدير الرئيسي" });
+      }
+      const updates: any = {};
+      if (req.body.name !== undefined) updates.name = req.body.name;
+      if (req.body.phone !== undefined) updates.phone = req.body.phone;
+      if (req.body.email !== undefined) updates.email = req.body.email;
+      if (req.body.active !== undefined) updates.active = req.body.active;
+      if (req.body.roleId !== undefined) {
+        updates.roleId = req.body.roleId;
+        const role = req.body.roleId ? await storage.getRole(req.body.roleId) : null;
+        updates.role = role?.slug === "admin" ? "admin" : "confirmateur";
+      }
+      if (req.body.password) {
+        if (req.body.password.length < 6) return res.status(400).json({ message: "كلمة المرور يجب أن تكون 6 أحرف على الأقل" });
+        updates.password = hashPassword(req.body.password);
+      }
+      const user = await storage.updateUser(req.params.id, updates);
+      if (!user) return res.status(404).json({ message: "المستخدم غير موجود" });
+      res.json({ ...user, password: undefined });
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  app.delete("/api/admin/users/:id", requireAdmin, async (req, res) => {
+    if (req.params.id === "user-admin") return res.status(400).json({ message: "لا يمكن حذف المدير الرئيسي" });
+    const ok = await storage.deleteUser(req.params.id);
+    if (!ok) return res.status(404).json({ message: "المستخدم غير موجود" });
+    res.json({ success: true });
   });
 
   // ── Operation History (Undo) ──────────────────────────────────────────────────

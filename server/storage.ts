@@ -21,12 +21,14 @@ import {
   type PurchasePayment, type InsertPurchasePayment,
   type SupplierReturn, type InsertSupplierReturn,
   type OperationHistory, type InsertOperationHistory,
+  type Role, type InsertRole,
+  ALL_PERMISSIONS,
   DEFAULT_DELIVERY_PRICES,
   users, products, categories, brands, suppliers, purchases, purchaseItems,
   inventoryMovements, orders, orderItems, expenses, profitRecords,
   blockedIps, abandonedCarts, appSettings, deliveryCompanies, productVariants,
   afterSaleRecords, phoneUnits, invoiceTemplates, partners, purchasePayments,
-  supplierReturns, operationHistory,
+  supplierReturns, operationHistory, roles,
 } from "@shared/schema";
 import { randomUUID, createHash, scryptSync, randomBytes, timingSafeEqual } from "crypto";
 import { db } from "./db";
@@ -296,6 +298,56 @@ export class DatabaseStorage implements IStorage {
 
   async getConfirmateurs(): Promise<User[]> {
     return db.select().from(users).where(eq(users.role, "confirmateur"));
+  }
+
+  async getAdminUsers(): Promise<User[]> {
+    return db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async updateLastLogin(id: string): Promise<void> {
+    await db.update(users).set({ lastLogin: new Date() }).where(eq(users.id, id));
+  }
+
+  // ============ ROLES ============
+
+  async getRoles(): Promise<Role[]> {
+    return db.select().from(roles).orderBy(roles.name);
+  }
+
+  async getRole(id: string): Promise<Role | undefined> {
+    const [r] = await db.select().from(roles).where(eq(roles.id, id));
+    return r;
+  }
+
+  async getRoleBySlug(slug: string): Promise<Role | undefined> {
+    const [r] = await db.select().from(roles).where(eq(roles.slug, slug));
+    return r;
+  }
+
+  async createRole(data: InsertRole): Promise<Role> {
+    const id = `role-${randomUUID()}`;
+    const [r] = await db.insert(roles).values({ id, ...data }).returning();
+    return r;
+  }
+
+  async updateRole(id: string, data: Partial<InsertRole>): Promise<Role | undefined> {
+    const [r] = await db.update(roles).set(data).where(eq(roles.id, id)).returning();
+    return r;
+  }
+
+  async deleteRole(id: string): Promise<boolean> {
+    const role = await this.getRole(id);
+    if (!role || role.isSystem) return false;
+    const usersWithRole = await db.select().from(users).where(eq(users.roleId, id));
+    if (usersWithRole.length > 0) return false;
+    await db.delete(roles).where(eq(roles.id, id));
+    return true;
+  }
+
+  async getRolePermissions(roleId: string): Promise<string[]> {
+    const role = await this.getRole(roleId);
+    if (!role) return [];
+    try { return JSON.parse(role.permissions); } catch { return []; }
   }
 
   // ============ CATEGORIES ============
@@ -1820,26 +1872,53 @@ export class DatabaseStorage implements IStorage {
 }
 
 async function seedDatabase() {
+  await seedRoles();
+
   const existingAdmin = await db.select().from(users).where(eq(users.id, "user-admin"));
   if (existingAdmin.length > 0) {
     const existingCategories = await db.select().from(categories);
     if (existingCategories.length === 0) {
       await seedCategoriesAndBrands();
     }
+    // Ensure admin has roleId set
+    if (!existingAdmin[0].roleId) {
+      const adminRole = await db.select().from(roles).where(eq(roles.slug, "admin"));
+      if (adminRole.length > 0) {
+        await db.update(users).set({ roleId: adminRole[0].id }).where(eq(users.id, "user-admin"));
+      }
+    }
     return;
   }
 
   console.log("[db] Seeding database...");
 
+  const adminRole = await db.select().from(roles).where(eq(roles.slug, "admin"));
   await db.insert(users).values({
     id: "user-admin", username: "admin",
     password: hashPassword("admin2026"),
     role: "admin", name: "المدير",
+    roleId: adminRole.length > 0 ? adminRole[0].id : null,
+    active: true,
   });
 
   await seedCategoriesAndBrands();
 
   console.log("[db] Database seeded ✓");
+}
+
+async function seedRoles() {
+  const existing = await db.select().from(roles);
+  if (existing.length > 0) return;
+
+  const vendeurPerms = ["pos.view", "pos.sell", "pos.print", "orders.view", "orders.create"];
+  const managerPerms = ALL_PERMISSIONS.filter(p => !p.startsWith("users.") && !p.startsWith("roles.") && p !== "settings.update");
+
+  await db.insert(roles).values([
+    { id: "role-admin", name: "Admin / Propriétaire", slug: "admin", permissions: JSON.stringify(ALL_PERMISSIONS), isSystem: true },
+    { id: "role-vendeur", name: "Caissier / Vendeur", slug: "vendeur", permissions: JSON.stringify(vendeurPerms), isSystem: true },
+    { id: "role-manager", name: "Manager", slug: "manager", permissions: JSON.stringify(managerPerms), isSystem: false },
+  ]);
+  console.log("[db] Default roles seeded ✓");
 }
 
 async function seedCategoriesAndBrands() {

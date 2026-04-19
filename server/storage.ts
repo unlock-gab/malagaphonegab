@@ -954,6 +954,8 @@ export class DatabaseStorage implements IStorage {
         }
         await db.update(orders).set({ stockDeducted: false, stockRestored: true, paymentStatus: "refunded" }).where(eq(orders.id, id));
       }
+      // Reverse profit record so dashboard revenue/profit correctly decrease on return
+      await db.delete(profitRecords).where(eq(profitRecords.orderId, id));
     }
 
     return o;

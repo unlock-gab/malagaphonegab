@@ -25,6 +25,13 @@ function formatDate(d: string | null | undefined) {
   if (!d) return "—";
   return new Intl.DateTimeFormat("ar-DZ", { day: "numeric", month: "short", year: "numeric" }).format(new Date(d));
 }
+function formatDateTime(d: string | null | undefined) {
+  if (!d) return "—";
+  return new Intl.DateTimeFormat("ar-DZ", {
+    day: "numeric", month: "short", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  }).format(new Date(d));
+}
 
 const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
   pending:   { label: "معلق",   cls: "bg-amber-50 text-amber-700 border-amber-200" },
@@ -1004,9 +1011,14 @@ function VersementModal({ purchase, onClose }: { purchase: any; onClose: () => v
                     {payments.map((p: any) => (
                       <tr key={p.id} className="border-b border-gray-50 last:border-0">
                         <td className="p-2.5">
-                          <div className="flex items-center gap-1 text-gray-600">
-                            <Clock className="w-3 h-3 text-gray-300" />
-                            <span>{formatDate(p.paymentDate)}</span>
+                          <div className="flex flex-col gap-0.5 text-gray-600">
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-3 h-3 text-gray-300" />
+                              <span>{formatDate(p.paymentDate)}</span>
+                            </div>
+                            <span className="text-gray-400 text-[10px] pr-4">
+                              {new Date(p.paymentDate).toLocaleTimeString("ar-DZ", { hour: "2-digit", minute: "2-digit" })}
+                            </span>
                           </div>
                         </td>
                         <td className="p-2.5 text-emerald-700 font-bold">
@@ -1045,11 +1057,26 @@ function ViewPurchaseDialog({ purchase, onClose, onComplete, onCancel: onCancelP
     queryKey: ["/api/purchases", purchase.id],
     queryFn: () => fetch(`/api/purchases/${purchase.id}`, { credentials: "include" }).then(r => r.json()),
   });
+  const { data: rawVPayments } = useQuery<any[]>({
+    queryKey: ["/api/purchases", purchase.id, "payments"],
+    queryFn: async () => {
+      const r = await fetch(`/api/purchases/${purchase.id}/payments`, { credentials: "include" });
+      if (!r.ok) return [];
+      const d = await r.json();
+      return Array.isArray(d) ? d : [];
+    },
+  });
+  const vPayments = Array.isArray(rawVPayments) ? rawVPayments : [];
 
   const data = full ?? purchase;
   const sc = STATUS_CONFIG[data.status] ?? STATUS_CONFIG.pending;
   const items = (data.items ?? []) as PurchaseItem[];
   const extraCosts = parseFloat(data.extraCosts || "0");
+  const purTotal = parseFloat(data.total || "0");
+  const purPaid = vPayments.reduce((s: number, p: any) => s + parseFloat(p.amount || "0"), 0);
+  const purRemaining = Math.max(0, purTotal - purPaid);
+  const payStatusKey = getPaymentStatus(purTotal, purPaid);
+  const psBadge = PAY_STATUS[payStatusKey];
 
   return (
     <Dialog open onOpenChange={o => { if (!o) onClose(); }}>
@@ -1175,10 +1202,53 @@ function ViewPurchaseDialog({ purchase, onClose, onComplete, onCancel: onCancelP
             </div>
           )}
 
+          {/* ── Payments summary ── */}
+          <div className="border border-gray-200 rounded-xl overflow-hidden">
+            <div className="bg-gray-50 border-b border-gray-100 px-3 py-2 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Wallet className="w-3.5 h-3.5 text-blue-600" />
+                <span className="text-xs font-semibold text-gray-600">الدفعات</span>
+              </div>
+              <span className={`text-xs px-2 py-0.5 rounded-full border ${psBadge.cls}`}>{psBadge.label}</span>
+            </div>
+            <div className="grid grid-cols-3 divide-x divide-gray-100 rtl:divide-x-reverse text-center">
+              <div className="p-2.5">
+                <p className="text-xs text-gray-400 mb-0.5">الإجمالي</p>
+                <p className="text-xs font-bold text-blue-700">{formatCurrency(purTotal)}</p>
+              </div>
+              <div className="p-2.5">
+                <p className="text-xs text-gray-400 mb-0.5">مدفوع</p>
+                <p className="text-xs font-bold text-emerald-700">{formatCurrency(purPaid)}</p>
+              </div>
+              <div className="p-2.5">
+                <p className="text-xs text-gray-400 mb-0.5">متبقي</p>
+                <p className={`text-xs font-bold ${purRemaining > 0 ? "text-red-600" : "text-gray-400"}`}>{formatCurrency(purRemaining)}</p>
+              </div>
+            </div>
+            {vPayments.length > 0 && (
+              <div className="border-t border-gray-100">
+                {vPayments.slice(0, 3).map((p: any) => (
+                  <div key={p.id} className="flex items-center justify-between px-3 py-2 border-b border-gray-50 last:border-0 text-xs">
+                    <div className="flex items-center gap-1.5 text-gray-400">
+                      <Clock className="w-3 h-3" />
+                      <span>{formatDateTime(p.paymentDate)}</span>
+                      <span className="text-gray-300">·</span>
+                      <span>{PAYMENT_METHODS.find(m => m.value === p.paymentMethod)?.label ?? p.paymentMethod}</span>
+                    </div>
+                    <span className="text-emerald-700 font-bold">{formatCurrency(parseFloat(p.amount || "0"))}</span>
+                  </div>
+                ))}
+                {vPayments.length > 3 && (
+                  <p className="text-xs text-gray-400 text-center py-2">+ {vPayments.length - 3} دفعات أخرى</p>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* ── Actions ── */}
           {onVersement && (
             <Button onClick={onVersement} className="w-full bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 text-sm shadow-none" data-testid="button-view-versements">
-              <Wallet className="w-4 h-4 ml-2" /> دفعات المورد (Versements)
+              <Wallet className="w-4 h-4 ml-2" /> إدارة الدفعات
             </Button>
           )}
           {data.status === "pending" && (

@@ -131,6 +131,18 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Auto-migrate DB schema on every startup so new tables are always created
+  try {
+    console.log("[db] Applying schema migrations...");
+    execSync("npx drizzle-kit push --force", {
+      stdio: "inherit",
+      env: { ...process.env },
+    });
+    console.log("[db] Schema migrations applied ✓");
+  } catch (e) {
+    console.error("[db] Schema migration error (continuing anyway):", e);
+  }
+
   // Serve uploaded product images as static files
   const uploadsDir = path.join(process.cwd(), "uploads");
   if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });

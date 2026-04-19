@@ -185,6 +185,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/categories", requireAdmin, async (req, res) => {
     try {
       const cat = await storage.createCategory(req.body);
+      logOp("category_create", "categories", cat.id, `Catégorie: ${cat.name}`, null, req.session.username ?? null);
       res.status(201).json(cat);
     } catch (e: any) { res.status(400).json({ message: e.message }); }
   });
@@ -196,6 +197,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.delete("/api/categories/:id", requireAdmin, async (req, res) => {
+    const existing = await storage.getCategory(req.params.id);
+    if (!existing) return res.status(404).json({ message: "الفئة غير موجودة" });
+    await logOp("category_delete", "categories", existing.id, `Catégorie supprimée: ${existing.name}`, null, req.session.username ?? null, existing as any);
     const ok = await storage.deleteCategory(req.params.id);
     if (!ok) return res.status(404).json({ message: "الفئة غير موجودة" });
     res.json({ message: "تم الحذف" });
@@ -210,6 +214,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/brands", requireAdmin, async (req, res) => {
     try {
       const brand = await storage.createBrand(req.body);
+      logOp("brand_create", "brands", brand.id, `Marque: ${brand.name}`, null, req.session.username ?? null);
       res.status(201).json(brand);
     } catch (e: any) { res.status(400).json({ message: e.message }); }
   });
@@ -221,6 +226,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.delete("/api/brands/:id", requireAdmin, async (req, res) => {
+    const existing = await storage.getBrand(req.params.id);
+    if (!existing) return res.status(404).json({ message: "الماركة غير موجودة" });
+    await logOp("brand_delete", "brands", existing.id, `Marque supprimée: ${existing.name}`, null, req.session.username ?? null, existing as any);
     const ok = await storage.deleteBrand(req.params.id);
     if (!ok) return res.status(404).json({ message: "الماركة غير موجودة" });
     res.json({ message: "تم الحذف" });
@@ -286,6 +294,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!req.body.costPrice || isNaN(cost) || cost <= 0)
         return res.status(400).json({ message: "Le coût du produit est obligatoire et doit être supérieur à 0 DA." });
       const product = await storage.createProduct(req.body);
+      logOp("product_create", "products", product.id, `Produit: ${product.name}`, product.costPrice, req.session.username ?? null);
       res.status(201).json(product);
     } catch (e: any) { res.status(400).json({ message: e.message }); }
   });
@@ -304,6 +313,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.delete("/api/products/:id", requireAdmin, async (req, res) => {
+    const existing = await storage.getProduct(req.params.id);
+    if (!existing) return res.status(404).json({ message: "المنتج غير موجود" });
+    const { image, images, ...productMeta } = existing as any;
+    await logOp("product_delete", "products", existing.id, `Produit supprimé: ${existing.name}`, existing.costPrice, req.session.username ?? null, { ...productMeta, image: null, images: null });
     const ok = await storage.deleteProduct(req.params.id);
     if (!ok) return res.status(404).json({ message: "المنتج غير موجود" });
     res.json({ message: "تم الحذف بنجاح" });
@@ -318,6 +331,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/suppliers", requireAdmin, async (req, res) => {
     try {
       const s = await storage.createSupplier(req.body);
+      logOp("supplier_create", "suppliers", s.id, `Fournisseur: ${s.name}`, null, req.session.username ?? null);
       res.status(201).json(s);
     } catch (e: any) { res.status(400).json({ message: e.message }); }
   });
@@ -329,6 +343,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.delete("/api/suppliers/:id", requireAdmin, async (req, res) => {
+    const existing = await storage.getSupplier(req.params.id);
+    if (!existing) return res.status(404).json({ message: "المورد غير موجود" });
+    await logOp("supplier_delete", "suppliers", existing.id, `Fournisseur supprimé: ${existing.name}`, null, req.session.username ?? null, existing as any);
     const ok = await storage.deleteSupplier(req.params.id);
     if (!ok) return res.status(404).json({ message: "المورد غير موجود" });
     res.json({ message: "تم الحذف" });
@@ -566,6 +583,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/after-sale", requireAdmin, async (req, res) => {
     try {
       const record = await storage.createAfterSaleRecord(req.body);
+      logOp("after_sale_create", "after-sale", record.id, `SAV: ${record.customerName} — ${record.productName}`, null, req.session.username ?? null);
       res.status(201).json(record);
     } catch (e: any) { res.status(400).json({ message: e.message }); }
   });
@@ -642,21 +660,28 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const body = { ...req.body };
       if (body.expenseDate) body.expenseDate = new Date(body.expenseDate);
       const e = await storage.createExpense(body);
+      logOp("expense_create", "expenses", e.id, `Dépense: ${e.label} (${e.amount} DA)`, e.amount, req.session.username ?? null);
       res.status(201).json(e);
     } catch (e: any) { res.status(400).json({ message: e.message }); }
   });
 
   app.patch("/api/expenses/:id", requireAdmin, async (req, res) => {
     try {
+      const old = await storage.getExpense(req.params.id);
+      if (!old) return res.status(404).json({ message: "المصروف غير موجود" });
       const body = { ...req.body };
       if (body.expenseDate) body.expenseDate = new Date(body.expenseDate);
       const e = await storage.updateExpense(req.params.id, body);
       if (!e) return res.status(404).json({ message: "المصروف غير موجود" });
+      logOp("expense_update", "expenses", e.id, `Dépense modifiée: ${e.label}`, e.amount, req.session.username ?? null, old as any);
       res.json(e);
     } catch (e: any) { res.status(400).json({ message: e.message }); }
   });
 
   app.delete("/api/expenses/:id", requireAdmin, async (req, res) => {
+    const existing = await storage.getExpense(req.params.id);
+    if (!existing) return res.status(404).json({ message: "المصروف غير موجود" });
+    await logOp("expense_delete", "expenses", existing.id, `Dépense supprimée: ${existing.label} (${existing.amount} DA)`, existing.amount, req.session.username ?? null, existing as any);
     const ok = await storage.deleteExpense(req.params.id);
     if (!ok) return res.status(404).json({ message: "المصروف غير موجود" });
     res.json({ message: "تم الحذف" });
@@ -972,6 +997,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/partners", requireAdmin, async (req, res) => {
     try {
       const partner = await storage.createPartner(req.body);
+      logOp("partner_create", "partners", partner.id, `Partenaire: ${partner.name}`, null, req.session.username ?? null);
       res.status(201).json(partner);
     } catch (e: any) { res.status(400).json({ message: e.message }); }
   });
@@ -981,6 +1007,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json(partner);
   });
   app.delete("/api/partners/:id", requireAdmin, async (req, res) => {
+    const existing = await storage.getPartner(req.params.id);
+    if (!existing) return res.status(404).json({ message: "Partenaire introuvable" });
+    await logOp("partner_delete", "partners", existing.id, `Partenaire supprimé: ${existing.name}`, null, req.session.username ?? null, existing as any);
     const ok = await storage.deletePartner(req.params.id);
     if (!ok) return res.status(404).json({ message: "Partenaire introuvable" });
     res.json({ success: true });
@@ -1122,6 +1151,76 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           const order = await storage.getOrder(op.recordId);
           if (!order) throw new Error("Commande introuvable");
           await storage.updateOrderStatus(op.recordId, meta.prevStatus);
+          break;
+        }
+        case "expense_create": {
+          const ok = await storage.deleteExpense(op.recordId);
+          if (!ok) throw new Error("Dépense introuvable ou déjà supprimée");
+          break;
+        }
+        case "expense_update": {
+          const { id: _id, createdAt: _ca, ...restoreData } = meta;
+          await storage.updateExpense(op.recordId, restoreData);
+          break;
+        }
+        case "expense_delete": {
+          if (!meta.id) throw new Error("Données de restauration manquantes");
+          await storage.restoreExpense(meta);
+          break;
+        }
+        case "product_create": {
+          const ok = await storage.deleteProduct(op.recordId);
+          if (!ok) throw new Error("Produit introuvable ou déjà supprimé");
+          break;
+        }
+        case "product_delete": {
+          if (!meta.id) throw new Error("Données de restauration manquantes");
+          await storage.restoreProduct(meta);
+          break;
+        }
+        case "category_create": {
+          const ok = await storage.deleteCategory(op.recordId);
+          if (!ok) throw new Error("Catégorie introuvable ou déjà supprimée");
+          break;
+        }
+        case "category_delete": {
+          if (!meta.id) throw new Error("Données de restauration manquantes");
+          await storage.restoreCategory(meta);
+          break;
+        }
+        case "brand_create": {
+          const ok = await storage.deleteBrand(op.recordId);
+          if (!ok) throw new Error("Marque introuvable ou déjà supprimée");
+          break;
+        }
+        case "brand_delete": {
+          if (!meta.id) throw new Error("Données de restauration manquantes");
+          await storage.restoreBrand(meta);
+          break;
+        }
+        case "supplier_create": {
+          const ok = await storage.deleteSupplier(op.recordId);
+          if (!ok) throw new Error("Fournisseur introuvable ou déjà supprimé");
+          break;
+        }
+        case "supplier_delete": {
+          if (!meta.id) throw new Error("Données de restauration manquantes");
+          await storage.restoreSupplier(meta);
+          break;
+        }
+        case "after_sale_create": {
+          const ok = await storage.deleteAfterSaleRecord(op.recordId);
+          if (!ok) throw new Error("Enregistrement SAV introuvable ou déjà supprimé");
+          break;
+        }
+        case "partner_create": {
+          const ok = await storage.deletePartner(op.recordId);
+          if (!ok) throw new Error("Partenaire introuvable ou déjà supprimé");
+          break;
+        }
+        case "partner_delete": {
+          if (!meta.id) throw new Error("Données de restauration manquantes");
+          await storage.restorePartner(meta);
           break;
         }
         default:

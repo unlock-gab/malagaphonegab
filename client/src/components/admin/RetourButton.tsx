@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Undo2, Clock, ShoppingCart, Package, Warehouse, RotateCcw, ArrowLeftRight, AlertTriangle, X, Check } from "lucide-react";
+import { Undo2, Clock, ShoppingCart, Package, Warehouse, RotateCcw, ArrowLeftRight, AlertTriangle, X, Check, Tag, Cpu, Building2, Wallet, Wrench, Users } from "lucide-react";
 import { useAdminLang } from "@/context/AdminLangContext";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -34,6 +34,20 @@ function opIcon(type: string) {
     case "supplier_return": return <RotateCcw className="w-3.5 h-3.5 text-rose-500" />;
     case "inventory_adjustment": return <Warehouse className="w-3.5 h-3.5 text-amber-500" />;
     case "order_status": return <Clock className="w-3.5 h-3.5 text-sky-500" />;
+    case "expense_create":
+    case "expense_update":
+    case "expense_delete": return <Wallet className="w-3.5 h-3.5 text-red-500" />;
+    case "product_create":
+    case "product_delete": return <Cpu className="w-3.5 h-3.5 text-indigo-500" />;
+    case "category_create":
+    case "category_delete": return <Tag className="w-3.5 h-3.5 text-teal-500" />;
+    case "brand_create":
+    case "brand_delete": return <Tag className="w-3.5 h-3.5 text-pink-500" />;
+    case "supplier_create":
+    case "supplier_delete": return <Building2 className="w-3.5 h-3.5 text-yellow-600" />;
+    case "after_sale_create": return <Wrench className="w-3.5 h-3.5 text-gray-600" />;
+    case "partner_create":
+    case "partner_delete": return <Users className="w-3.5 h-3.5 text-cyan-500" />;
     default: return <Clock className="w-3.5 h-3.5 text-gray-400" />;
   }
 }
@@ -47,6 +61,20 @@ function opModuleLabel(type: string): string {
     case "supplier_return": return "Retours";
     case "inventory_adjustment": return "Stock";
     case "order_status": return "Commandes";
+    case "expense_create":
+    case "expense_update":
+    case "expense_delete": return "Dépenses";
+    case "product_create":
+    case "product_delete": return "Produits";
+    case "category_create":
+    case "category_delete": return "Catégories";
+    case "brand_create":
+    case "brand_delete": return "Marques";
+    case "supplier_create":
+    case "supplier_delete": return "Fournisseurs";
+    case "after_sale_create": return "SAV";
+    case "partner_create":
+    case "partner_delete": return "Partenaires";
     default: return type;
   }
 }
@@ -66,6 +94,34 @@ function undoDescription(op: OperationHistory): string {
       return "L'ajustement de stock sera inversé.";
     case "order_status":
       return "Le statut de la commande sera rétabli à l'état précédent.";
+    case "expense_create":
+      return "La dépense sera définitivement supprimée.";
+    case "expense_update":
+      return "La dépense sera restaurée aux valeurs précédentes.";
+    case "expense_delete":
+      return "La dépense supprimée sera restaurée.";
+    case "product_create":
+      return "Le produit sera définitivement supprimé.";
+    case "product_delete":
+      return "Le produit supprimé sera restauré (sans image).";
+    case "category_create":
+      return "La catégorie sera définitivement supprimée.";
+    case "category_delete":
+      return "La catégorie supprimée sera restaurée.";
+    case "brand_create":
+      return "La marque sera définitivement supprimée.";
+    case "brand_delete":
+      return "La marque supprimée sera restaurée.";
+    case "supplier_create":
+      return "Le fournisseur sera définitivement supprimé.";
+    case "supplier_delete":
+      return "Le fournisseur supprimé sera restauré.";
+    case "after_sale_create":
+      return "L'enregistrement SAV sera définitivement supprimé.";
+    case "partner_create":
+      return "Le partenaire sera définitivement supprimé.";
+    case "partner_delete":
+      return "Le partenaire supprimé sera restauré.";
     default:
       return "Cette opération sera annulée.";
   }

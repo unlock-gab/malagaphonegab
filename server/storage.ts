@@ -1787,6 +1787,36 @@ export class DatabaseStorage implements IStorage {
   async deleteProfitRecordByOrderId(orderId: string): Promise<void> {
     await db.delete(profitRecords).where(eq(profitRecords.orderId, orderId));
   }
+
+  // ── Restore helpers (undo of delete operations) ──────────────────────────────
+  async restoreExpense(data: any): Promise<void> {
+    const { id, label, amount, category, notes, expenseDate, createdAt } = data;
+    await db.insert(expenses).values({ id, label, amount, category, notes: notes ?? null, expenseDate: expenseDate ? new Date(expenseDate) : new Date(), createdAt: createdAt ? new Date(createdAt) : new Date() }).onConflictDoNothing();
+  }
+  async restoreCategory(data: any): Promise<void> {
+    const { id, name, slug, icon, color, description, active, sortOrder } = data;
+    await db.insert(categories).values({ id, name, slug, icon: icon ?? null, color: color ?? null, description: description ?? null, active: active ?? true, sortOrder: sortOrder ?? 0 }).onConflictDoNothing();
+  }
+  async restoreBrand(data: any): Promise<void> {
+    const { id, name, slug, logo, active, createdAt } = data;
+    await db.insert(brands).values({ id, name, slug, logo: logo ?? null, active: active ?? true, createdAt: createdAt ? new Date(createdAt) : new Date() }).onConflictDoNothing();
+  }
+  async restoreSupplier(data: any): Promise<void> {
+    const { id, name, phone, email, address, notes, active, createdAt } = data;
+    await db.insert(suppliers).values({ id, name, phone: phone ?? null, email: email ?? null, address: address ?? null, notes: notes ?? null, active: active ?? true, createdAt: createdAt ? new Date(createdAt) : new Date() }).onConflictDoNothing();
+  }
+  async restoreProduct(data: any): Promise<void> {
+    const { id, name, description, slug, sku, price, costPrice, category, categoryId, brand, brandId, stock, published, featured, productType, specifications, sortOrder, createdAt } = data;
+    await db.insert(products).values({ id, name, description: description ?? null, slug, sku: sku ?? null, price, costPrice, category: category ?? null, categoryId: categoryId ?? null, brand: brand ?? null, brandId: brandId ?? null, stock: stock ?? 0, published: published ?? false, featured: featured ?? false, productType: productType ?? "accessory", specifications: specifications ?? null, sortOrder: sortOrder ?? 0, image: null, images: null, createdAt: createdAt ? new Date(createdAt) : new Date() }).onConflictDoNothing();
+  }
+  async restoreAfterSaleRecord(data: any): Promise<void> {
+    const { id, orderId, customerId, customerName, productId, productName, type, status, notes, warrantyExpiry, createdAt } = data;
+    await db.insert(afterSaleRecords).values({ id, orderId: orderId ?? null, customerId: customerId ?? null, customerName, productId: productId ?? null, productName, type, status: status ?? "open", notes: notes ?? null, warrantyExpiry: warrantyExpiry ? new Date(warrantyExpiry) : null, createdAt: createdAt ? new Date(createdAt) : new Date() }).onConflictDoNothing();
+  }
+  async restorePartner(data: any): Promise<void> {
+    const { id, name, phone, email, sharePercentage, notes, active, createdAt } = data;
+    await db.insert(partners).values({ id, name, phone: phone ?? null, email: email ?? null, sharePercentage, notes: notes ?? null, active: active ?? true, createdAt: createdAt ? new Date(createdAt) : new Date() }).onConflictDoNothing();
+  }
 }
 
 async function seedDatabase() {

@@ -839,12 +839,18 @@ function VersementModal({ purchase, onClose }: { purchase: any; onClose: () => v
   const { toast } = useToast();
   const total = parseFloat(purchase.total || "0");
 
-  const { data: payments = [], isLoading, refetch } = useQuery<any[]>({
+  const { data: rawPayments, isLoading, refetch } = useQuery<any[]>({
     queryKey: ["/api/purchases", purchase.id, "payments"],
-    queryFn: () => fetch(`/api/purchases/${purchase.id}/payments`, { credentials: "include" }).then(r => r.json()),
+    queryFn: async () => {
+      const r = await fetch(`/api/purchases/${purchase.id}/payments`, { credentials: "include" });
+      if (!r.ok) throw new Error("فشل تحميل الدفعات");
+      const data = await r.json();
+      return Array.isArray(data) ? data : [];
+    },
   });
+  const payments = Array.isArray(rawPayments) ? rawPayments : [];
 
-  const totalPaid = payments.reduce((s, p) => s + parseFloat(p.amount || "0"), 0);
+  const totalPaid = payments.reduce((s: number, p: any) => s + parseFloat(p.amount || "0"), 0);
   const remaining = Math.max(0, total - totalPaid);
   const payStatus = getPaymentStatus(total, totalPaid);
   const ps = PAY_STATUS[payStatus];
@@ -1207,9 +1213,16 @@ export default function AdminPurchases() {
   const { data: suppliers = [] } = useQuery<Supplier[]>({ queryKey: ["/api/suppliers"] });
   const { data: products = [] } = useQuery<Product[]>({ queryKey: ["/api/products"] });
   const { data: partners = [] } = useQuery<Partner[]>({ queryKey: ["/api/partners"] });
-  const { data: paymentSummaries = [] } = useQuery<{ purchaseId: string; totalPaid: number }[]>({
+  const { data: rawSummaries } = useQuery<{ purchaseId: string; totalPaid: number }[]>({
     queryKey: ["/api/purchases/payments-summary"],
+    queryFn: async () => {
+      const r = await fetch("/api/purchases/payments-summary", { credentials: "include" });
+      if (!r.ok) return [];
+      const data = await r.json();
+      return Array.isArray(data) ? data : [];
+    },
   });
+  const paymentSummaries = Array.isArray(rawSummaries) ? rawSummaries : [];
 
   const paidMap = Object.fromEntries(paymentSummaries.map(s => [s.purchaseId, s.totalPaid]));
 

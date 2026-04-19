@@ -1,4 +1,5 @@
 import { Link, useLocation } from "wouter";
+import RetourButton from "@/components/admin/RetourButton";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Package, ShoppingCart, ChevronDown,
@@ -350,6 +351,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <RetourButton />
             <button className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-all relative">
               <Bell className="w-4 h-4" />
               {(orderCounts.new || 0) > 0 && (

@@ -57,6 +57,30 @@ function requireAdmin(req: Request, res: Response, next: NextFunction) {
 
 const ALLOWED_ORDER_STATUSES = ["new", "confirmed", "delivered", "paid", "returned"];
 
+async function logOp(
+  operationType: string,
+  module: string,
+  recordId: string,
+  label: string,
+  amount?: string | number | null,
+  createdBy?: string | null,
+  undoMeta?: Record<string, any>,
+) {
+  try {
+    await storage.logOperation({
+      id: `op-${crypto.randomUUID()}`,
+      operationType,
+      module,
+      recordId,
+      label,
+      amount: amount != null ? String(amount) : null,
+      createdBy: createdBy ?? null,
+      undoMeta: undoMeta ? JSON.stringify(undoMeta) : null,
+      isUndone: false,
+    });
+  } catch { /* non-blocking — history failure must not break business operations */ }
+}
+
 const isBase64 = (s: string) => typeof s === "string" && s.startsWith("data:");
 
 function getClientIp(req: Request): string {
@@ -331,12 +355,19 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/purchases", requireAdmin, async (req, res) => {
     try {
       const { items = [], ...purchaseData } = req.body;
-      // Drizzle requires a real Date object for timestamp columns, not a JSON string
       if (purchaseData.purchaseDate) {
         purchaseData.purchaseDate = new Date(purchaseData.purchaseDate);
         if (isNaN(purchaseData.purchaseDate.getTime())) purchaseData.purchaseDate = new Date();
       }
       const purchase = await storage.createPurchase(purchaseData, items);
+      logOp(
+        "purchase",
+        "purchases",
+        purchase.id,
+        `Achat #${purchase.id.slice(-6).toUpperCase()} — ${purchase.supplierName}`,
+        purchase.total,
+        req.session.username ?? null,
+      );
       res.status(201).json(purchase);
     } catch (e: any) { res.status(400).json({ message: e.message }); }
   });
@@ -366,7 +397,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const { productId, quantity, type, notes } = req.body;
       if (!productId || quantity === undefined || !type) return res.status(400).json({ message: "بيانات ناقصة" });
       const movType = type === "in" ? "manual_adjustment" : type === "out" ? "damaged_out" : type;
-      await storage.adjustStock(productId, parseInt(quantity), movType, "manual_adjustment", undefined, notes);
+      const parsedQty = parseInt(quantity);
+      await storage.adjustStock(productId, parsedQty, movType, "manual_adjustment", undefined, notes);
+      const product = await storage.getProduct(productId);
+      logOp(
+        "inventory_adjustment",
+        "inventory",
+        productId,
+        `Ajustement stock — ${product?.name ?? productId} (${type === "in" ? "+" : "-"}${parsedQty})`,
+        null,
+        req.session.username ?? null,
+        { productId, quantity: parsedQty, originalDir: type === "in" ? "in" : "out" },
+      );
       res.json({ message: "تم تعديل المخزون" });
     } catch (e: any) { res.status(400).json({ message: e.message }); }
   });
@@ -405,16 +447,23 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const { items = [], ...orderData } = req.body;
       const initialStatus = orderData.status ?? "new";
-      // Create the order with status "new" first, then use updateOrderStatus to trigger
-      // all business logic (stock deduction, profit snapshot) correctly
       const order = await storage.createOrder({ ...orderData, source: orderData.source ?? "admin", status: "new" }, items);
-      // If a specific initial status was requested, transition through updateOrderStatus
-      // so stock deduction and other business rules fire properly
+      let finalOrder = order;
       if (initialStatus !== "new") {
         const updated = await storage.updateOrderStatus(order.id, initialStatus);
-        return res.status(201).json(updated ?? order);
+        finalOrder = updated ?? order;
       }
-      res.status(201).json(order);
+      const isPOS = (orderData.source ?? "admin") === "pos";
+      const shortRef = "#" + order.id.slice(-6).toUpperCase();
+      logOp(
+        isPOS ? "pos_sale" : "admin_order",
+        "orders",
+        order.id,
+        isPOS ? `Vente POS ${shortRef} — ${order.customerName}` : `Commande admin ${shortRef} — ${order.customerName}`,
+        order.total,
+        req.session.username ?? null,
+      );
+      return res.status(201).json(finalOrder);
     } catch (e: any) { res.status(400).json({ message: e.message }); }
   });
 
@@ -422,11 +471,25 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const { status } = req.body;
     if (!status || !ALLOWED_ORDER_STATUSES.includes(status)) return res.status(400).json({ message: "حالة غير صالحة" });
     if (req.session.role === "confirmateur") {
-      const order = await storage.getOrder(req.params.id);
-      if (!order || order.assignedTo !== req.session.userId) return res.status(403).json({ message: "غير مصرح" });
+      const existing = await storage.getOrder(req.params.id);
+      if (!existing || existing.assignedTo !== req.session.userId) return res.status(403).json({ message: "غير مصرح" });
     }
+    const prevOrder = await storage.getOrder(req.params.id);
+    const prevStatus = prevOrder?.status;
     const order = await storage.updateOrderStatus(req.params.id, status);
     if (!order) return res.status(404).json({ message: "الطلب غير موجود" });
+    if (req.session.role === "admin" && prevStatus && prevStatus !== status) {
+      const shortRef = "#" + req.params.id.slice(-6).toUpperCase();
+      logOp(
+        "order_status",
+        "orders",
+        req.params.id,
+        `Statut commande ${shortRef} — ${prevStatus} → ${status}`,
+        null,
+        req.session.username ?? null,
+        { prevStatus },
+      );
+    }
     res.json(order);
   });
 
@@ -883,6 +946,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         paymentDate: req.body.paymentDate ? new Date(req.body.paymentDate) : new Date(),
         notes: req.body.notes || null,
       });
+      const purchase = await storage.getPurchase(req.params.id);
+      logOp(
+        "versement",
+        "purchases",
+        payment.id,
+        `Versement #${req.params.id.slice(-6).toUpperCase()} — ${purchase?.supplierName ?? "Fournisseur"} (${new Intl.NumberFormat("fr-FR").format(parseFloat(payment.amount))} DA)`,
+        payment.amount,
+        req.session.username ?? null,
+        { purchaseId: req.params.id, supplierName: purchase?.supplierName },
+      );
       res.status(201).json(payment);
     } catch (e: any) { res.status(400).json({ message: e.message }); }
   });
@@ -962,7 +1035,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         returnDate: b.returnDate ? new Date(b.returnDate) : new Date(),
       };
       const ret = await storage.createSupplierReturn(data);
-      // Auto-apply if status is completed
+      logOp(
+        "supplier_return",
+        "supplier_returns",
+        ret.id,
+        `Retour/Échange fournisseur — ${ret.supplierName} (${ret.productName})`,
+        ret.totalValue,
+        req.session.username ?? null,
+      );
       if (b.autoApply) {
         const applied = await storage.applySupplierReturn(ret.id);
         return res.status(201).json(applied);
@@ -981,6 +1061,78 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const r = await storage.cancelSupplierReturn(req.params.id);
       res.json(r);
     } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  // ── Operation History (Undo) ──────────────────────────────────────────────────
+  app.get("/api/operation-history", requireAdmin, async (_req, res) => {
+    try {
+      res.json(await storage.getRecentOperations(5));
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.post("/api/operation-history/:id/undo", requireAdmin, async (req, res) => {
+    try {
+      const op = await storage.getOperation(req.params.id);
+      if (!op) return res.status(404).json({ message: "Opération introuvable" });
+      if (op.isUndone) return res.status(400).json({ message: "Opération déjà annulée" });
+
+      const meta = op.undoMeta ? JSON.parse(op.undoMeta) : {};
+
+      switch (op.operationType) {
+        case "pos_sale":
+        case "admin_order": {
+          const order = await storage.getOrder(op.recordId);
+          if (!order) throw new Error("Commande introuvable");
+          if (["returned", "cancelled"].includes(order.status)) throw new Error("La commande est déjà annulée ou retournée");
+          if (["new", "confirmed"].includes(order.status)) {
+            await storage.updateOrder(op.recordId, { status: "cancelled" });
+          } else {
+            await storage.updateOrderStatus(op.recordId, "returned");
+          }
+          await storage.deleteProfitRecordByOrderId(op.recordId);
+          break;
+        }
+        case "purchase": {
+          const purchase = await storage.getPurchase(op.recordId);
+          if (!purchase) throw new Error("Achat introuvable");
+          if (purchase.status === "cancelled") throw new Error("L'achat est déjà annulé");
+          await storage.updatePurchaseStatus(op.recordId, "cancelled");
+          break;
+        }
+        case "versement": {
+          const ok = await storage.deletePurchasePayment(op.recordId);
+          if (!ok) throw new Error("Versement introuvable ou déjà supprimé");
+          break;
+        }
+        case "supplier_return": {
+          const ret = await storage.getSupplierReturn(op.recordId);
+          if (!ret) throw new Error("Retour fournisseur introuvable");
+          if (ret.status === "cancelled") throw new Error("Le retour est déjà annulé");
+          await storage.cancelSupplierReturn(op.recordId);
+          break;
+        }
+        case "inventory_adjustment": {
+          if (!meta.productId || meta.quantity === undefined || !meta.originalDir) throw new Error("Données d'annulation insuffisantes");
+          const reverseType = meta.originalDir === "in" ? "damaged_out" : "manual_adjustment";
+          await storage.adjustStock(meta.productId, Math.abs(meta.quantity), reverseType, "undo_adjustment", undefined, `Annulation: ${op.label}`);
+          break;
+        }
+        case "order_status": {
+          if (!meta.prevStatus) throw new Error("Statut précédent inconnu");
+          const order = await storage.getOrder(op.recordId);
+          if (!order) throw new Error("Commande introuvable");
+          await storage.updateOrderStatus(op.recordId, meta.prevStatus);
+          break;
+        }
+        default:
+          throw new Error(`Type non supporté: ${op.operationType}`);
+      }
+
+      await storage.markOperationUndone(req.params.id);
+      res.json({ message: "Opération annulée avec succès" });
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
   });
 
   return httpServer;

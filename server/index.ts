@@ -196,6 +196,21 @@ app.use((req, res, next) => {
         return_date TIMESTAMP DEFAULT NOW(),
         created_at TIMESTAMP DEFAULT NOW()
       );
+      CREATE TABLE IF NOT EXISTS operation_history (
+        id VARCHAR PRIMARY KEY,
+        operation_type TEXT NOT NULL,
+        module TEXT NOT NULL,
+        record_id TEXT NOT NULL,
+        label TEXT NOT NULL,
+        amount NUMERIC(10,2),
+        prev_state TEXT,
+        new_state TEXT,
+        created_by TEXT,
+        created_at TIMESTAMP DEFAULT NOW(),
+        is_undone BOOLEAN NOT NULL DEFAULT FALSE,
+        undone_at TIMESTAMP,
+        undo_meta TEXT
+      );
     `);
     console.log("[db] Critical tables & columns verified ✓");
   } catch (e) {

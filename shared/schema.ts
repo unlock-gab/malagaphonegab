@@ -372,6 +372,23 @@ export const supplierReturns = pgTable("supplier_returns", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// ===================== OPERATION HISTORY (UNDO LOG) =====================
+export const operationHistory = pgTable("operation_history", {
+  id: varchar("id").primaryKey(),
+  operationType: text("operation_type").notNull(),
+  module: text("module").notNull(),
+  recordId: text("record_id").notNull(),
+  label: text("label").notNull(),
+  amount: numeric("amount", { precision: 10, scale: 2 }),
+  prevState: text("prev_state"),
+  newState: text("new_state"),
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+  isUndone: boolean("is_undone").notNull().default(false),
+  undoneAt: timestamp("undone_at"),
+  undoMeta: text("undo_meta"),
+});
+
 // ===================== INSERT SCHEMAS =====================
 export const insertProductSchema = createInsertSchema(products).omit({ id: true, createdAt: true });
 export const insertOrderSchema = createInsertSchema(orders).omit({ id: true, createdAt: true });
@@ -392,6 +409,7 @@ export const insertInvoiceTemplateSchema = createInsertSchema(invoiceTemplates).
 export const insertPartnerSchema = createInsertSchema(partners).omit({ id: true, createdAt: true });
 export const insertPurchasePaymentSchema = createInsertSchema(purchasePayments).omit({ id: true, createdAt: true });
 export const insertSupplierReturnSchema = createInsertSchema(supplierReturns).omit({ id: true, createdAt: true });
+export const insertOperationHistorySchema = createInsertSchema(operationHistory).omit({ createdAt: true, undoneAt: true });
 
 // ===================== TYPES =====================
 export type InsertUser = { username: string; password: string; role: string; name: string };
@@ -436,6 +454,8 @@ export type PurchasePayment = typeof purchasePayments.$inferSelect;
 export type InsertPurchasePayment = z.infer<typeof insertPurchasePaymentSchema>;
 export type SupplierReturn = typeof supplierReturns.$inferSelect;
 export type InsertSupplierReturn = z.infer<typeof insertSupplierReturnSchema>;
+export type OperationHistory = typeof operationHistory.$inferSelect;
+export type InsertOperationHistory = z.infer<typeof insertOperationHistorySchema>;
 
 // CartItem type for storefront cart
 export type CartItem = {

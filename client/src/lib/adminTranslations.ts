@@ -1,6 +1,22 @@
 export type Lang = "fr" | "ar";
 
 const T = {
+  // ── UNDO (RETOUR) ─────────────────────────────────────────────────
+  retour:                  { fr: "Retour",                  ar: "تراجع" },
+  retour_title:            { fr: "Annuler une opération",   ar: "إلغاء عملية" },
+  retour_no_ops:           { fr: "Aucune opération récente",ar: "لا توجد عمليات حديثة" },
+  retour_undo:             { fr: "Annuler",                 ar: "تراجع" },
+  retour_confirm_title:    { fr: "Confirmer l'annulation",  ar: "تأكيد الإلغاء" },
+  retour_confirm_body:     { fr: "Cette action est irréversible. Voulez-vous continuer ?", ar: "هذا الإجراء لا يمكن التراجع عنه. هل تريد المتابعة؟" },
+  retour_confirm_btn:      { fr: "Confirmer",               ar: "تأكيد" },
+  retour_cancel_btn:       { fr: "Annuler",                 ar: "إلغاء" },
+  retour_success:          { fr: "Opération annulée",       ar: "تم إلغاء العملية" },
+  retour_error:            { fr: "Erreur d'annulation",     ar: "خطأ في الإلغاء" },
+  retour_module_orders:    { fr: "Commandes",               ar: "الطلبات" },
+  retour_module_purchases: { fr: "Achats",                  ar: "المشتريات" },
+  retour_module_inventory: { fr: "Stock",                   ar: "المخزون" },
+  retour_module_supplier_returns: { fr: "Retours",          ar: "المرتجعات" },
+
   // ── LAYOUT / NAVIGATION ─────────────────────────────────────────
   nav_home:             { fr: "Accueil",               ar: "الرئيسية" },
   nav_dashboard:        { fr: "Tableau de bord",       ar: "لوحة التحكم" },

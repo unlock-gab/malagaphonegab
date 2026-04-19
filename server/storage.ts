@@ -20,12 +20,13 @@ import {
   type Partner, type InsertPartner,
   type PurchasePayment, type InsertPurchasePayment,
   type SupplierReturn, type InsertSupplierReturn,
+  type OperationHistory, type InsertOperationHistory,
   DEFAULT_DELIVERY_PRICES,
   users, products, categories, brands, suppliers, purchases, purchaseItems,
   inventoryMovements, orders, orderItems, expenses, profitRecords,
   blockedIps, abandonedCarts, appSettings, deliveryCompanies, productVariants,
   afterSaleRecords, phoneUnits, invoiceTemplates, partners, purchasePayments,
-  supplierReturns,
+  supplierReturns, operationHistory,
 } from "@shared/schema";
 import { randomUUID, createHash, scryptSync, randomBytes, timingSafeEqual } from "crypto";
 import { db } from "./db";
@@ -218,6 +219,13 @@ export interface IStorage {
   cancelSupplierReturn(id: string): Promise<SupplierReturn>;
   getSupplierBalance(supplierId: string): Promise<{ totalPurchases: number; totalPaid: number; totalReturned: number; remaining: number; credit: number }>;
   getPurchaseBalance(purchaseId: string): Promise<{ total: number; totalPaid: number; totalReturned: number; remaining: number; credit: number }>;
+
+  // Operation History (Undo log)
+  logOperation(data: InsertOperationHistory): Promise<OperationHistory>;
+  getRecentOperations(limit?: number): Promise<OperationHistory[]>;
+  getOperation(id: string): Promise<OperationHistory | undefined>;
+  markOperationUndone(id: string): Promise<void>;
+  deleteProfitRecordByOrderId(orderId: string): Promise<void>;
 }
 
 export interface TopProductRow {
@@ -1750,6 +1758,34 @@ export class DatabaseStorage implements IStorage {
     const totalReturned = allReturns.reduce((s, r) => s + parseFloat(r.totalValue as string), 0);
     const net = totalPurchases - totalPaid - totalReturned;
     return { totalPurchases, totalPaid, totalReturned, remaining: Math.max(0, net), credit: net < 0 ? Math.abs(net) : 0 };
+  }
+
+  // ── Operation History (Undo log) ─────────────────────────────────────────────
+  async logOperation(data: InsertOperationHistory): Promise<OperationHistory> {
+    const [r] = await db.insert(operationHistory).values(data).returning();
+    return r;
+  }
+
+  async getRecentOperations(limit = 5): Promise<OperationHistory[]> {
+    return db.select().from(operationHistory)
+      .where(eq(operationHistory.isUndone, false))
+      .orderBy(desc(operationHistory.createdAt))
+      .limit(limit);
+  }
+
+  async getOperation(id: string): Promise<OperationHistory | undefined> {
+    const [r] = await db.select().from(operationHistory).where(eq(operationHistory.id, id));
+    return r;
+  }
+
+  async markOperationUndone(id: string): Promise<void> {
+    await db.update(operationHistory)
+      .set({ isUndone: true, undoneAt: new Date() })
+      .where(eq(operationHistory.id, id));
+  }
+
+  async deleteProfitRecordByOrderId(orderId: string): Promise<void> {
+    await db.delete(profitRecords).where(eq(profitRecords.orderId, orderId));
   }
 }
 

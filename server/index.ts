@@ -167,6 +167,35 @@ app.use((req, res, next) => {
         created_at TIMESTAMP DEFAULT NOW()
       );
       ALTER TABLE purchase_payments ADD COLUMN IF NOT EXISTS payment_method TEXT NOT NULL DEFAULT 'cash';
+      CREATE TABLE IF NOT EXISTS supplier_returns (
+        id VARCHAR PRIMARY KEY,
+        purchase_id VARCHAR NOT NULL,
+        supplier_id VARCHAR,
+        supplier_name TEXT NOT NULL,
+        type TEXT NOT NULL DEFAULT 'return',
+        product_id VARCHAR,
+        product_name TEXT NOT NULL,
+        phone_unit_id VARCHAR,
+        imei TEXT,
+        quantity INTEGER NOT NULL DEFAULT 1,
+        unit_value NUMERIC(10,2) NOT NULL DEFAULT 0,
+        total_value NUMERIC(10,2) NOT NULL DEFAULT 0,
+        replacement_product_id VARCHAR,
+        replacement_product_name TEXT,
+        replacement_phone_unit_id VARCHAR,
+        replacement_imei TEXT,
+        replacement_quantity INTEGER DEFAULT 1,
+        replacement_unit_cost NUMERIC(10,2),
+        replacement_total_cost NUMERIC(10,2),
+        reason TEXT,
+        notes TEXT,
+        status TEXT NOT NULL DEFAULT 'pending',
+        stock_applied BOOLEAN NOT NULL DEFAULT FALSE,
+        balance_applied BOOLEAN NOT NULL DEFAULT FALSE,
+        auto_apply BOOLEAN NOT NULL DEFAULT TRUE,
+        return_date TIMESTAMP DEFAULT NOW(),
+        created_at TIMESTAMP DEFAULT NOW()
+      );
     `);
     console.log("[db] Critical tables & columns verified ✓");
   } catch (e) {

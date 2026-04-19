@@ -57,7 +57,7 @@ function undoDescription(op: OperationHistory): string {
     case "admin_order":
       return "La commande sera annulée et le stock restauré si applicable.";
     case "purchase":
-      return "L'achat sera annulé et le stock restitué.";
+      return "L'achat sera définitivement supprimé et le stock restitué.";
     case "versement":
       return "Le versement fournisseur sera supprimé.";
     case "supplier_return":

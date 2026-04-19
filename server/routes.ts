@@ -1094,9 +1094,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         }
         case "purchase": {
           const purchase = await storage.getPurchase(op.recordId);
-          if (!purchase) throw new Error("Achat introuvable");
-          if (purchase.status === "cancelled") throw new Error("L'achat est déjà annulé");
-          await storage.updatePurchaseStatus(op.recordId, "cancelled");
+          if (!purchase) throw new Error("Achat introuvable ou déjà supprimé");
+          const deleted = await storage.deletePurchase(op.recordId);
+          if (!deleted) throw new Error("Échec de la suppression de l'achat");
           break;
         }
         case "versement": {

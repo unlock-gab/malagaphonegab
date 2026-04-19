@@ -258,15 +258,25 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post("/api/products", requireAdmin, async (req, res) => {
     try {
+      const cost = parseFloat(req.body.costPrice ?? "0");
+      if (!req.body.costPrice || isNaN(cost) || cost <= 0)
+        return res.status(400).json({ message: "Le coût du produit est obligatoire et doit être supérieur à 0 DA." });
       const product = await storage.createProduct(req.body);
       res.status(201).json(product);
     } catch (e: any) { res.status(400).json({ message: e.message }); }
   });
 
   app.patch("/api/products/:id", requireAdmin, async (req, res) => {
-    const product = await storage.updateProduct(req.params.id, req.body);
-    if (!product) return res.status(404).json({ message: "المنتج غير موجود" });
-    res.json(product);
+    try {
+      if (req.body.costPrice !== undefined) {
+        const cost = parseFloat(req.body.costPrice ?? "0");
+        if (isNaN(cost) || cost <= 0)
+          return res.status(400).json({ message: "Le coût du produit est obligatoire et doit être supérieur à 0 DA." });
+      }
+      const product = await storage.updateProduct(req.params.id, req.body);
+      if (!product) return res.status(404).json({ message: "Produit introuvable" });
+      res.json(product);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
   });
 
   app.delete("/api/products/:id", requireAdmin, async (req, res) => {
@@ -744,6 +754,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post("/api/products/:id/variants", requireAdmin, async (req, res) => {
     try {
+      const cost = parseFloat(req.body.costPrice ?? "0");
+      if (!req.body.costPrice || isNaN(cost) || cost <= 0)
+        return res.status(400).json({ message: "Le coût de la variante est obligatoire et doit être supérieur à 0 DA." });
       const v = await storage.createProductVariant({ ...req.body, productId: req.params.id });
       res.status(201).json(v);
     } catch (e: any) { res.status(400).json({ message: e.message }); }
@@ -751,8 +764,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.patch("/api/variants/:id", requireAdmin, async (req, res) => {
     try {
+      if (req.body.costPrice !== undefined) {
+        const cost = parseFloat(req.body.costPrice ?? "0");
+        if (isNaN(cost) || cost <= 0)
+          return res.status(400).json({ message: "Le coût de la variante est obligatoire et doit être supérieur à 0 DA." });
+      }
       const v = await storage.updateProductVariant(req.params.id, req.body);
-      if (!v) return res.status(404).json({ message: "Variant not found" });
+      if (!v) return res.status(404).json({ message: "Variant introuvable" });
       res.json(v);
     } catch (e: any) { res.status(400).json({ message: e.message }); }
   });

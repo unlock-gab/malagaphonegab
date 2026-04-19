@@ -103,7 +103,7 @@ const cls = {
   select: "bg-white border-gray-200 text-gray-900 text-sm",
 };
 
-function Field({ label, children, full, help }: { label: string; children: React.ReactNode; full?: boolean; help?: string }) {
+function Field({ label, children, full, help }: { label: React.ReactNode; children: React.ReactNode; full?: boolean; help?: string }) {
   return (
     <div className={full ? "col-span-2" : ""}>
       <Label className="text-gray-600 text-xs mb-1.5 block font-semibold">{label}</Label>
@@ -310,10 +310,15 @@ function ProductFormDialog({ initial, onSave, onCancel, loading, categories, bra
             <Field label={t("original_price")} help={t("original_price_help")}>
               <Input type="number" value={form.originalPrice} onChange={e => set("originalPrice", e.target.value)} className={cls.input} placeholder="0" />
             </Field>
-            <Field label={t("cost_price_field")} help={t("cost_price_help")}>
+            <Field label={<span>{t("cost_price_field")} <span className="text-red-500">*</span></span>} help={t("cost_price_help")}>
               <Input type="number" value={form.costPrice} onChange={e => set("costPrice", e.target.value)}
                 className={`${cls.input} ${(!form.costPrice || parseFloat(form.costPrice) <= 0) ? "border-red-300 focus-visible:ring-red-400" : ""}`}
                 placeholder="0" data-testid="input-product-cost" />
+              {(!form.costPrice || parseFloat(form.costPrice) <= 0) && (
+                <p className="text-red-500 text-[11px] mt-1 flex items-center gap-1">
+                  <span>⚠</span> Coût obligatoire — ne peut pas être 0 DA
+                </p>
+              )}
             </Field>
           </div>
           <div className="flex items-center gap-6 pt-1">
@@ -506,19 +511,20 @@ function ProductVariantsDialog({ product, onClose }: { product: Product; onClose
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
+      let res: Response;
       if (editingVariant) {
-        const res = await fetch(`/api/variants/${editingVariant.id}`, {
+        res = await fetch(`/api/variants/${editingVariant.id}`, {
           method: "PATCH", headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data), credentials: "include",
         });
-        return res.json();
       } else {
-        const res = await fetch(`/api/products/${product.id}/variants`, {
+        res = await fetch(`/api/products/${product.id}/variants`, {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data), credentials: "include",
         });
-        return res.json();
       }
+      if (!res.ok) { const e = await res.json(); throw new Error(e.message || t("save_failed")); }
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products", product.id, "variants"] });
@@ -526,7 +532,7 @@ function ProductVariantsDialog({ product, onClose }: { product: Product; onClose
       setForm({ storage: "", color: "", sku: "", imei: "", costPrice: "", price: "", stock: "1", active: true });
       toast({ title: t("saved_ok") });
     },
-    onError: () => toast({ title: t("save_failed"), variant: "destructive" }),
+    onError: (e: any) => toast({ title: e.message || t("save_failed"), variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
@@ -648,8 +654,15 @@ function ProductVariantsDialog({ product, onClose }: { product: Product; onClose
                   <Input type="number" value={form.price} onChange={e => setF("price", e.target.value)} className={`${inputCls} h-9`} placeholder={product.price?.toString() || "0"} />
                 </div>
                 <div>
-                  <Label className="text-gray-500 text-xs mb-1 block">{t("cost_price_field")}</Label>
-                  <Input type="number" value={form.costPrice} onChange={e => setF("costPrice", e.target.value)} className={`${inputCls} h-9`} placeholder="0" />
+                  <Label className="text-gray-500 text-xs mb-1 block flex items-center gap-1">
+                    {t("cost_price_field")} <span className="text-red-500">*</span>
+                  </Label>
+                  <Input type="number" value={form.costPrice} onChange={e => setF("costPrice", e.target.value)}
+                    className={`${inputCls} h-9 ${(!form.costPrice || parseFloat(form.costPrice) <= 0) ? "border-red-300 focus-visible:ring-red-400" : ""}`}
+                    placeholder="0" />
+                  {(!form.costPrice || parseFloat(form.costPrice) <= 0) && (
+                    <p className="text-red-500 text-[10px] mt-0.5">⚠ Coût obligatoire</p>
+                  )}
                 </div>
                 <div>
                   <Label className="text-gray-500 text-xs mb-1 block">{t("col_stock")}</Label>
@@ -669,7 +682,7 @@ function ProductVariantsDialog({ product, onClose }: { product: Product; onClose
                 <Label className="text-gray-700 text-sm">{t("variant_active")}</Label>
               </div>
               <div className="flex gap-2">
-                <Button onClick={handleSave} disabled={saveMutation.isPending} className="bg-blue-600 hover:bg-blue-700 text-white text-sm flex-1" data-testid="btn-save-variant">
+                <Button onClick={handleSave} disabled={saveMutation.isPending || !form.costPrice || parseFloat(form.costPrice) <= 0} className="bg-blue-600 hover:bg-blue-700 text-white text-sm flex-1" data-testid="btn-save-variant">
                   {saveMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin ml-1" /> : null}
                   {editingVariant ? t("update_variant") : t("add")}
                 </Button>

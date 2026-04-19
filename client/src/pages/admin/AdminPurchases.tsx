@@ -862,7 +862,8 @@ function VersementModal({ purchase, onClose }: { purchase: any; onClose: () => v
   const payStatus = getPaymentStatus(total, totalPaid);
   const ps = PAY_STATUS[payStatus];
 
-  const [form, setForm] = useState({ amount: "", paymentMethod: "cash", date: new Date().toISOString().split("T")[0], notes: "" });
+  const localNow = () => { const d = new Date(); const p = (n: number) => n.toString().padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
+  const [form, setForm] = useState({ amount: "", paymentMethod: "cash", date: localNow(), notes: "" });
   const setF = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
 
   const addMutation = useMutation({
@@ -876,7 +877,7 @@ function VersementModal({ purchase, onClose }: { purchase: any; onClose: () => v
       queryClient.invalidateQueries({ queryKey: ["/api/purchases", purchase.id, "payments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/purchases/payments-summary"] });
       refetch();
-      setForm(f => ({ ...f, amount: "", notes: "" }));
+      setForm(f => ({ ...f, amount: "", notes: "", date: localNow() }));
       toast({ title: "✓ Paiement enregistré" });
     },
     onError: (e: any) => toast({ title: "Échec", description: e.message, variant: "destructive" }),
@@ -961,8 +962,8 @@ function VersementModal({ purchase, onClose }: { purchase: any; onClose: () => v
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <Label className="text-gray-500 text-xs mb-1 block">Date</Label>
-                  <Input type="date" value={form.date} onChange={e => setF("date", e.target.value)}
+                  <Label className="text-gray-500 text-xs mb-1 block">Date et heure</Label>
+                  <Input type="datetime-local" value={form.date} onChange={e => setF("date", e.target.value)}
                     className="bg-white border-gray-200 text-gray-900 text-sm h-8" />
                 </div>
                 <div>

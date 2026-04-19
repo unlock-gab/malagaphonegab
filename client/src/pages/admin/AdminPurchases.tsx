@@ -1386,15 +1386,15 @@ export default function AdminPurchases() {
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-100 text-gray-500 text-xs">
                     <th className="text-right p-3 font-semibold">المورد</th>
-                    <th className="text-right p-3 font-semibold hidden sm:table-cell">المرجع</th>
-                    <th className="text-right p-3 font-semibold hidden md:table-cell">التاريخ</th>
-                    <th className="text-right p-3 font-semibold">الإجمالي</th>
-                    <th className="text-right p-3 font-semibold hidden md:table-cell">مدفوع</th>
-                    <th className="text-right p-3 font-semibold hidden md:table-cell">متبقي</th>
-                    <th className="text-center p-3 font-semibold hidden lg:table-cell">حالة الدفع</th>
-                    <th className="text-center p-3 font-semibold">الحالة</th>
-                    <th className="text-center p-3 font-semibold w-32 hidden sm:table-cell">إجراء</th>
-                    <th className="text-center p-3 font-semibold w-12 sm:hidden">عرض</th>
+                    <th className="text-right p-3 font-semibold w-24 hidden sm:table-cell">المرجع</th>
+                    <th className="text-right p-3 font-semibold w-28 hidden md:table-cell">التاريخ</th>
+                    <th className="text-right p-3 font-semibold w-28">الإجمالي</th>
+                    <th className="text-right p-3 font-semibold w-24 hidden md:table-cell">مدفوع</th>
+                    <th className="text-right p-3 font-semibold w-24 hidden md:table-cell">متبقي</th>
+                    <th className="text-center p-3 font-semibold w-28 hidden lg:table-cell">حالة الدفع</th>
+                    <th className="text-center p-3 font-semibold w-24">الحالة</th>
+                    <th className="text-center p-3 font-semibold w-36 hidden sm:table-cell">إجراء</th>
+                    <th className="text-center p-3 font-semibold w-10 sm:hidden">عرض</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1440,26 +1440,26 @@ export default function AdminPurchases() {
                             </div>
                           </div>
                         </td>
-                        <td className="p-3 text-gray-400 text-xs font-mono hidden sm:table-cell">{pur.referenceNumber ?? "—"}</td>
-                        <td className="p-3 text-gray-400 text-xs hidden md:table-cell">{formatDate(pur.purchaseDate?.toString())}</td>
-                        <td className="p-3">
+                        <td className="p-3 text-right text-gray-400 text-xs font-mono hidden sm:table-cell w-24 whitespace-nowrap">{pur.referenceNumber ?? "—"}</td>
+                        <td className="p-3 text-right text-gray-400 text-xs hidden md:table-cell w-28 whitespace-nowrap">{formatDate(pur.purchaseDate?.toString())}</td>
+                        <td className="p-3 text-right w-28 whitespace-nowrap">
                           <span className="text-blue-700 font-bold text-sm">{formatCurrency(purTotal)}</span>
                         </td>
-                        <td className="p-3 hidden md:table-cell">
+                        <td className="p-3 text-right hidden md:table-cell w-24 whitespace-nowrap">
                           <span className="text-emerald-700 font-semibold text-xs">{formatCurrency(purPaid)}</span>
                         </td>
-                        <td className="p-3 hidden md:table-cell">
+                        <td className="p-3 text-right hidden md:table-cell w-24 whitespace-nowrap">
                           <span className={`font-semibold text-xs ${purRemaining > 0 ? "text-red-600" : "text-gray-400"}`}>
                             {formatCurrency(purRemaining)}
                           </span>
                         </td>
-                        <td className="p-3 text-center hidden lg:table-cell">
+                        <td className="p-3 text-center hidden lg:table-cell w-28">
                           <span className={`text-xs px-2 py-0.5 rounded-full border ${ps.cls}`}>{ps.label}</span>
                         </td>
-                        <td className="p-3 text-center">
+                        <td className="p-3 text-center w-24">
                           <span className={`text-xs px-2 py-0.5 rounded-full border ${sc.cls}`}>{sc.label}</span>
                         </td>
-                        <td className="p-3 hidden sm:table-cell" onClick={e => e.stopPropagation()}>
+                        <td className="p-3 hidden sm:table-cell w-36" onClick={e => e.stopPropagation()}>
                           <div className="flex items-center gap-1 justify-center flex-wrap">
                             <Button size="sm" onClick={() => setVersementPurchase(pur)}
                               className="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 shadow-none text-xs h-7 px-2"

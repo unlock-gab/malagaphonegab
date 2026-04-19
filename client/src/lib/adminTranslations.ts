@@ -289,6 +289,7 @@ const T = {
   apply:                  { fr: "Appliquer",                  ar: "تطبيق" },
   no_profit_records:      { fr: "Aucun enregistrement",       ar: "لا توجد سجلات" },
   order_ref:              { fr: "Réf. commande",              ar: "رقم الطلب" },
+  product_col:            { fr: "Produit",                    ar: "المنتج" },
   revenue_col:            { fr: "Revenus",                    ar: "الإيرادات" },
   cost_col:               { fr: "Coût",                       ar: "التكلفة" },
   expenses_col:           { fr: "Dépenses",                   ar: "المصاريف" },

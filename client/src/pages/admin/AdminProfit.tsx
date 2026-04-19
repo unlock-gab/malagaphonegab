@@ -188,6 +188,7 @@ export default function AdminProfit() {
                       <tr className="bg-gray-50 border-b border-gray-100 text-gray-500">
                         <th className="text-start p-3 font-semibold">{t("order_ref")}</th>
                         <th className="text-start p-3 font-semibold">{t("date")}</th>
+                        <th className="text-start p-3 font-semibold hidden sm:table-cell">{t("product_col")}</th>
                         <th className="text-start p-3 font-semibold">{t("revenue_col")}</th>
                         <th className="text-start p-3 font-semibold hidden md:table-cell">{t("cost_col")}</th>
                         <th className="text-start p-3 font-semibold hidden lg:table-cell">{t("expenses_col")}</th>
@@ -203,6 +204,11 @@ export default function AdminProfit() {
                           <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50/70 transition-colors" data-testid={`row-profit-${r.id}`}>
                             <td className="p-3 font-mono text-gray-400">{shortId(r.orderId)}</td>
                             <td className="p-3 text-gray-500">{formatDate(r.createdAt?.toString())}</td>
+                            <td className="p-3 hidden sm:table-cell">
+                              {(r as any).productNames
+                                ? <span className="text-gray-700 font-medium">{(r as any).productNames}</span>
+                                : <span className="text-gray-300">—</span>}
+                            </td>
                             <td className="p-3 text-emerald-700 font-semibold">{formatCurrency(parseFloat(r.revenue as string))}</td>
                             <td className="p-3 text-red-600 hidden md:table-cell">− {formatCurrency(parseFloat(r.productCost as string))}</td>
                             <td className="p-3 text-orange-700 hidden lg:table-cell">
@@ -221,7 +227,7 @@ export default function AdminProfit() {
                         );
                       })}
                       <tr className="bg-blue-50 border-t border-blue-100 font-bold text-xs">
-                        <td className="p-3 text-gray-700" colSpan={2}>{t("total")}</td>
+                        <td className="p-3 text-gray-700" colSpan={3}>{t("total")}</td>
                         <td className="p-3 text-emerald-700">{formatCurrency(totalRevenue)}</td>
                         <td className="p-3 text-red-600 hidden md:table-cell">− {formatCurrency(totalCost)}</td>
                         <td className="p-3 text-orange-700 hidden lg:table-cell">

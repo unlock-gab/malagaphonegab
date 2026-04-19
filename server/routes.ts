@@ -602,7 +602,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // ==================== PROFIT ====================
 
   app.get("/api/profit", requireAdmin, async (_req, res) => {
-    res.json(await storage.getProfitRecords());
+    const records = await storage.getProfitRecords();
+    // Enrich each record with product names from its order items
+    const enriched = await Promise.all(records.map(async r => {
+      try {
+        const items = await storage.getOrderItems(r.orderId);
+        const productNames = items.map(i => i.productName).filter(Boolean).join(", ");
+        return { ...r, productNames: productNames || null };
+      } catch {
+        return { ...r, productNames: null };
+      }
+    }));
+    res.json(enriched);
   });
 
   // ==================== CONFIRMATEURS ====================

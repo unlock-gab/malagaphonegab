@@ -143,7 +143,7 @@ app.use((req, res, next) => {
     console.error("[db] Schema migration error (continuing anyway):", e);
   }
 
-  // Fallback: ensure critical tables exist via raw SQL (handles old Docker images missing new tables)
+  // Fallback: ensure critical tables & columns exist via raw SQL (handles old Docker images missing new schema changes)
   try {
     await pgPool.query(`
       CREATE TABLE IF NOT EXISTS partners (
@@ -154,8 +154,11 @@ app.use((req, res, next) => {
         default_share NUMERIC(5,2) NOT NULL DEFAULT 50,
         created_at TIMESTAMP DEFAULT NOW()
       );
+      ALTER TABLE purchases ADD COLUMN IF NOT EXISTS partner_id VARCHAR;
+      ALTER TABLE purchases ADD COLUMN IF NOT EXISTS partner_name TEXT;
+      ALTER TABLE purchases ADD COLUMN IF NOT EXISTS partner_percentage NUMERIC(5,2);
     `);
-    console.log("[db] Critical tables verified ✓");
+    console.log("[db] Critical tables & columns verified ✓");
   } catch (e) {
     console.error("[db] Critical table check error:", e);
   }

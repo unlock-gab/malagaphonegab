@@ -143,6 +143,23 @@ app.use((req, res, next) => {
     console.error("[db] Schema migration error (continuing anyway):", e);
   }
 
+  // Fallback: ensure critical tables exist via raw SQL (handles old Docker images missing new tables)
+  try {
+    await pgPool.query(`
+      CREATE TABLE IF NOT EXISTS partners (
+        id VARCHAR PRIMARY KEY,
+        name TEXT NOT NULL,
+        phone TEXT,
+        notes TEXT,
+        default_share NUMERIC(5,2) NOT NULL DEFAULT 50,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    console.log("[db] Critical tables verified ✓");
+  } catch (e) {
+    console.error("[db] Critical table check error:", e);
+  }
+
   // Serve uploaded product images as static files
   const uploadsDir = path.join(process.cwd(), "uploads");
   if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });

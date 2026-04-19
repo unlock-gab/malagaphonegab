@@ -836,6 +836,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   // ── Purchase Payments (Versements) ───────────────────────────────────────────
+  app.get("/api/purchases/payments-summary", requireAdmin, async (_req, res) => {
+    const summary = await storage.getAllPurchasePaymentsSummary();
+    res.json(summary);
+  });
   app.get("/api/purchases/:id/payments", requireAdmin, async (req, res) => {
     const payments = await storage.getPurchasePayments(req.params.id);
     res.json(payments);
@@ -845,6 +849,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const payment = await storage.createPurchasePayment({
         purchaseId: req.params.id,
         amount: req.body.amount,
+        paymentMethod: req.body.paymentMethod || "cash",
         paymentDate: req.body.paymentDate ? new Date(req.body.paymentDate) : new Date(),
         notes: req.body.notes || null,
       });

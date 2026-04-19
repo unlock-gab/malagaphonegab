@@ -143,6 +143,7 @@ export const purchasePayments = pgTable("purchase_payments", {
   id: varchar("id").primaryKey(),
   purchaseId: varchar("purchase_id").notNull(),
   amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+  paymentMethod: text("payment_method").notNull().default("cash"),
   paymentDate: timestamp("payment_date").defaultNow(),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),

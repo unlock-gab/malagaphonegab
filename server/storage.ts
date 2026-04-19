@@ -202,6 +202,7 @@ export interface IStorage {
 
   // Purchase Payments (Versements)
   getPurchasePayments(purchaseId: string): Promise<PurchasePayment[]>;
+  getAllPurchasePaymentsSummary(): Promise<{ purchaseId: string; totalPaid: number }[]>;
   createPurchasePayment(data: InsertPurchasePayment): Promise<PurchasePayment>;
   deletePurchasePayment(id: string): Promise<boolean>;
 }
@@ -1532,6 +1533,16 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(purchasePayments)
       .where(eq(purchasePayments.purchaseId, purchaseId))
       .orderBy(desc(purchasePayments.paymentDate));
+  }
+  async getAllPurchasePaymentsSummary(): Promise<{ purchaseId: string; totalPaid: number }[]> {
+    const rows = await db
+      .select({
+        purchaseId: purchasePayments.purchaseId,
+        totalPaid: sql<number>`coalesce(sum(${purchasePayments.amount}::numeric), 0)`,
+      })
+      .from(purchasePayments)
+      .groupBy(purchasePayments.purchaseId);
+    return rows.map(r => ({ purchaseId: r.purchaseId, totalPaid: Number(r.totalPaid) }));
   }
   async createPurchasePayment(data: InsertPurchasePayment): Promise<PurchasePayment> {
     const id = randomUUID();

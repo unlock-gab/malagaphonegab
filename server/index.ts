@@ -157,6 +157,7 @@ app.use((req, res, next) => {
       ALTER TABLE purchases ADD COLUMN IF NOT EXISTS partner_id VARCHAR;
       ALTER TABLE purchases ADD COLUMN IF NOT EXISTS partner_name TEXT;
       ALTER TABLE purchases ADD COLUMN IF NOT EXISTS partner_percentage NUMERIC(5,2);
+      ALTER TABLE purchase_payments ADD COLUMN IF NOT EXISTS payment_method TEXT NOT NULL DEFAULT 'cash';
     `);
     console.log("[db] Critical tables & columns verified ✓");
   } catch (e) {

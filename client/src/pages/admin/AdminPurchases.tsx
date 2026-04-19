@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
-  Plus, ShoppingBag, Trash2, Check, X, Building2, Calendar, Search, ChevronRight,
+  Plus, ShoppingBag, Trash2, Check, X, Building2, Search, ChevronRight,
   Loader2, PackagePlus, Package, Smartphone, ChevronDown, UserRound, Save,
-  Handshake, Percent, Banknote, CreditCard, CircleDollarSign, AlertCircle,
+  Handshake, Percent, Wallet, History, BadgeDollarSign, Clock, CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +31,25 @@ const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
   completed: { label: "مكتمل", cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
   cancelled: { label: "ملغي",  cls: "bg-red-50 text-red-600 border-red-200" },
 };
+
+const PAY_STATUS: Record<string, { label: string; cls: string }> = {
+  unpaid:          { label: "غير مدفوع",    cls: "bg-red-50 text-red-600 border-red-200" },
+  partially_paid:  { label: "مدفوع جزئياً", cls: "bg-amber-50 text-amber-700 border-amber-200" },
+  paid:            { label: "مدفوع كامل",   cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+};
+
+const PAYMENT_METHODS: { value: string; label: string }[] = [
+  { value: "cash",     label: "نقداً" },
+  { value: "transfer", label: "تحويل بنكي" },
+  { value: "cheque",   label: "شيك" },
+  { value: "other",    label: "أخرى" },
+];
+
+function getPaymentStatus(total: number, paid: number) {
+  if (paid <= 0) return "unpaid";
+  if (paid >= total - 0.01) return "paid";
+  return "partially_paid";
+}
 
 interface PurchaseItem {
   productId: string;
@@ -815,9 +834,205 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
   );
 }
 
-function ViewPurchaseDialog({ purchase, onClose, onComplete, onCancel: onCancelPur, onDelete }: {
+function VersementModal({ purchase, onClose }: { purchase: any; onClose: () => void }) {
+  const { dir } = useAdminLang();
+  const { toast } = useToast();
+  const total = parseFloat(purchase.total || "0");
+
+  const { data: payments = [], isLoading, refetch } = useQuery<any[]>({
+    queryKey: ["/api/purchases", purchase.id, "payments"],
+    queryFn: () => fetch(`/api/purchases/${purchase.id}/payments`, { credentials: "include" }).then(r => r.json()),
+  });
+
+  const totalPaid = payments.reduce((s, p) => s + parseFloat(p.amount || "0"), 0);
+  const remaining = Math.max(0, total - totalPaid);
+  const payStatus = getPaymentStatus(total, totalPaid);
+  const ps = PAY_STATUS[payStatus];
+
+  const [form, setForm] = useState({ amount: "", paymentMethod: "cash", date: new Date().toISOString().split("T")[0], notes: "" });
+  const setF = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
+
+  const addMutation = useMutation({
+    mutationFn: () => apiRequest("POST", `/api/purchases/${purchase.id}/payments`, {
+      amount: parseFloat(form.amount),
+      paymentMethod: form.paymentMethod,
+      paymentDate: new Date(form.date),
+      notes: form.notes || null,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/purchases", purchase.id, "payments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/purchases/payments-summary"] });
+      refetch();
+      setForm(f => ({ ...f, amount: "", notes: "" }));
+      toast({ title: "✓ تم تسجيل الدفعة" });
+    },
+    onError: (e: any) => toast({ title: "فشل", description: e.message, variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/purchase-payments/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/purchases", purchase.id, "payments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/purchases/payments-summary"] });
+      refetch();
+      toast({ title: "تم الحذف" });
+    },
+  });
+
+  const amountVal = parseFloat(form.amount) || 0;
+  const canSubmit = amountVal > 0 && amountVal <= remaining + 0.01;
+
+  return (
+    <Dialog open onOpenChange={o => { if (!o) onClose(); }}>
+      <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-lg max-h-[92vh] overflow-y-auto shadow-xl" dir={dir}>
+        <DialogHeader className="border-b border-gray-100 pb-3">
+          <DialogTitle className="text-gray-900 flex items-center gap-2 text-sm font-bold">
+            <Wallet className="w-4 h-4 text-blue-600" />
+            دفعات المورد — {purchase.supplierName}
+            {purchase.referenceNumber && <span className="text-gray-400 font-mono text-xs">#{purchase.referenceNumber}</span>}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 pt-1">
+          {/* Summary cards */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-center">
+              <p className="text-xs text-blue-400 mb-1">الإجمالي</p>
+              <p className="text-sm font-black text-blue-700">{formatCurrency(total)}</p>
+            </div>
+            <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-center">
+              <p className="text-xs text-emerald-400 mb-1">مدفوع</p>
+              <p className="text-sm font-black text-emerald-700">{formatCurrency(totalPaid)}</p>
+            </div>
+            <div className={`rounded-xl p-3 text-center border ${remaining > 0 ? "bg-red-50 border-red-100" : "bg-gray-50 border-gray-100"}`}>
+              <p className={`text-xs mb-1 ${remaining > 0 ? "text-red-400" : "text-gray-400"}`}>متبقي</p>
+              <p className={`text-sm font-black ${remaining > 0 ? "text-red-600" : "text-gray-400"}`}>{formatCurrency(remaining)}</p>
+            </div>
+          </div>
+
+          {/* Payment status badge */}
+          <div className="flex items-center justify-center">
+            <span className={`text-xs px-3 py-1 rounded-full border font-semibold ${ps.cls}`}>{ps.label}</span>
+          </div>
+
+          {/* Add versement form */}
+          {remaining > 0.01 && (
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-3">
+              <p className="text-xs font-bold text-gray-600 flex items-center gap-1.5">
+                <BadgeDollarSign className="w-3.5 h-3.5 text-blue-600" /> إضافة دفعة جديدة
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-gray-500 text-xs mb-1 block">المبلغ * (د.ج)</Label>
+                  <Input
+                    type="number" min="1" step="1"
+                    value={form.amount} onChange={e => setF("amount", e.target.value)}
+                    placeholder={`أقصى: ${Math.round(remaining)}`}
+                    className="bg-white border-gray-200 text-gray-900 text-sm h-8"
+                    data-testid="input-versement-amount"
+                  />
+                </div>
+                <div>
+                  <Label className="text-gray-500 text-xs mb-1 block">طريقة الدفع</Label>
+                  <Select value={form.paymentMethod} onValueChange={v => setF("paymentMethod", v)}>
+                    <SelectTrigger className="bg-white border-gray-200 text-gray-900 text-sm h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border-gray-200 shadow-lg">
+                      {PAYMENT_METHODS.map(m => (
+                        <SelectItem key={m.value} value={m.value} className="text-sm text-gray-800">{m.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-gray-500 text-xs mb-1 block">التاريخ</Label>
+                  <Input type="date" value={form.date} onChange={e => setF("date", e.target.value)}
+                    className="bg-white border-gray-200 text-gray-900 text-sm h-8" />
+                </div>
+                <div>
+                  <Label className="text-gray-500 text-xs mb-1 block">ملاحظة (اختياري)</Label>
+                  <Input value={form.notes} onChange={e => setF("notes", e.target.value)}
+                    className="bg-white border-gray-200 text-gray-900 text-sm h-8" placeholder="ملاحظة..." />
+                </div>
+              </div>
+              {amountVal > 0 && amountVal > remaining + 0.01 && (
+                <p className="text-xs text-red-500">المبلغ أكبر من المتبقي ({formatCurrency(remaining)})</p>
+              )}
+              <Button onClick={() => addMutation.mutate()} disabled={!canSubmit || addMutation.isPending}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm h-8 shadow-sm"
+                data-testid="button-add-versement">
+                {addMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-3.5 h-3.5 ml-2" />تسجيل الدفعة</>}
+              </Button>
+            </div>
+          )}
+
+          {/* Versement history */}
+          <div>
+            <p className="text-xs font-bold text-gray-600 flex items-center gap-1.5 mb-2">
+              <History className="w-3.5 h-3.5 text-blue-600" /> سجل الدفعات
+            </p>
+            {isLoading ? (
+              <div className="flex items-center gap-2 text-gray-400 text-xs py-4 justify-center">
+                <Loader2 className="w-4 h-4 animate-spin" /> جاري التحميل...
+              </div>
+            ) : payments.length === 0 ? (
+              <div className="border border-dashed border-gray-200 rounded-xl p-6 text-center text-gray-400 text-xs">
+                لا توجد دفعات مسجّلة بعد
+              </div>
+            ) : (
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-gray-100 text-gray-500">
+                      <th className="text-right p-2.5 font-semibold">التاريخ</th>
+                      <th className="text-right p-2.5 font-semibold">المبلغ</th>
+                      <th className="text-right p-2.5 font-semibold hidden sm:table-cell">الطريقة</th>
+                      <th className="text-right p-2.5 font-semibold hidden sm:table-cell">ملاحظة</th>
+                      <th className="w-8"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {payments.map((p: any) => (
+                      <tr key={p.id} className="border-b border-gray-50 last:border-0">
+                        <td className="p-2.5">
+                          <div className="flex items-center gap-1 text-gray-600">
+                            <Clock className="w-3 h-3 text-gray-300" />
+                            <span>{formatDate(p.paymentDate)}</span>
+                          </div>
+                        </td>
+                        <td className="p-2.5 text-emerald-700 font-bold">
+                          {formatCurrency(parseFloat(p.amount || "0"))}
+                        </td>
+                        <td className="p-2.5 text-gray-500 hidden sm:table-cell">
+                          {PAYMENT_METHODS.find(m => m.value === p.paymentMethod)?.label ?? p.paymentMethod ?? "—"}
+                        </td>
+                        <td className="p-2.5 text-gray-400 hidden sm:table-cell">{p.notes || "—"}</td>
+                        <td className="p-2.5">
+                          <button onClick={() => { if (confirm("حذف؟")) deleteMutation.mutate(p.id); }}
+                            className="p-1 text-gray-300 hover:text-red-500 rounded transition-colors">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ViewPurchaseDialog({ purchase, onClose, onComplete, onCancel: onCancelPur, onDelete, onVersement }: {
   purchase: any; onClose: () => void;
   onComplete: () => void; onCancel: () => void; onDelete: () => void;
+  onVersement?: () => void;
 }) {
   const { dir } = useAdminLang();
   const { data: full, isLoading } = useQuery<any>({
@@ -955,6 +1170,11 @@ function ViewPurchaseDialog({ purchase, onClose, onComplete, onCancel: onCancelP
           )}
 
           {/* ── Actions ── */}
+          {onVersement && (
+            <Button onClick={onVersement} className="w-full bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 text-sm shadow-none" data-testid="button-view-versements">
+              <Wallet className="w-4 h-4 ml-2" /> دفعات المورد (Versements)
+            </Button>
+          )}
           {data.status === "pending" && (
             <div className="flex gap-2">
               <Button onClick={onComplete} className="flex-1 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 text-sm shadow-none">
@@ -979,6 +1199,7 @@ export default function AdminPurchases() {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [viewPurchase, setViewPurchase] = useState<any | null>(null);
+  const [versementPurchase, setVersementPurchase] = useState<any | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -986,6 +1207,11 @@ export default function AdminPurchases() {
   const { data: suppliers = [] } = useQuery<Supplier[]>({ queryKey: ["/api/suppliers"] });
   const { data: products = [] } = useQuery<Product[]>({ queryKey: ["/api/products"] });
   const { data: partners = [] } = useQuery<Partner[]>({ queryKey: ["/api/partners"] });
+  const { data: paymentSummaries = [] } = useQuery<{ purchaseId: string; totalPaid: number }[]>({
+    queryKey: ["/api/purchases/payments-summary"],
+  });
+
+  const paidMap = Object.fromEntries(paymentSummaries.map(s => [s.purchaseId, s.totalPaid]));
 
   const createMutation = useMutation({
     mutationFn: (data: any) => apiRequest("POST", "/api/purchases", data),
@@ -1079,16 +1305,18 @@ export default function AdminPurchases() {
                     <th className="text-right p-3 font-semibold">المورد</th>
                     <th className="text-right p-3 font-semibold hidden sm:table-cell">المرجع</th>
                     <th className="text-right p-3 font-semibold hidden md:table-cell">التاريخ</th>
-                    <th className="text-right p-3 font-semibold hidden lg:table-cell">المنتجات</th>
                     <th className="text-right p-3 font-semibold">الإجمالي</th>
+                    <th className="text-right p-3 font-semibold hidden md:table-cell">مدفوع</th>
+                    <th className="text-right p-3 font-semibold hidden md:table-cell">متبقي</th>
+                    <th className="text-center p-3 font-semibold hidden lg:table-cell">حالة الدفع</th>
                     <th className="text-center p-3 font-semibold">الحالة</th>
-                    <th className="text-center p-3 font-semibold w-28 hidden sm:table-cell">إجراء</th>
+                    <th className="text-center p-3 font-semibold w-32 hidden sm:table-cell">إجراء</th>
                     <th className="text-center p-3 font-semibold w-12 sm:hidden">عرض</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.length === 0 ? (
-                    <tr><td colSpan={8} className="text-center py-16">
+                    <tr><td colSpan={10} className="text-center py-16">
                       <div className="w-14 h-14 bg-gray-50 border border-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
                         <ShoppingBag className="w-7 h-7 text-gray-300" />
                       </div>
@@ -1104,7 +1332,11 @@ export default function AdminPurchases() {
                     </td></tr>
                   ) : filtered.map(pur => {
                     const sc = STATUS_CONFIG[pur.status] ?? STATUS_CONFIG.pending;
-                    const items = ((pur as any).items ?? []) as any[];
+                    const purTotal = parseFloat(pur.total as string || "0");
+                    const purPaid = paidMap[pur.id] ?? 0;
+                    const purRemaining = Math.max(0, purTotal - purPaid);
+                    const payStatusKey = getPaymentStatus(purTotal, purPaid);
+                    const ps = PAY_STATUS[payStatusKey];
                     return (
                       <tr key={pur.id} className="border-b border-gray-50 hover:bg-gray-50/70 transition-colors cursor-pointer"
                         onClick={() => setViewPurchase(pur)} data-testid={`row-purchase-${pur.id}`}>
@@ -1127,17 +1359,30 @@ export default function AdminPurchases() {
                         </td>
                         <td className="p-3 text-gray-400 text-xs font-mono hidden sm:table-cell">{pur.referenceNumber ?? "—"}</td>
                         <td className="p-3 text-gray-400 text-xs hidden md:table-cell">{formatDate(pur.purchaseDate?.toString())}</td>
-                        <td className="p-3 text-gray-400 text-xs hidden lg:table-cell">
-                          {items.length > 0 ? `${items.length} منتج` : "—"}
-                        </td>
                         <td className="p-3">
-                          <span className="text-blue-700 font-bold">{formatCurrency(parseFloat(pur.total as string || "0"))}</span>
+                          <span className="text-blue-700 font-bold text-sm">{formatCurrency(purTotal)}</span>
+                        </td>
+                        <td className="p-3 hidden md:table-cell">
+                          <span className="text-emerald-700 font-semibold text-xs">{formatCurrency(purPaid)}</span>
+                        </td>
+                        <td className="p-3 hidden md:table-cell">
+                          <span className={`font-semibold text-xs ${purRemaining > 0 ? "text-red-600" : "text-gray-400"}`}>
+                            {formatCurrency(purRemaining)}
+                          </span>
+                        </td>
+                        <td className="p-3 text-center hidden lg:table-cell">
+                          <span className={`text-xs px-2 py-0.5 rounded-full border ${ps.cls}`}>{ps.label}</span>
                         </td>
                         <td className="p-3 text-center">
                           <span className={`text-xs px-2 py-0.5 rounded-full border ${sc.cls}`}>{sc.label}</span>
                         </td>
                         <td className="p-3 hidden sm:table-cell" onClick={e => e.stopPropagation()}>
-                          <div className="flex items-center gap-1 justify-center">
+                          <div className="flex items-center gap-1 justify-center flex-wrap">
+                            <Button size="sm" onClick={() => setVersementPurchase(pur)}
+                              className="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 shadow-none text-xs h-7 px-2"
+                              data-testid={`button-versement-${pur.id}`}>
+                              <Wallet className="w-3 h-3 ml-0.5" /> دفعة
+                            </Button>
                             {pur.status === "pending" && (
                               <>
                                 <Button size="sm" onClick={() => statusMutation.mutate({ id: pur.id, status: "completed" })}
@@ -1192,7 +1437,12 @@ export default function AdminPurchases() {
             onComplete={() => statusMutation.mutate({ id: viewPurchase.id, status: "completed" })}
             onCancel={() => statusMutation.mutate({ id: viewPurchase.id, status: "cancelled" })}
             onDelete={() => { if (confirm("حذف الشراء؟")) deleteMutation.mutate(viewPurchase.id); }}
+            onVersement={() => { setViewPurchase(null); setVersementPurchase(viewPurchase); }}
           />
+        )}
+
+        {versementPurchase && (
+          <VersementModal purchase={versementPurchase} onClose={() => setVersementPurchase(null)} />
         )}
       </div>
     </AdminLayout>

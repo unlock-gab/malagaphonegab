@@ -157,6 +157,15 @@ app.use((req, res, next) => {
       ALTER TABLE purchases ADD COLUMN IF NOT EXISTS partner_id VARCHAR;
       ALTER TABLE purchases ADD COLUMN IF NOT EXISTS partner_name TEXT;
       ALTER TABLE purchases ADD COLUMN IF NOT EXISTS partner_percentage NUMERIC(5,2);
+      CREATE TABLE IF NOT EXISTS purchase_payments (
+        id VARCHAR PRIMARY KEY,
+        purchase_id VARCHAR NOT NULL,
+        amount NUMERIC(10,2) NOT NULL,
+        payment_method TEXT NOT NULL DEFAULT 'cash',
+        payment_date TIMESTAMP DEFAULT NOW(),
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
       ALTER TABLE purchase_payments ADD COLUMN IF NOT EXISTS payment_method TEXT NOT NULL DEFAULT 'cash';
     `);
     console.log("[db] Critical tables & columns verified ✓");

@@ -124,7 +124,7 @@ function EmployeeModal({ open, onClose, initial }: {
               <Input data-testid="input-emp-jobtitle" value={form.jobTitle} onChange={e => setForm(f => ({ ...f, jobTitle: e.target.value }))} placeholder="Vendeur" />
             </div>
             <div className="space-y-1">
-              <Label>Salaire mensuel (MAD) *</Label>
+              <Label>Salaire mensuel (DA) *</Label>
               <Input data-testid="input-emp-salary" type="number" min="0" step="0.01" value={form.monthlySalary} onChange={e => setForm(f => ({ ...f, monthlySalary: e.target.value }))} placeholder="0.00" />
             </div>
             <div className="space-y-1">
@@ -175,7 +175,7 @@ function AdvanceModal({ open, onClose, employee, month, year }: {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/payroll/summary"] });
       queryClient.invalidateQueries({ queryKey: ["/api/salary-advances"] });
-      toast({ title: `Avance de ${amount} MAD enregistrée` });
+      toast({ title: `Avance de ${amount} DA enregistrée` });
       setAmount(""); setNote("");
       onClose();
     },
@@ -193,10 +193,10 @@ function AdvanceModal({ open, onClose, employee, month, year }: {
         </DialogHeader>
         <div className="space-y-3">
           <p className="text-sm text-gray-500">
-            {MONTHS_FR[month - 1]} {year} · Salaire de base : <span className="font-semibold text-gray-700">{fmt(parseFloat(employee.monthlySalary))} MAD</span>
+            {MONTHS_FR[month - 1]} {year} · Salaire de base : <span className="font-semibold text-gray-700">{fmt(parseFloat(employee.monthlySalary))} DA</span>
           </p>
           <div className="space-y-1">
-            <Label>Montant (MAD) *</Label>
+            <Label>Montant (DA) *</Label>
             <Input data-testid="input-advance-amount" type="number" min="0.01" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" autoFocus />
           </div>
           <div className="space-y-1">
@@ -238,7 +238,7 @@ function PaymentModal({ open, onClose, employee, month, year, remaining }: {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/payroll/summary"] });
       queryClient.invalidateQueries({ queryKey: ["/api/salary-payments"] });
-      toast({ title: `Paiement de ${amount} MAD enregistré` });
+      toast({ title: `Paiement de ${amount} DA enregistré` });
       setAmount(""); setNote(""); setPaymentMethod("cash");
       onClose();
     },
@@ -256,10 +256,10 @@ function PaymentModal({ open, onClose, employee, month, year, remaining }: {
         </DialogHeader>
         <div className="space-y-3">
           <p className="text-sm text-gray-500">
-            {MONTHS_FR[month - 1]} {year} · Restant : <span className="font-semibold text-red-600">{fmt(remaining)} MAD</span>
+            {MONTHS_FR[month - 1]} {year} · Restant : <span className="font-semibold text-red-600">{fmt(remaining)} DA</span>
           </p>
           <div className="space-y-1">
-            <Label>Montant (MAD) *</Label>
+            <Label>Montant (DA) *</Label>
             <Input data-testid="input-payment-amount" type="number" min="0.01" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" autoFocus />
           </div>
           <div className="space-y-1">
@@ -350,7 +350,7 @@ function DetailModal({ open, onClose, row, month, year, lang }: {
         <div className="bg-gray-50 rounded-lg p-3 space-y-1 text-sm">
           {row.employee.jobTitle && <div className="text-gray-500">Poste: <span className="text-gray-800 font-medium">{row.employee.jobTitle}</span></div>}
           {row.employee.phone && <div className="text-gray-500">Tél: <span className="text-gray-800">{row.employee.phone}</span></div>}
-          <div className="text-gray-500">Salaire de base: <span className="text-gray-800 font-semibold">{fmt(row.baseSalary)} MAD</span></div>
+          <div className="text-gray-500">Salaire de base: <span className="text-gray-800 font-semibold">{fmt(row.baseSalary)} DA</span></div>
         </div>
 
         {/* Current month summary */}
@@ -365,19 +365,19 @@ function DetailModal({ open, onClose, row, month, year, lang }: {
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div className="bg-blue-50 rounded p-2">
               <div className="text-blue-500 text-xs">Base</div>
-              <div className="font-bold text-blue-700">{fmt(row.baseSalary)} MAD</div>
+              <div className="font-bold text-blue-700">{fmt(row.baseSalary)} DA</div>
             </div>
             <div className="bg-amber-50 rounded p-2">
               <div className="text-amber-500 text-xs">Avances</div>
-              <div className="font-bold text-amber-700">- {fmt(row.totalAdvances)} MAD</div>
+              <div className="font-bold text-amber-700">- {fmt(row.totalAdvances)} DA</div>
             </div>
             <div className="bg-emerald-50 rounded p-2">
               <div className="text-emerald-500 text-xs">Payé</div>
-              <div className="font-bold text-emerald-700">- {fmt(row.totalPayments)} MAD</div>
+              <div className="font-bold text-emerald-700">- {fmt(row.totalPayments)} DA</div>
             </div>
             <div className="bg-red-50 rounded p-2">
               <div className="text-red-500 text-xs">Restant</div>
-              <div className="font-bold text-red-700">{fmt(row.remaining)} MAD</div>
+              <div className="font-bold text-red-700">{fmt(row.remaining)} DA</div>
             </div>
           </div>
         </div>
@@ -395,7 +395,7 @@ function DetailModal({ open, onClose, row, month, year, lang }: {
                 {advances.map((a: any) => (
                   <div key={a.id} className="flex items-center justify-between text-sm bg-amber-50 rounded px-3 py-2" data-testid={`advance-item-${a.id}`}>
                     <div>
-                      <span className="font-semibold text-amber-700">{fmt(parseFloat(a.amount))} MAD</span>
+                      <span className="font-semibold text-amber-700">{fmt(parseFloat(a.amount))} DA</span>
                       {a.note && <span className="text-gray-500 ml-2 text-xs">— {a.note}</span>}
                       <div className="text-xs text-gray-400">{fmtDate(a.createdAt)}</div>
                     </div>
@@ -426,7 +426,7 @@ function DetailModal({ open, onClose, row, month, year, lang }: {
                 {payments.map((p: any) => (
                   <div key={p.id} className="flex items-center justify-between text-sm bg-emerald-50 rounded px-3 py-2" data-testid={`payment-item-${p.id}`}>
                     <div>
-                      <span className="font-semibold text-emerald-700">{fmt(parseFloat(p.amount))} MAD</span>
+                      <span className="font-semibold text-emerald-700">{fmt(parseFloat(p.amount))} DA</span>
                       <span className="text-gray-500 ml-2 text-xs">{p.paymentMethod}</span>
                       {p.note && <span className="text-gray-500 ml-2 text-xs">— {p.note}</span>}
                       <div className="text-xs text-gray-400">{fmtDate(p.createdAt)}</div>
@@ -532,7 +532,7 @@ export default function AdminSalaries() {
                 <span className="text-xs text-blue-500">Masse salariale</span>
               </div>
               <p className="text-xl font-bold text-blue-700" data-testid="stat-total-payroll">
-                {summary ? fmt(summary.totalPayroll) : "—"} <span className="text-sm font-normal">MAD</span>
+                {summary ? fmt(summary.totalPayroll) : "—"} <span className="text-sm font-normal">DA</span>
               </p>
             </CardContent>
           </Card>
@@ -543,7 +543,7 @@ export default function AdminSalaries() {
                 <span className="text-xs text-emerald-500">Payé ce mois</span>
               </div>
               <p className="text-xl font-bold text-emerald-700" data-testid="stat-total-paid">
-                {summary ? fmt(summary.totalPaid) : "—"} <span className="text-sm font-normal">MAD</span>
+                {summary ? fmt(summary.totalPaid) : "—"} <span className="text-sm font-normal">DA</span>
               </p>
             </CardContent>
           </Card>
@@ -554,7 +554,7 @@ export default function AdminSalaries() {
                 <span className="text-xs text-amber-500">Avances</span>
               </div>
               <p className="text-xl font-bold text-amber-700" data-testid="stat-total-advances">
-                {summary ? fmt(summary.totalAdvances) : "—"} <span className="text-sm font-normal">MAD</span>
+                {summary ? fmt(summary.totalAdvances) : "—"} <span className="text-sm font-normal">DA</span>
               </p>
             </CardContent>
           </Card>
@@ -565,7 +565,7 @@ export default function AdminSalaries() {
                 <span className="text-xs text-red-500">Restant</span>
               </div>
               <p className="text-xl font-bold text-red-700" data-testid="stat-total-remaining">
-                {summary ? fmt(summary.totalRemaining) : "—"} <span className="text-sm font-normal">MAD</span>
+                {summary ? fmt(summary.totalRemaining) : "—"} <span className="text-sm font-normal">DA</span>
               </p>
             </CardContent>
           </Card>

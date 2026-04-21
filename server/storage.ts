@@ -1248,19 +1248,14 @@ export class DatabaseStorage implements IStorage {
     const fullLowStock = await this.getLowStockProducts(5);
 
     // Build monthly revenue chart data (last 6 months)
+    // Use profit records for revenue so delivery fees are excluded (revenue already = total - deliveryPrice)
     const monthlyMap: Record<string, { revenue: number; profit: number }> = {};
-    for (const o of allOrders) {
-      if (o.status !== "delivered") continue;
-      const d = new Date(o.createdAt!);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      if (!monthlyMap[key]) monthlyMap[key] = { revenue: 0, profit: 0 };
-      monthlyMap[key].revenue += parseFloat(o.total as string || "0");
-    }
     for (const p of allProfitRecords) {
       const d = new Date(p.createdAt!);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
       if (!monthlyMap[key]) monthlyMap[key] = { revenue: 0, profit: 0 };
-      monthlyMap[key].profit += parseFloat(p.netProfit as string || "0");
+      monthlyMap[key].revenue += parseFloat(p.revenue as string || "0");  // delivery excluded
+      monthlyMap[key].profit  += parseFloat(p.netProfit as string || "0");
     }
     // Include service sales in monthly revenue + profit (100% margin)
     for (const s of allServiceSales) {

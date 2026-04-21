@@ -716,11 +716,20 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const records = await storage.getProfitRecords();
     const enriched = await Promise.all(records.map(async r => {
       try {
-        const items = await storage.getOrderItems(r.orderId);
+        const [items, order] = await Promise.all([
+          storage.getOrderItems(r.orderId),
+          storage.getOrder(r.orderId),
+        ]);
         const productNames = items.map(i => i.productName).filter(Boolean).join(", ");
-        return { ...r, productNames: productNames || null, source: "order" };
+        // Operator = confirmateur who handled it, or source label
+        let operatorName: string | null = null;
+        if (order?.confirmateurName) operatorName = order.confirmateurName;
+        else if (order?.source === "pos") operatorName = "POS";
+        else if (order?.source === "admin") operatorName = "Admin";
+        else if (order?.source === "storefront") operatorName = "Boutique";
+        return { ...r, productNames: productNames || null, source: "order", operatorName };
       } catch {
-        return { ...r, productNames: null, source: "order" };
+        return { ...r, productNames: null, source: "order", operatorName: null };
       }
     }));
     // Include service sales as profit entries (cost=0, margin=100%)
@@ -742,6 +751,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       category: s.category,
       cashierName: s.cashierName,
       paymentMethod: s.paymentMethod,
+      operatorName: s.cashierName ?? "Vente service",
     }));
     res.json([...enriched, ...serviceEntries]);
   });

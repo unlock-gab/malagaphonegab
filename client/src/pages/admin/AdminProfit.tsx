@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { TrendingUp, DollarSign, Users, BarChart3, Calendar, Handshake } from "lucide-react";
+import { TrendingUp, DollarSign, Users, BarChart3, Calendar, Handshake, UserCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -283,6 +283,7 @@ export default function AdminProfit() {
                         <th className="text-start p-3 font-semibold">{t("order_ref")}</th>
                         <th className="text-start p-3 font-semibold">{t("date")}</th>
                         <th className="text-start p-3 font-semibold hidden sm:table-cell">{t("product_col")}</th>
+                        <th className="text-start p-3 font-semibold hidden lg:table-cell">Utilisateur</th>
                         <th className="text-start p-3 font-semibold">{t("revenue_col")}</th>
                         <th className="text-start p-3 font-semibold hidden md:table-cell">{t("cost_col")}</th>
                         <th className="text-start p-3 font-semibold hidden lg:table-cell">{t("expenses_col")}</th>
@@ -306,6 +307,14 @@ export default function AdminProfit() {
                               {(r as any).productNames
                                 ? <span className="text-gray-700 font-medium">{(r as any).productNames}</span>
                                 : <span className="text-gray-300">—</span>}
+                            </td>
+                            <td className="p-3 hidden lg:table-cell">
+                              {(r as any).operatorName ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">
+                                  <UserCircle className="w-2.5 h-2.5" />
+                                  {(r as any).operatorName}
+                                </span>
+                              ) : <span className="text-gray-300">—</span>}
                             </td>
                             <td className="p-3 text-emerald-700 font-semibold">{formatCurrency(parseFloat(r.revenue as string))}</td>
                             <td className="p-3 text-red-600 hidden md:table-cell">− {formatCurrency(parseFloat(r.productCost as string))}</td>
@@ -332,7 +341,7 @@ export default function AdminProfit() {
                         );
                       })}
                       <tr className="bg-blue-50 border-t border-blue-100 font-bold text-xs">
-                        <td className="p-3 text-gray-700" colSpan={3}>{t("total")}</td>
+                        <td className="p-3 text-gray-700" colSpan={4}>{t("total")}</td>
                         <td className="p-3 text-emerald-700">{formatCurrency(totalRevenue)}</td>
                         <td className="p-3 text-red-600 hidden md:table-cell">− {formatCurrency(totalCost)}</td>
                         <td className="p-3 text-orange-700 hidden lg:table-cell">

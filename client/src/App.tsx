@@ -8,21 +8,25 @@ import { AdminLangProvider } from "@/context/AdminLangContext";
 import NotFound from "@/pages/not-found";
 import { Component, ReactNode } from "react";
 
-class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
+class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null; info: string }> {
   constructor(props: { children: ReactNode }) {
     super(props);
-    this.state = { error: null };
+    this.state = { error: null, info: "" };
   }
   static getDerivedStateFromError(error: Error) { return { error }; }
+  componentDidCatch(error: Error, info: { componentStack: string }) {
+    this.setState({ info: info.componentStack ?? "" });
+    console.error("[ErrorBoundary]", error, info);
+  }
   render() {
     if (this.state.error) {
       return (
-        <div style={{ padding: 40, fontFamily: "sans-serif", textAlign: "center" }}>
-          <h2 style={{ color: "#e53e3e" }}>Une erreur est survenue</h2>
-          <pre style={{ background: "#f7f7f7", padding: 16, borderRadius: 8, textAlign: "left", overflow: "auto", maxWidth: 800, margin: "16px auto" }}>
-            {this.state.error.message}
+        <div style={{ padding: 24, fontFamily: "monospace", background: "#fff1f0", minHeight: "100vh" }}>
+          <h2 style={{ color: "#c53030", marginBottom: 8 }}>Erreur critique — {this.state.error.name}</h2>
+          <pre style={{ background: "#fff", border: "1px solid #fc8181", padding: 16, borderRadius: 6, overflow: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all", fontSize: 13, marginBottom: 16 }}>
+            {this.state.error.message}{"\n\nStack:\n"}{this.state.error.stack}{"\n\nComponent Stack:\n"}{this.state.info}
           </pre>
-          <button onClick={() => window.location.reload()} style={{ padding: "8px 24px", background: "#3182ce", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}>
+          <button onClick={() => window.location.reload()} style={{ padding: "8px 24px", background: "#3182ce", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 14 }}>
             Recharger la page
           </button>
         </div>

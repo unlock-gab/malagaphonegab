@@ -714,17 +714,36 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.get("/api/profit", requireAdmin, async (_req, res) => {
     const records = await storage.getProfitRecords();
-    // Enrich each record with product names from its order items
     const enriched = await Promise.all(records.map(async r => {
       try {
         const items = await storage.getOrderItems(r.orderId);
         const productNames = items.map(i => i.productName).filter(Boolean).join(", ");
-        return { ...r, productNames: productNames || null };
+        return { ...r, productNames: productNames || null, source: "order" };
       } catch {
-        return { ...r, productNames: null };
+        return { ...r, productNames: null, source: "order" };
       }
     }));
-    res.json(enriched);
+    // Include service sales as profit entries (cost=0, margin=100%)
+    const serviceSales = await storage.getServiceSales();
+    const serviceEntries = serviceSales.map(s => ({
+      id: s.id,
+      orderId: s.id,
+      revenue: s.amount,
+      productCost: "0",
+      allocatedExpenses: "0",
+      grossProfit: s.amount,
+      netProfit: s.amount,
+      partnerShare: "0",
+      ownerShare: s.amount,
+      createdAt: s.createdAt,
+      productNames: s.serviceName,
+      source: "service",
+      serviceName: s.serviceName,
+      category: s.category,
+      cashierName: s.cashierName,
+      paymentMethod: s.paymentMethod,
+    }));
+    res.json([...enriched, ...serviceEntries]);
   });
 
   // ==================== CONFIRMATEURS ====================
@@ -1113,6 +1132,41 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const r = await storage.cancelSupplierReturn(req.params.id);
       res.json(r);
     } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  // ==================== SERVICE SALES ====================
+
+  app.get("/api/service-sales", requireAuth, async (_req, res) => {
+    const sales = await storage.getServiceSales();
+    res.json(sales);
+  });
+
+  app.post("/api/service-sales", requireAuth, async (req, res) => {
+    try {
+      const { serviceName, category, customerName, customerPhone, amount, paymentMethod, notes } = req.body;
+      if (!serviceName?.trim()) return res.status(400).json({ message: "Nom du service requis" });
+      const amt = parseFloat(amount);
+      if (!amt || amt <= 0) return res.status(400).json({ message: "Le montant doit être positif" });
+      if (!paymentMethod?.trim()) return res.status(400).json({ message: "Mode de paiement requis" });
+      const sale = await storage.createServiceSale({
+        serviceName: serviceName.trim(),
+        category: category?.trim() || null,
+        customerName: customerName?.trim() || null,
+        customerPhone: customerPhone?.trim() || null,
+        amount: amt.toFixed(2),
+        paymentMethod: paymentMethod.trim(),
+        notes: notes?.trim() || null,
+        cashierName: req.session.name ?? null,
+        cashierUsername: req.session.username ?? null,
+      });
+      res.status(201).json(sale);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  app.delete("/api/service-sales/:id", requireAdmin, async (req, res) => {
+    const ok = await storage.deleteServiceSale(req.params.id);
+    if (!ok) return res.status(404).json({ message: "Vente introuvable" });
+    res.json({ success: true });
   });
 
   // ==================== ROLES ====================

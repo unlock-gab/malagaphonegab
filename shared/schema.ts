@@ -444,6 +444,21 @@ export const operationHistory = pgTable("operation_history", {
   undoMeta: text("undo_meta"),
 });
 
+// ===================== SERVICE SALES =====================
+export const serviceSales = pgTable("service_sales", {
+  id: varchar("id").primaryKey(),
+  serviceName: text("service_name").notNull(),
+  category: text("category"),
+  customerName: text("customer_name"),
+  customerPhone: text("customer_phone"),
+  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+  paymentMethod: text("payment_method").notNull().default("cash"),
+  notes: text("notes"),
+  cashierName: text("cashier_name"),
+  cashierUsername: text("cashier_username"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // ===================== INSERT SCHEMAS =====================
 export const insertProductSchema = createInsertSchema(products).omit({ id: true, createdAt: true });
 export const insertOrderSchema = createInsertSchema(orders).omit({ id: true, createdAt: true });
@@ -465,6 +480,7 @@ export const insertPartnerSchema = createInsertSchema(partners).omit({ id: true,
 export const insertPurchasePaymentSchema = createInsertSchema(purchasePayments).omit({ id: true, createdAt: true });
 export const insertSupplierReturnSchema = createInsertSchema(supplierReturns).omit({ id: true, createdAt: true });
 export const insertOperationHistorySchema = createInsertSchema(operationHistory).omit({ createdAt: true, undoneAt: true });
+export const insertServiceSaleSchema = createInsertSchema(serviceSales).omit({ id: true, createdAt: true });
 
 // ===================== TYPES =====================
 export type InsertUser = {
@@ -521,6 +537,8 @@ export type SupplierReturn = typeof supplierReturns.$inferSelect;
 export type InsertSupplierReturn = z.infer<typeof insertSupplierReturnSchema>;
 export type OperationHistory = typeof operationHistory.$inferSelect;
 export type InsertOperationHistory = z.infer<typeof insertOperationHistorySchema>;
+export type ServiceSale = typeof serviceSales.$inferSelect;
+export type InsertServiceSale = z.infer<typeof insertServiceSaleSchema>;
 
 // CartItem type for storefront cart
 export type CartItem = {

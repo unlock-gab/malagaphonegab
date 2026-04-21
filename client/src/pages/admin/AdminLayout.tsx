@@ -6,7 +6,7 @@ import {
   Menu, Bell, Settings, Truck, Users, LogOut, Loader2,
   ShoppingBag, Building2, Tags, Star, Smartphone,
   TrendingUp, Boxes, Home, Receipt, ChevronRight, BarChart3, Shield, Zap,
-  Languages, FileText, Handshake, RotateCcw,
+  Languages, FileText, Handshake, RotateCcw, Wrench,
 } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -183,6 +183,18 @@ function NavContent({ location, orderCounts, navigate, onClose, t }: {
           data-testid="nav-admin-pos">
           <Zap className="w-4 h-4 flex-shrink-0" />
           <span className="flex-1">{t("nav_pos")}</span>
+        </div>
+      </Link>
+      <Link href="/admin/service-sales">
+        <div onClick={onClose}
+          className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl cursor-pointer transition-all text-sm font-semibold shadow-sm border ${
+            location === "/admin/service-sales"
+              ? "bg-violet-600 text-white border-violet-600 shadow-violet-200"
+              : "bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100 hover:border-violet-300"
+          }`}
+          data-testid="nav-admin-service-sales">
+          <Wrench className="w-4 h-4 flex-shrink-0" />
+          <span className="flex-1">{t("nav_service_sale")}</span>
         </div>
       </Link>
 

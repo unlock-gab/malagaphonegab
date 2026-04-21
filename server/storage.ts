@@ -22,13 +22,14 @@ import {
   type SupplierReturn, type InsertSupplierReturn,
   type OperationHistory, type InsertOperationHistory,
   type Role, type InsertRole,
+  type ServiceSale, type InsertServiceSale,
   ALL_PERMISSIONS,
   DEFAULT_DELIVERY_PRICES,
   users, products, categories, brands, suppliers, purchases, purchaseItems,
   inventoryMovements, orders, orderItems, expenses, profitRecords,
   blockedIps, abandonedCarts, appSettings, deliveryCompanies, productVariants,
   afterSaleRecords, phoneUnits, invoiceTemplates, partners, purchasePayments,
-  supplierReturns, operationHistory, roles,
+  supplierReturns, operationHistory, roles, serviceSales,
 } from "@shared/schema";
 import { randomUUID, createHash, scryptSync, randomBytes, timingSafeEqual } from "crypto";
 import { db } from "./db";
@@ -228,6 +229,12 @@ export interface IStorage {
   getOperation(id: string): Promise<OperationHistory | undefined>;
   markOperationUndone(id: string): Promise<void>;
   deleteProfitRecordByOrderId(orderId: string): Promise<void>;
+
+  // Service Sales
+  getServiceSales(): Promise<ServiceSale[]>;
+  getServiceSaleById(id: string): Promise<ServiceSale | undefined>;
+  createServiceSale(data: InsertServiceSale): Promise<ServiceSale>;
+  deleteServiceSale(id: string): Promise<boolean>;
 }
 
 export interface TopProductRow {
@@ -1868,6 +1875,28 @@ export class DatabaseStorage implements IStorage {
   async restorePartner(data: any): Promise<void> {
     const { id, name, phone, email, sharePercentage, notes, active, createdAt } = data;
     await db.insert(partners).values({ id, name, phone: phone ?? null, email: email ?? null, sharePercentage, notes: notes ?? null, active: active ?? true, createdAt: createdAt ? new Date(createdAt) : new Date() }).onConflictDoNothing();
+  }
+
+  // ============ SERVICE SALES ============
+
+  async getServiceSales(): Promise<ServiceSale[]> {
+    return db.select().from(serviceSales).orderBy(desc(serviceSales.createdAt));
+  }
+
+  async getServiceSaleById(id: string): Promise<ServiceSale | undefined> {
+    const [s] = await db.select().from(serviceSales).where(eq(serviceSales.id, id));
+    return s;
+  }
+
+  async createServiceSale(data: InsertServiceSale): Promise<ServiceSale> {
+    const id = `svc-${randomUUID()}`;
+    const [s] = await db.insert(serviceSales).values({ ...data, id }).returning();
+    return s;
+  }
+
+  async deleteServiceSale(id: string): Promise<boolean> {
+    const result = await db.delete(serviceSales).where(eq(serviceSales.id, id)).returning();
+    return result.length > 0;
   }
 }
 

@@ -226,6 +226,19 @@ app.use((req, res, next) => {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT TRUE;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP;
+      CREATE TABLE IF NOT EXISTS service_sales (
+        id VARCHAR PRIMARY KEY,
+        service_name TEXT NOT NULL,
+        category TEXT,
+        customer_name TEXT,
+        customer_phone TEXT,
+        amount NUMERIC(10,2) NOT NULL,
+        payment_method TEXT NOT NULL DEFAULT 'cash',
+        notes TEXT,
+        cashier_name TEXT,
+        cashier_username TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
     `);
     console.log("[db] Critical tables & columns verified ✓");
   } catch (e) {

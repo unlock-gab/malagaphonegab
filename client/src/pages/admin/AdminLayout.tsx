@@ -58,7 +58,6 @@ function buildNavSections(t: (k: any) => string) {
       label: t("nav_admin_section"),
       items: [
         { icon: Truck,     label: t("nav_delivery"),      href: "/admin/delivery" },
-        { icon: Building2, label: t("nav_shippers"),      href: "/admin/shippers" },
         { icon: FileText,  label: t("nav_invoices"),      href: "/admin/invoices" },
         { icon: Settings,  label: t("nav_settings"),      href: "/admin/settings" },
       ],

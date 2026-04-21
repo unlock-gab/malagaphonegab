@@ -46,7 +46,6 @@ import AdminSettings from "@/pages/admin/AdminSettings";
 import AdminDelivery from "@/pages/admin/AdminDelivery";
 import AdminIPBlocker from "@/pages/admin/AdminIPBlocker";
 import AdminAbandoned from "@/pages/admin/AdminAbandoned";
-import AdminShippers from "@/pages/admin/AdminShippers";
 import AdminLogin from "@/pages/admin/AdminLogin";
 import AdminCategories from "@/pages/admin/AdminCategories";
 import AdminBrands from "@/pages/admin/AdminBrands";
@@ -101,7 +100,6 @@ function Router() {
         <Route path="/admin/settings" component={AdminSettings} />
         <Route path="/admin/ip-blocker" component={AdminIPBlocker} />
         <Route path="/admin/abandoned" component={AdminAbandoned} />
-        <Route path="/admin/shippers" component={AdminShippers} />
         <Route path="/admin/reports" component={AdminReports} />
         <Route path="/admin/customers" component={AdminCustomers} />
         <Route path="/admin/after-sale" component={AdminAfterSale} />

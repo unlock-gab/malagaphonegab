@@ -23,6 +23,9 @@ import {
   type OperationHistory, type InsertOperationHistory,
   type Role, type InsertRole,
   type ServiceSale, type InsertServiceSale,
+  type Employee, type InsertEmployee,
+  type SalaryAdvance, type InsertSalaryAdvance,
+  type SalaryPayment, type InsertSalaryPayment,
   ALL_PERMISSIONS,
   DEFAULT_DELIVERY_PRICES,
   users, products, categories, brands, suppliers, purchases, purchaseItems,
@@ -30,6 +33,7 @@ import {
   blockedIps, abandonedCarts, appSettings, deliveryCompanies, productVariants,
   afterSaleRecords, phoneUnits, invoiceTemplates, partners, purchasePayments,
   supplierReturns, operationHistory, roles, serviceSales,
+  employees, salaryAdvances, salaryPayments,
 } from "@shared/schema";
 import { randomUUID, createHash, scryptSync, randomBytes, timingSafeEqual } from "crypto";
 import { db } from "./db";
@@ -235,6 +239,18 @@ export interface IStorage {
   getServiceSaleById(id: string): Promise<ServiceSale | undefined>;
   createServiceSale(data: InsertServiceSale): Promise<ServiceSale>;
   deleteServiceSale(id: string): Promise<boolean>;
+
+  // Payroll
+  getEmployees(): Promise<Employee[]>;
+  getEmployeeById(id: string): Promise<Employee | undefined>;
+  createEmployee(data: InsertEmployee): Promise<Employee>;
+  updateEmployee(id: string, data: Partial<InsertEmployee>): Promise<Employee | undefined>;
+  getSalaryAdvances(employeeId?: string, month?: number, year?: number): Promise<SalaryAdvance[]>;
+  createSalaryAdvance(data: InsertSalaryAdvance): Promise<SalaryAdvance>;
+  deleteSalaryAdvance(id: string): Promise<boolean>;
+  getSalaryPayments(employeeId?: string, month?: number, year?: number): Promise<SalaryPayment[]>;
+  createSalaryPayment(data: InsertSalaryPayment): Promise<SalaryPayment>;
+  deleteSalaryPayment(id: string): Promise<boolean>;
 }
 
 export interface TopProductRow {
@@ -1896,6 +1912,70 @@ export class DatabaseStorage implements IStorage {
 
   async deleteServiceSale(id: string): Promise<boolean> {
     const result = await db.delete(serviceSales).where(eq(serviceSales.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // ============ PAYROLL ============
+
+  async getEmployees(): Promise<Employee[]> {
+    return db.select().from(employees).orderBy(employees.fullName);
+  }
+
+  async getEmployeeById(id: string): Promise<Employee | undefined> {
+    const [e] = await db.select().from(employees).where(eq(employees.id, id));
+    return e;
+  }
+
+  async createEmployee(data: InsertEmployee): Promise<Employee> {
+    const id = `emp-${randomUUID()}`;
+    const [e] = await db.insert(employees).values({ ...data, id }).returning();
+    return e;
+  }
+
+  async updateEmployee(id: string, data: Partial<InsertEmployee>): Promise<Employee | undefined> {
+    const [e] = await db.update(employees).set(data).where(eq(employees.id, id)).returning();
+    return e;
+  }
+
+  async getSalaryAdvances(employeeId?: string, month?: number, year?: number): Promise<SalaryAdvance[]> {
+    let q = db.select().from(salaryAdvances).$dynamic();
+    const conditions = [];
+    if (employeeId) conditions.push(eq(salaryAdvances.employeeId, employeeId));
+    if (month !== undefined) conditions.push(eq(salaryAdvances.month, month));
+    if (year !== undefined) conditions.push(eq(salaryAdvances.year, year));
+    if (conditions.length) q = q.where(and(...conditions));
+    return q.orderBy(desc(salaryAdvances.createdAt));
+  }
+
+  async createSalaryAdvance(data: InsertSalaryAdvance): Promise<SalaryAdvance> {
+    const id = `adv-${randomUUID()}`;
+    const [a] = await db.insert(salaryAdvances).values({ ...data, id }).returning();
+    return a;
+  }
+
+  async deleteSalaryAdvance(id: string): Promise<boolean> {
+    const result = await db.delete(salaryAdvances).where(eq(salaryAdvances.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getSalaryPayments(employeeId?: string, month?: number, year?: number): Promise<SalaryPayment[]> {
+    let q = db.select().from(salaryPayments).$dynamic();
+    const conditions = [];
+    if (employeeId) conditions.push(eq(salaryPayments.employeeId, employeeId));
+    if (month !== undefined) conditions.push(eq(salaryPayments.month, month));
+    if (year !== undefined) conditions.push(eq(salaryPayments.year, year));
+    if (conditions.length) q = q.where(and(...conditions));
+    return q.orderBy(desc(salaryPayments.createdAt));
+  }
+
+  async createSalaryPayment(data: InsertSalaryPayment): Promise<SalaryPayment> {
+    const id = `pay-${randomUUID()}`;
+    const [p] = await db.insert(salaryPayments).values({ ...data, id }).returning();
+    return p;
+  }
+
+  async deleteSalaryPayment(id: string): Promise<boolean> {
+    const result = await db.delete(salaryPayments).where(eq(salaryPayments.id, id)).returning();
     return result.length > 0;
   }
 }

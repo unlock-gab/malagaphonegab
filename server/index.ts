@@ -239,6 +239,38 @@ app.use((req, res, next) => {
         cashier_username TEXT,
         created_at TIMESTAMP DEFAULT NOW()
       );
+      CREATE TABLE IF NOT EXISTS employees (
+        id VARCHAR PRIMARY KEY,
+        full_name TEXT NOT NULL,
+        phone TEXT,
+        job_title TEXT,
+        monthly_salary NUMERIC(10,2) NOT NULL,
+        start_date TIMESTAMP,
+        status TEXT NOT NULL DEFAULT 'active',
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS salary_advances (
+        id VARCHAR PRIMARY KEY,
+        employee_id VARCHAR NOT NULL REFERENCES employees(id),
+        month INTEGER NOT NULL,
+        year INTEGER NOT NULL,
+        amount NUMERIC(10,2) NOT NULL,
+        note TEXT,
+        created_by TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS salary_payments (
+        id VARCHAR PRIMARY KEY,
+        employee_id VARCHAR NOT NULL REFERENCES employees(id),
+        month INTEGER NOT NULL,
+        year INTEGER NOT NULL,
+        amount NUMERIC(10,2) NOT NULL,
+        payment_method TEXT NOT NULL DEFAULT 'cash',
+        note TEXT,
+        created_by TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
     `);
     console.log("[db] Critical tables & columns verified ✓");
   } catch (e) {

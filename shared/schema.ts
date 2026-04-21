@@ -19,6 +19,7 @@ export const ALL_PERMISSIONS = [
   "settings.view", "settings.update",
   "users.view", "users.create", "users.update", "users.delete",
   "roles.view", "roles.create", "roles.update", "roles.delete",
+  "payroll.view", "payroll.create", "payroll.update", "payroll.pay", "payroll.advance",
 ] as const;
 export type Permission = typeof ALL_PERMISSIONS[number];
 
@@ -37,6 +38,7 @@ export const PERMISSION_GROUPS: { group: string; groupFr: string; perms: Permiss
   { group: "settings", groupFr: "Paramètres", perms: ["settings.view", "settings.update"] },
   { group: "users", groupFr: "Utilisateurs", perms: ["users.view", "users.create", "users.update", "users.delete"] },
   { group: "roles", groupFr: "Rôles & Permissions", perms: ["roles.view", "roles.create", "roles.update", "roles.delete"] },
+  { group: "payroll", groupFr: "RH / Salaires", perms: ["payroll.view", "payroll.create", "payroll.update", "payroll.pay", "payroll.advance"] },
 ];
 
 // ===================== ROLES =====================
@@ -459,6 +461,42 @@ export const serviceSales = pgTable("service_sales", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// ===================== PAYROLL =====================
+export const employees = pgTable("employees", {
+  id: varchar("id").primaryKey(),
+  fullName: text("full_name").notNull(),
+  phone: text("phone"),
+  jobTitle: text("job_title"),
+  monthlySalary: numeric("monthly_salary", { precision: 10, scale: 2 }).notNull(),
+  startDate: timestamp("start_date"),
+  status: text("status").notNull().default("active"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const salaryAdvances = pgTable("salary_advances", {
+  id: varchar("id").primaryKey(),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id),
+  month: integer("month").notNull(),
+  year: integer("year").notNull(),
+  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+  note: text("note"),
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const salaryPayments = pgTable("salary_payments", {
+  id: varchar("id").primaryKey(),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id),
+  month: integer("month").notNull(),
+  year: integer("year").notNull(),
+  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+  paymentMethod: text("payment_method").notNull().default("cash"),
+  note: text("note"),
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // ===================== INSERT SCHEMAS =====================
 export const insertProductSchema = createInsertSchema(products).omit({ id: true, createdAt: true });
 export const insertOrderSchema = createInsertSchema(orders).omit({ id: true, createdAt: true });
@@ -481,6 +519,9 @@ export const insertPurchasePaymentSchema = createInsertSchema(purchasePayments).
 export const insertSupplierReturnSchema = createInsertSchema(supplierReturns).omit({ id: true, createdAt: true });
 export const insertOperationHistorySchema = createInsertSchema(operationHistory).omit({ createdAt: true, undoneAt: true });
 export const insertServiceSaleSchema = createInsertSchema(serviceSales).omit({ id: true, createdAt: true });
+export const insertEmployeeSchema = createInsertSchema(employees).omit({ id: true, createdAt: true });
+export const insertSalaryAdvanceSchema = createInsertSchema(salaryAdvances).omit({ id: true, createdAt: true });
+export const insertSalaryPaymentSchema = createInsertSchema(salaryPayments).omit({ id: true, createdAt: true });
 
 // ===================== TYPES =====================
 export type InsertUser = {
@@ -539,6 +580,12 @@ export type OperationHistory = typeof operationHistory.$inferSelect;
 export type InsertOperationHistory = z.infer<typeof insertOperationHistorySchema>;
 export type ServiceSale = typeof serviceSales.$inferSelect;
 export type InsertServiceSale = z.infer<typeof insertServiceSaleSchema>;
+export type Employee = typeof employees.$inferSelect;
+export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
+export type SalaryAdvance = typeof salaryAdvances.$inferSelect;
+export type InsertSalaryAdvance = z.infer<typeof insertSalaryAdvanceSchema>;
+export type SalaryPayment = typeof salaryPayments.$inferSelect;
+export type InsertSalaryPayment = z.infer<typeof insertSalaryPaymentSchema>;
 
 // CartItem type for storefront cart
 export type CartItem = {

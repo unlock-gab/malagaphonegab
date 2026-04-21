@@ -1169,6 +1169,168 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json({ success: true });
   });
 
+  // ==================== PAYROLL ====================
+
+  app.get("/api/employees", requirePermission("payroll.view"), async (_req, res) => {
+    res.json(await storage.getEmployees());
+  });
+
+  app.post("/api/employees", requirePermission("payroll.create"), async (req, res) => {
+    try {
+      const { fullName, phone, jobTitle, monthlySalary, startDate, status, notes } = req.body;
+      if (!fullName?.trim()) return res.status(400).json({ message: "Nom complet requis" });
+      const sal = parseFloat(monthlySalary);
+      if (!sal || sal <= 0) return res.status(400).json({ message: "Salaire mensuel invalide" });
+      const emp = await storage.createEmployee({
+        fullName: fullName.trim(),
+        phone: phone?.trim() || null,
+        jobTitle: jobTitle?.trim() || null,
+        monthlySalary: sal.toFixed(2),
+        startDate: startDate ? new Date(startDate) : null,
+        status: status ?? "active",
+        notes: notes?.trim() || null,
+      });
+      res.status(201).json(emp);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  app.patch("/api/employees/:id", requirePermission("payroll.update"), async (req, res) => {
+    try {
+      const { fullName, phone, jobTitle, monthlySalary, startDate, status, notes } = req.body;
+      const updates: any = {};
+      if (fullName !== undefined) updates.fullName = fullName.trim();
+      if (phone !== undefined) updates.phone = phone?.trim() || null;
+      if (jobTitle !== undefined) updates.jobTitle = jobTitle?.trim() || null;
+      if (monthlySalary !== undefined) { const s = parseFloat(monthlySalary); if (s > 0) updates.monthlySalary = s.toFixed(2); }
+      if (startDate !== undefined) updates.startDate = startDate ? new Date(startDate) : null;
+      if (status !== undefined) updates.status = status;
+      if (notes !== undefined) updates.notes = notes?.trim() || null;
+      const emp = await storage.updateEmployee(req.params.id, updates);
+      if (!emp) return res.status(404).json({ message: "Employé introuvable" });
+      res.json(emp);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  app.get("/api/salary-advances", requirePermission("payroll.view"), async (req, res) => {
+    const { employeeId, month, year } = req.query as Record<string, string>;
+    const advances = await storage.getSalaryAdvances(
+      employeeId || undefined,
+      month ? parseInt(month) : undefined,
+      year ? parseInt(year) : undefined,
+    );
+    res.json(advances);
+  });
+
+  app.post("/api/salary-advances", requirePermission("payroll.advance"), async (req, res) => {
+    try {
+      const { employeeId, month, year, amount, note } = req.body;
+      if (!employeeId) return res.status(400).json({ message: "Employé requis" });
+      const amt = parseFloat(amount);
+      if (!amt || amt <= 0) return res.status(400).json({ message: "Montant invalide" });
+      const m = parseInt(month); const y = parseInt(year);
+      if (!m || m < 1 || m > 12 || !y) return res.status(400).json({ message: "Mois/année invalide" });
+      const emp = await storage.getEmployeeById(employeeId);
+      if (!emp) return res.status(404).json({ message: "Employé introuvable" });
+      const adv = await storage.createSalaryAdvance({
+        employeeId, month: m, year: y,
+        amount: amt.toFixed(2),
+        note: note?.trim() || null,
+        createdBy: req.session.username ?? null,
+      });
+      // Create expense for this advance
+      await storage.createExpense({
+        title: `Avance salaire - ${emp.fullName}`,
+        amount: amt.toFixed(2),
+        expenseType: "salary_advance",
+        notes: note?.trim() || `Avance ${m}/${y}`,
+        expenseDate: new Date(),
+        relatedOrderId: null,
+        relatedPurchaseId: null,
+      });
+      res.status(201).json(adv);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  app.delete("/api/salary-advances/:id", requireAdmin, async (req, res) => {
+    const ok = await storage.deleteSalaryAdvance(req.params.id);
+    if (!ok) return res.status(404).json({ message: "Avance introuvable" });
+    res.json({ success: true });
+  });
+
+  app.get("/api/salary-payments", requirePermission("payroll.view"), async (req, res) => {
+    const { employeeId, month, year } = req.query as Record<string, string>;
+    const payments = await storage.getSalaryPayments(
+      employeeId || undefined,
+      month ? parseInt(month) : undefined,
+      year ? parseInt(year) : undefined,
+    );
+    res.json(payments);
+  });
+
+  app.post("/api/salary-payments", requirePermission("payroll.pay"), async (req, res) => {
+    try {
+      const { employeeId, month, year, amount, paymentMethod, note } = req.body;
+      if (!employeeId) return res.status(400).json({ message: "Employé requis" });
+      const amt = parseFloat(amount);
+      if (!amt || amt <= 0) return res.status(400).json({ message: "Montant invalide" });
+      const m = parseInt(month); const y = parseInt(year);
+      if (!m || m < 1 || m > 12 || !y) return res.status(400).json({ message: "Mois/année invalide" });
+      if (!paymentMethod?.trim()) return res.status(400).json({ message: "Mode de paiement requis" });
+      const emp = await storage.getEmployeeById(employeeId);
+      if (!emp) return res.status(404).json({ message: "Employé introuvable" });
+      const pmt = await storage.createSalaryPayment({
+        employeeId, month: m, year: y,
+        amount: amt.toFixed(2),
+        paymentMethod: paymentMethod.trim(),
+        note: note?.trim() || null,
+        createdBy: req.session.username ?? null,
+      });
+      // Create expense for this salary payment
+      await storage.createExpense({
+        title: `Salaire - ${emp.fullName}`,
+        amount: amt.toFixed(2),
+        expenseType: "salary",
+        notes: note?.trim() || `Paiement salaire ${m}/${y}`,
+        expenseDate: new Date(),
+        relatedOrderId: null,
+        relatedPurchaseId: null,
+      });
+      res.status(201).json(pmt);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  app.delete("/api/salary-payments/:id", requireAdmin, async (req, res) => {
+    const ok = await storage.deleteSalaryPayment(req.params.id);
+    if (!ok) return res.status(404).json({ message: "Paiement introuvable" });
+    res.json({ success: true });
+  });
+
+  app.get("/api/payroll/summary", requirePermission("payroll.view"), async (req, res) => {
+    const now = new Date();
+    const month = parseInt((req.query.month as string) || String(now.getMonth() + 1));
+    const year = parseInt((req.query.year as string) || String(now.getFullYear()));
+    const emps = await storage.getEmployees();
+    const advances = await storage.getSalaryAdvances(undefined, month, year);
+    const payments = await storage.getSalaryPayments(undefined, month, year);
+    const activeEmps = emps.filter(e => e.status === "active");
+    const rows = activeEmps.map(emp => {
+      const baseSalary = parseFloat(emp.monthlySalary);
+      const empAdvances = advances.filter(a => a.employeeId === emp.id);
+      const empPayments = payments.filter(p => p.employeeId === emp.id);
+      const totalAdvances = empAdvances.reduce((s, a) => s + parseFloat(a.amount), 0);
+      const totalPayments = empPayments.reduce((s, p) => s + parseFloat(p.amount), 0);
+      const remaining = baseSalary - totalAdvances - totalPayments;
+      const hasActivity = totalAdvances > 0 || totalPayments > 0;
+      const status = remaining <= 0 ? "paid" : hasActivity ? "partially_paid" : "unpaid";
+      return { employee: emp, baseSalary, totalAdvances, totalPayments, remaining: Math.max(0, remaining), status };
+    });
+    const totalPayroll = activeEmps.reduce((s, e) => s + parseFloat(e.monthlySalary), 0);
+    const totalPaid = rows.reduce((s, r) => s + r.totalPayments, 0);
+    const totalAdvancesSum = rows.reduce((s, r) => s + r.totalAdvances, 0);
+    const totalRemaining = rows.reduce((s, r) => s + r.remaining, 0);
+    res.json({ month, year, rows, summary: { totalPayroll, totalPaid, totalAdvances: totalAdvancesSum, totalRemaining, activeCount: activeEmps.length } });
+  });
+
   // ==================== ROLES ====================
 
   app.get("/api/roles", requireAdmin, async (_req, res) => {

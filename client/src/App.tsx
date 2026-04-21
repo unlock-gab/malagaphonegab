@@ -36,6 +36,7 @@ import AdminSupplierReturns from "@/pages/admin/AdminSupplierReturns";
 import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminRoles from "@/pages/admin/AdminRoles";
 import AdminServiceSale from "@/pages/admin/AdminServiceSale";
+import AdminSalaries from "@/pages/admin/AdminSalaries";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useEffect } from "react";
@@ -76,6 +77,7 @@ function Router() {
         <Route path="/admin/after-sale" component={AdminAfterSale} />
         <Route path="/admin/pos" component={AdminPOS} />
         <Route path="/admin/service-sales" component={AdminServiceSale} />
+        <Route path="/admin/salaries" component={AdminSalaries} />
         <Route path="/admin/invoices" component={AdminInvoices} />
         <Route path="/admin/partners" component={AdminPartners} />
         <Route path="/admin/supplier-returns" component={AdminSupplierReturns} />

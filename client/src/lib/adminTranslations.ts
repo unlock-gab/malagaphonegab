@@ -46,6 +46,8 @@ const T = {
   nav_settings:         { fr: "Paramètres",            ar: "الإعدادات" },
   nav_pos:              { fr: "Vente comptoire",        ar: "نقطة البيع POS" },
   nav_service_sale:     { fr: "Vente service",          ar: "بيع الخدمات" },
+  nav_hr_section:       { fr: "RH / Personnel",         ar: "الموارد البشرية" },
+  nav_salaries:         { fr: "Salaires",               ar: "الرواتب" },
   nav_invoices:         { fr: "Factures",              ar: "الفواتير" },
   nav_partners:         { fr: "Partenaires",           ar: "الشركاء" },
   nav_supplier_returns: { fr: "Retours fournisseur",   ar: "إرجاع / تبديل المورد" },

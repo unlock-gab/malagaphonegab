@@ -303,12 +303,11 @@ function SidebarFooter({ user, onLogout, t }: { user: any; onLogout: () => void;
 }
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  // ── ALL HOOKS MUST BE DECLARED BEFORE ANY EARLY RETURN ──
   const [location, navigate] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, loading, logout } = useAuth();
   const { t, dir } = useAdminLang();
-
-  const navSections = buildNavSections(t);
 
   const { data: orderCounts = {} } = useQuery<Record<string, number>>({
     queryKey: ["/api/orders/counts"],
@@ -316,24 +315,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     enabled: !!user && user.role === "admin",
   });
 
-  if (loading) return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-center">
-        <Loader2 className="w-8 h-8 text-blue-500 animate-spin mx-auto mb-2" />
-        <p className="text-gray-400 text-sm">{t("loading_checking")}</p>
-      </div>
-    </div>
-  );
-
-  if (!user) { navigate("/admin/login"); return null; }
-
-  const currentLabel = location === "/admin/pos"
-    ? t("nav_pos")
-    : location.startsWith("/admin/orders")
-      ? t("nav_orders")
-      : navSections.flatMap(s => s.items).find(n => n.href === location)?.label || t("nav_dashboard");
-
-  const handleLogout = useCallback(async () => { await logout(); navigate("/admin/login"); }, [logout, navigate]);
+  const handleLogout = useCallback(async () => {
+    await logout();
+    navigate("/admin/login");
+  }, [logout, navigate]);
 
   // ── Idle timeout: 4 minutes (240s). Warning at 30s remaining ──
   const IDLE_TIMEOUT = 240;
@@ -341,10 +326,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const [idleWarning, setIdleWarning] = useState(false);
   const [countdown,   setCountdown]   = useState(WARN_AT);
-  const idleTimer      = useRef<ReturnType<typeof setTimeout>  | null>(null);
-  const countTimer     = useRef<ReturnType<typeof setInterval> | null>(null);
-  const isWarningRef   = useRef(false); // mirrors idleWarning but readable inside closures
+  const idleTimer       = useRef<ReturnType<typeof setTimeout>  | null>(null);
+  const countTimer      = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isWarningRef    = useRef(false);
   const handleLogoutRef = useRef(handleLogout);
+
   useEffect(() => { handleLogoutRef.current = handleLogout; }, [handleLogout]);
 
   const clearTimers = useCallback(() => {
@@ -365,7 +351,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }, (IDLE_TIMEOUT - WARN_AT) * 1000);
   }, [clearTimers]);
 
-  // Trigger logout when countdown hits 0
   useEffect(() => {
     if (idleWarning && countdown === 0) {
       clearTimers();
@@ -382,6 +367,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [clearTimers, resetIdle]);
 
   useEffect(() => {
+    if (!user) return; // Don't start idle timer when not authenticated
     const events = ["mousemove", "keydown", "mousedown", "touchstart", "scroll", "click"];
     const handler = () => resetIdle();
     events.forEach(e => window.addEventListener(e, handler, { passive: true }));
@@ -390,7 +376,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       events.forEach(e => window.removeEventListener(e, handler));
       clearTimers();
     };
-  }, [resetIdle, clearTimers]);
+  }, [user, resetIdle, clearTimers]);
+
+  // ── Computed values (after all hooks) ──
+  const navSections  = buildNavSections(t);
+  const currentLabel = location === "/admin/pos"
+    ? t("nav_pos")
+    : location.startsWith("/admin/orders")
+      ? t("nav_orders")
+      : navSections.flatMap(s => s.items).find(n => n.href === location)?.label || t("nav_dashboard");
+
+  // ── EARLY RETURNS (after ALL hooks) ──
+  if (loading) return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="text-center">
+        <Loader2 className="w-8 h-8 text-blue-500 animate-spin mx-auto mb-2" />
+        <p className="text-gray-400 text-sm">{t("loading_checking")}</p>
+      </div>
+    </div>
+  );
+
+  if (!user) { navigate("/admin/login"); return null; }
 
   return (
     <div className="min-h-screen bg-gray-50 flex" dir={dir}>

@@ -521,7 +521,7 @@ function NewPurchaseForm({ onSave, onCancel, loading, suppliers, products: initi
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label className="text-gray-600 text-sm font-semibold">Date d'achat</Label>
-          <Input type="date" value={form.purchaseDate} onChange={e => setF("purchaseDate", e.target.value)}
+          <Input type="date" lang="fr-FR" value={form.purchaseDate} onChange={e => setF("purchaseDate", e.target.value)}
             className="bg-white border-gray-200 text-gray-900 text-sm" />
         </div>
         <div className="space-y-1.5">

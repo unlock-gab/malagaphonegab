@@ -129,7 +129,7 @@ function EmployeeModal({ open, onClose, initial }: {
             </div>
             <div className="space-y-1">
               <Label>Date début</Label>
-              <Input data-testid="input-emp-startdate" type="date" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} />
+              <Input data-testid="input-emp-startdate" type="date" lang="fr-FR" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} />
             </div>
             <div className="space-y-1">
               <Label>Statut</Label>

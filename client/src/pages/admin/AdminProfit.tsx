@@ -130,12 +130,12 @@ export default function AdminProfit() {
             <div className="flex items-end gap-2">
               <div>
                 <Label className="text-gray-500 text-xs block mb-1">{t("from_date")}</Label>
-                <Input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setActiveFilter("custom"); }}
+                <Input type="date" lang="fr-FR" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setActiveFilter("custom"); }}
                   className="bg-white border-gray-200 text-gray-900 text-sm h-8 w-36" data-testid="input-date-from" />
               </div>
               <div>
                 <Label className="text-gray-500 text-xs block mb-1">{t("to_date")}</Label>
-                <Input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setActiveFilter("custom"); }}
+                <Input type="date" lang="fr-FR" value={dateTo} onChange={e => { setDateTo(e.target.value); setActiveFilter("custom"); }}
                   className="bg-white border-gray-200 text-gray-900 text-sm h-8 w-36" data-testid="input-date-to" />
               </div>
             </div>

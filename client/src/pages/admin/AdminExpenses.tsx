@@ -72,7 +72,7 @@ function ExpenseForm({ initial, onSave, onCancel, loading }: {
       </div>
       <div className="space-y-1.5">
         <Label className="text-gray-600 text-sm font-semibold">{t("date")}</Label>
-        <Input type="date" value={form.expenseDate} onChange={e => set("expenseDate", e.target.value)}
+        <Input type="date" lang="fr-FR" value={form.expenseDate} onChange={e => set("expenseDate", e.target.value)}
           className="bg-white border-gray-200 text-gray-900" data-testid="input-expense-date" />
       </div>
       <div className="space-y-1.5">

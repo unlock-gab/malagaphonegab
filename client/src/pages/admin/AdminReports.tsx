@@ -113,11 +113,11 @@ export default function AdminReports() {
 
             {useCustom && (
               <div className="flex items-center gap-2">
-                <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)}
+                <input type="date" lang="fr-FR" value={customFrom} onChange={e => setCustomFrom(e.target.value)}
                   className="px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 focus:border-blue-400 focus:outline-none"
                   data-testid="input-from-date" />
                 <span className="text-gray-400 text-sm">—</span>
-                <input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)}
+                <input type="date" lang="fr-FR" value={customTo} onChange={e => setCustomTo(e.target.value)}
                   className="px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 focus:border-blue-400 focus:outline-none"
                   data-testid="input-to-date" />
               </div>

@@ -6,7 +6,7 @@ import {
   Menu, Bell, Settings, Truck, Users, LogOut, Loader2,
   ShoppingBag, Building2, Tags, Star, Smartphone,
   TrendingUp, Boxes, Home, Receipt, ChevronRight, BarChart3, Shield, Zap,
-  Languages, FileText, Handshake, RotateCcw, Wrench, UserCheck,
+  Languages, FileText, Handshake, RotateCcw, Wrench, UserCheck, CreditCard,
 } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -63,6 +63,12 @@ function buildNavSections(t: (k: any) => string) {
       label: t("nav_hr_section"),
       items: [
         { icon: UserCheck, label: t("nav_salaries"), href: "/admin/salaries" },
+      ],
+    },
+    {
+      label: "Ventes & Finance",
+      items: [
+        { icon: CreditCard, label: t("nav_client_credit"), href: "/admin/client-credits" },
       ],
     },
     {

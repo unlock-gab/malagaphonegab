@@ -26,6 +26,8 @@ import {
   type Employee, type InsertEmployee,
   type SalaryAdvance, type InsertSalaryAdvance,
   type SalaryPayment, type InsertSalaryPayment,
+  type ClientCredit, type InsertClientCredit,
+  type CreditVersement, type InsertCreditVersement,
   ALL_PERMISSIONS,
   DEFAULT_DELIVERY_PRICES,
   users, products, categories, brands, suppliers, purchases, purchaseItems,
@@ -34,6 +36,7 @@ import {
   afterSaleRecords, phoneUnits, invoiceTemplates, partners, purchasePayments,
   supplierReturns, operationHistory, roles, serviceSales,
   employees, salaryAdvances, salaryPayments,
+  clientCredits, creditVersements,
 } from "@shared/schema";
 import { randomUUID, createHash, scryptSync, randomBytes, timingSafeEqual } from "crypto";
 import { db } from "./db";
@@ -251,6 +254,16 @@ export interface IStorage {
   getSalaryPayments(employeeId?: string, month?: number, year?: number): Promise<SalaryPayment[]>;
   createSalaryPayment(data: InsertSalaryPayment): Promise<SalaryPayment>;
   deleteSalaryPayment(id: string): Promise<boolean>;
+
+  // Client Credit
+  getClientCredits(): Promise<ClientCredit[]>;
+  getClientCreditById(id: string): Promise<ClientCredit | undefined>;
+  createClientCredit(data: InsertClientCredit): Promise<ClientCredit>;
+  updateClientCredit(id: string, data: Partial<ClientCredit>): Promise<ClientCredit | undefined>;
+  getCreditVersements(creditId: string): Promise<CreditVersement[]>;
+  createCreditVersement(data: InsertCreditVersement): Promise<CreditVersement>;
+  deleteCreditVersement(id: string): Promise<boolean>;
+  getTotalActiveClientCredit(): Promise<number>;
 }
 
 export interface TopProductRow {
@@ -280,6 +293,7 @@ export interface DashboardStats {
   netProfit: number;
   partnerShare: number;
   ownerShare: number;
+  totalClientCredit: number;
   recentOrders: Order[];
   lowStockProducts: Product[];
   recentMovements: InventoryMovement[];
@@ -1269,6 +1283,8 @@ export class DatabaseStorage implements IStorage {
       revenue: r.revenue,
     }));
 
+    const totalClientCredit = await this.getTotalActiveClientCredit();
+
     return {
       totalProducts,
       lowStockCount,
@@ -1277,6 +1293,7 @@ export class DatabaseStorage implements IStorage {
       netProfit,
       partnerShare,
       ownerShare,
+      totalClientCredit,
       recentOrders,
       lowStockProducts: fullLowStock.slice(0, 5),
       recentMovements,
@@ -1977,6 +1994,54 @@ export class DatabaseStorage implements IStorage {
   async deleteSalaryPayment(id: string): Promise<boolean> {
     const result = await db.delete(salaryPayments).where(eq(salaryPayments.id, id)).returning();
     return result.length > 0;
+  }
+
+  // ============ CLIENT CREDIT ============
+
+  async getClientCredits(): Promise<ClientCredit[]> {
+    return db.select().from(clientCredits).orderBy(desc(clientCredits.createdAt));
+  }
+
+  async getClientCreditById(id: string): Promise<ClientCredit | undefined> {
+    const [row] = await db.select().from(clientCredits).where(eq(clientCredits.id, id));
+    return row;
+  }
+
+  async createClientCredit(data: InsertClientCredit): Promise<ClientCredit> {
+    const id = randomUUID();
+    const [row] = await db.insert(clientCredits).values({ ...data, id }).returning();
+    return row;
+  }
+
+  async updateClientCredit(id: string, data: Partial<ClientCredit>): Promise<ClientCredit | undefined> {
+    const [row] = await db.update(clientCredits).set({ ...data, updatedAt: new Date() }).where(eq(clientCredits.id, id)).returning();
+    return row;
+  }
+
+  async getCreditVersements(creditId: string): Promise<CreditVersement[]> {
+    return db.select().from(creditVersements).where(eq(creditVersements.creditId, creditId)).orderBy(desc(creditVersements.createdAt));
+  }
+
+  async createCreditVersement(data: InsertCreditVersement): Promise<CreditVersement> {
+    const id = randomUUID();
+    const [row] = await db.insert(creditVersements).values({ ...data, id }).returning();
+    return row;
+  }
+
+  async deleteCreditVersement(id: string): Promise<boolean> {
+    const result = await db.delete(creditVersements).where(eq(creditVersements.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getTotalActiveClientCredit(): Promise<number> {
+    try {
+      const result = await db.select({ total: sql<string>`COALESCE(SUM(remaining_amount),0)` })
+        .from(clientCredits)
+        .where(sql`status NOT IN ('paid','cancelled')`);
+      return parseFloat(result[0]?.total ?? "0");
+    } catch {
+      return 0;
+    }
   }
 }
 

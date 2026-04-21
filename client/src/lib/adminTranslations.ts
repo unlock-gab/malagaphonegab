@@ -48,6 +48,7 @@ const T = {
   nav_service_sale:     { fr: "Vente service",          ar: "بيع الخدمات" },
   nav_hr_section:       { fr: "RH / Personnel",         ar: "الموارد البشرية" },
   nav_salaries:         { fr: "Salaires",               ar: "الرواتب" },
+  nav_client_credit:    { fr: "Crédit Client",          ar: "سلف العملاء" },
   nav_invoices:         { fr: "Factures",              ar: "الفواتير" },
   nav_partners:         { fr: "Partenaires",           ar: "الشركاء" },
   nav_supplier_returns: { fr: "Retours fournisseur",   ar: "إرجاع / تبديل المورد" },

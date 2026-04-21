@@ -271,6 +271,30 @@ app.use((req, res, next) => {
         created_by TEXT,
         created_at TIMESTAMP DEFAULT NOW()
       );
+      CREATE TABLE IF NOT EXISTS client_credits (
+        id VARCHAR PRIMARY KEY,
+        customer_id VARCHAR,
+        customer_name TEXT NOT NULL,
+        customer_phone TEXT,
+        linked_order_id VARCHAR,
+        original_amount NUMERIC(10,2) NOT NULL,
+        total_paid NUMERIC(10,2) NOT NULL DEFAULT 0,
+        remaining_amount NUMERIC(10,2) NOT NULL,
+        status TEXT NOT NULL DEFAULT 'unpaid',
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS credit_versements (
+        id VARCHAR PRIMARY KEY,
+        credit_id VARCHAR NOT NULL REFERENCES client_credits(id),
+        customer_id VARCHAR,
+        amount NUMERIC(10,2) NOT NULL,
+        payment_method TEXT NOT NULL DEFAULT 'cash',
+        note TEXT,
+        created_by TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
     `);
     console.log("[db] Critical tables & columns verified ✓");
   } catch (e) {

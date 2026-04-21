@@ -1331,6 +1331,97 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json({ month, year, rows, summary: { totalPayroll, totalPaid, totalAdvances: totalAdvancesSum, totalRemaining, activeCount: activeEmps.length } });
   });
 
+  // ==================== CLIENT CREDIT ====================
+
+  app.get("/api/client-credits", requirePermission("client_credit.view"), async (_req, res) => {
+    res.json(await storage.getClientCredits());
+  });
+
+  app.post("/api/client-credits", requirePermission("client_credit.create"), async (req, res) => {
+    try {
+      const { customerName, customerPhone, originalAmount, linkedOrderId, customerId, notes } = req.body;
+      if (!customerName?.trim()) return res.status(400).json({ message: "Nom du client requis" });
+      const amt = parseFloat(originalAmount);
+      if (isNaN(amt) || amt <= 0) return res.status(400).json({ message: "Montant invalide" });
+      const credit = await storage.createClientCredit({
+        customerName: customerName.trim(),
+        customerPhone: customerPhone?.trim() || null,
+        customerId: customerId || null,
+        linkedOrderId: linkedOrderId || null,
+        originalAmount: amt.toFixed(2),
+        totalPaid: "0",
+        remainingAmount: amt.toFixed(2),
+        status: "unpaid",
+        notes: notes?.trim() || null,
+      });
+      res.status(201).json(credit);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  app.patch("/api/client-credits/:id", requirePermission("client_credit.update"), async (req, res) => {
+    try {
+      const credit = await storage.getClientCreditById(req.params.id);
+      if (!credit) return res.status(404).json({ message: "Crédit introuvable" });
+      const updates: any = {};
+      if (req.body.notes !== undefined) updates.notes = req.body.notes;
+      if (req.body.status !== undefined) updates.status = req.body.status;
+      if (req.body.customerPhone !== undefined) updates.customerPhone = req.body.customerPhone;
+      const updated = await storage.updateClientCredit(req.params.id, updates);
+      res.json(updated);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  app.patch("/api/client-credits/:id/cancel", requirePermission("client_credit.cancel"), async (req, res) => {
+    try {
+      const credit = await storage.getClientCreditById(req.params.id);
+      if (!credit) return res.status(404).json({ message: "Crédit introuvable" });
+      if (credit.status === "paid") return res.status(400).json({ message: "Crédit déjà soldé" });
+      const updated = await storage.updateClientCredit(req.params.id, { status: "cancelled" });
+      res.json(updated);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  app.get("/api/client-credits/:id/versements", requirePermission("client_credit.view"), async (req, res) => {
+    const versements = await storage.getCreditVersements(req.params.id);
+    res.json(versements);
+  });
+
+  app.post("/api/client-credits/:id/versements", requirePermission("client_credit.add_payment"), async (req, res) => {
+    try {
+      const credit = await storage.getClientCreditById(req.params.id);
+      if (!credit) return res.status(404).json({ message: "Crédit introuvable" });
+      if (credit.status === "paid") return res.status(400).json({ message: "Crédit déjà soldé" });
+      if (credit.status === "cancelled") return res.status(400).json({ message: "Crédit annulé" });
+      const amt = parseFloat(req.body.amount);
+      if (isNaN(amt) || amt <= 0) return res.status(400).json({ message: "Montant invalide" });
+      const remaining = parseFloat(credit.remainingAmount as string);
+      if (amt > remaining + 0.01) return res.status(400).json({ message: `Montant supérieur au restant (${remaining.toFixed(2)} DA)` });
+      const versement = await storage.createCreditVersement({
+        creditId: credit.id,
+        customerId: credit.customerId || null,
+        amount: amt.toFixed(2),
+        paymentMethod: req.body.paymentMethod?.trim() || "cash",
+        note: req.body.note?.trim() || null,
+        createdBy: req.session.username ?? null,
+      });
+      const newPaid = parseFloat(credit.totalPaid as string) + amt;
+      const newRemaining = parseFloat(credit.originalAmount as string) - newPaid;
+      const newStatus = newRemaining <= 0.01 ? "paid" : "partially_paid";
+      await storage.updateClientCredit(credit.id, {
+        totalPaid: newPaid.toFixed(2),
+        remainingAmount: Math.max(0, newRemaining).toFixed(2),
+        status: newStatus,
+      });
+      res.status(201).json(versement);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  app.delete("/api/credit-versements/:id", requirePermission("client_credit.update"), async (req, res) => {
+    const ok = await storage.deleteCreditVersement(req.params.id);
+    if (!ok) return res.status(404).json({ message: "Versement introuvable" });
+    res.json({ success: true });
+  });
+
   // ==================== ROLES ====================
 
   app.get("/api/roles", requireAdmin, async (_req, res) => {

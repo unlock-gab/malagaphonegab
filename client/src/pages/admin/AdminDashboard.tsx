@@ -4,7 +4,7 @@ import { Link } from "wouter";
 import {
   Package, ShoppingCart, TrendingUp, AlertTriangle, DollarSign,
   Users, ArrowUpRight, ArrowDownRight, Clock, Truck, Activity,
-  BarChart3, ChevronRight,
+  BarChart3, ChevronRight, CreditCard,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ORDER_STATUSES } from "@shared/schema";
@@ -19,6 +19,7 @@ interface DashboardStats {
   netProfit: number;
   partnerShare: number;
   ownerShare: number;
+  totalClientCredit: number;
   recentOrders: any[];
   lowStockProducts: any[];
   recentMovements: any[];
@@ -153,10 +154,10 @@ export default function AdminDashboard() {
           {isLoading
             ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)
             : <>
-              <KpiCard icon={Package} label={t("total_products")}      value={stats?.totalProducts ?? 0}              iconBg="bg-slate-100"  iconColor="text-slate-600"  href="/admin/products" />
-              <KpiCard icon={Truck}   label={t("recent_purchases_count")} value={stats?.recentPurchases?.length ?? 0} iconBg="bg-orange-50"  iconColor="text-orange-600" sub={t("purchase_invoice")} href="/admin/purchases" />
-              <KpiCard icon={Users}   label={t("partner_share")}       value={formatCurrency(stats?.partnerShare ?? 0)} iconBg="bg-pink-50"  iconColor="text-pink-600" href="/admin/profit" />
-              <KpiCard icon={Users}   label={t("owner_share")}         value={formatCurrency(stats?.ownerShare ?? 0)}   iconBg="bg-indigo-50" iconColor="text-indigo-600" href="/admin/profit" />
+              <KpiCard icon={Package}    label={t("total_products")}         value={stats?.totalProducts ?? 0}              iconBg="bg-slate-100"  iconColor="text-slate-600"  href="/admin/products" />
+              <KpiCard icon={Truck}      label={t("recent_purchases_count")} value={stats?.recentPurchases?.length ?? 0} iconBg="bg-orange-50"  iconColor="text-orange-600" sub={t("purchase_invoice")} href="/admin/purchases" />
+              <KpiCard icon={Users}      label={t("partner_share")}          value={formatCurrency(stats?.partnerShare ?? 0)} iconBg="bg-pink-50"  iconColor="text-pink-600" href="/admin/profit" />
+              <KpiCard icon={CreditCard} label="Crédit Client"               value={formatCurrency(stats?.totalClientCredit ?? 0)} iconBg="bg-red-50" iconColor="text-red-600" href="/admin/client-credits" />
             </>
           }
         </div>

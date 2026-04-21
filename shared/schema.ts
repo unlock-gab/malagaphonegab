@@ -20,6 +20,7 @@ export const ALL_PERMISSIONS = [
   "users.view", "users.create", "users.update", "users.delete",
   "roles.view", "roles.create", "roles.update", "roles.delete",
   "payroll.view", "payroll.create", "payroll.update", "payroll.pay", "payroll.advance",
+  "client_credit.view", "client_credit.create", "client_credit.update", "client_credit.add_payment", "client_credit.cancel",
 ] as const;
 export type Permission = typeof ALL_PERMISSIONS[number];
 
@@ -39,6 +40,7 @@ export const PERMISSION_GROUPS: { group: string; groupFr: string; perms: Permiss
   { group: "users", groupFr: "Utilisateurs", perms: ["users.view", "users.create", "users.update", "users.delete"] },
   { group: "roles", groupFr: "Rôles & Permissions", perms: ["roles.view", "roles.create", "roles.update", "roles.delete"] },
   { group: "payroll", groupFr: "RH / Salaires", perms: ["payroll.view", "payroll.create", "payroll.update", "payroll.pay", "payroll.advance"] },
+  { group: "client_credit", groupFr: "Crédit Client", perms: ["client_credit.view", "client_credit.create", "client_credit.update", "client_credit.add_payment", "client_credit.cancel"] },
 ];
 
 // ===================== ROLES =====================
@@ -497,6 +499,33 @@ export const salaryPayments = pgTable("salary_payments", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// ===================== CLIENT CREDIT =====================
+export const clientCredits = pgTable("client_credits", {
+  id: varchar("id").primaryKey(),
+  customerId: varchar("customer_id"),
+  customerName: text("customer_name").notNull(),
+  customerPhone: text("customer_phone"),
+  linkedOrderId: varchar("linked_order_id"),
+  originalAmount: numeric("original_amount", { precision: 10, scale: 2 }).notNull(),
+  totalPaid: numeric("total_paid", { precision: 10, scale: 2 }).notNull().default("0"),
+  remainingAmount: numeric("remaining_amount", { precision: 10, scale: 2 }).notNull(),
+  status: text("status").notNull().default("unpaid"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const creditVersements = pgTable("credit_versements", {
+  id: varchar("id").primaryKey(),
+  creditId: varchar("credit_id").notNull().references(() => clientCredits.id),
+  customerId: varchar("customer_id"),
+  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+  paymentMethod: text("payment_method").notNull().default("cash"),
+  note: text("note"),
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // ===================== INSERT SCHEMAS =====================
 export const insertProductSchema = createInsertSchema(products).omit({ id: true, createdAt: true });
 export const insertOrderSchema = createInsertSchema(orders).omit({ id: true, createdAt: true });
@@ -522,6 +551,8 @@ export const insertServiceSaleSchema = createInsertSchema(serviceSales).omit({ i
 export const insertEmployeeSchema = createInsertSchema(employees).omit({ id: true, createdAt: true });
 export const insertSalaryAdvanceSchema = createInsertSchema(salaryAdvances).omit({ id: true, createdAt: true });
 export const insertSalaryPaymentSchema = createInsertSchema(salaryPayments).omit({ id: true, createdAt: true });
+export const insertClientCreditSchema = createInsertSchema(clientCredits).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertCreditVersementSchema = createInsertSchema(creditVersements).omit({ id: true, createdAt: true });
 
 // ===================== TYPES =====================
 export type InsertUser = {
@@ -586,6 +617,10 @@ export type SalaryAdvance = typeof salaryAdvances.$inferSelect;
 export type InsertSalaryAdvance = z.infer<typeof insertSalaryAdvanceSchema>;
 export type SalaryPayment = typeof salaryPayments.$inferSelect;
 export type InsertSalaryPayment = z.infer<typeof insertSalaryPaymentSchema>;
+export type ClientCredit = typeof clientCredits.$inferSelect;
+export type InsertClientCredit = z.infer<typeof insertClientCreditSchema>;
+export type CreditVersement = typeof creditVersements.$inferSelect;
+export type InsertCreditVersement = z.infer<typeof insertCreditVersementSchema>;
 
 // CartItem type for storefront cart
 export type CartItem = {

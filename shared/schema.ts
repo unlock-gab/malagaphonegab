@@ -322,6 +322,9 @@ export const profitRecords = pgTable("profit_records", {
   netProfit: numeric("net_profit", { precision: 10, scale: 2 }).notNull(),
   partnerShare: numeric("partner_share", { precision: 10, scale: 2 }).notNull(),
   ownerShare: numeric("owner_share", { precision: 10, scale: 2 }).notNull(),
+  partnerId: varchar("partner_id"),
+  partnerName: text("partner_name"),
+  partnerPercentage: numeric("partner_percentage", { precision: 5, scale: 2 }),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

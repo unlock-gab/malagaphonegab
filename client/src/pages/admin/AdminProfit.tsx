@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { TrendingUp, DollarSign, Users, BarChart3, Calendar } from "lucide-react";
+import { TrendingUp, DollarSign, Users, BarChart3, Calendar, Handshake } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,13 @@ function formatDate(d: string | null | undefined) {
   return new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric" }).format(new Date(d));
 }
 function shortId(id: string) { return "#" + id.slice(-6).toUpperCase(); }
+
+const PARTNER_COLORS = [
+  { bg: "bg-pink-50",   border: "border-pink-100",   text: "text-pink-700",   badge: "bg-pink-100 text-pink-700" },
+  { bg: "bg-violet-50", border: "border-violet-100", text: "text-violet-700", badge: "bg-violet-100 text-violet-700" },
+  { bg: "bg-orange-50", border: "border-orange-100", text: "text-orange-700", badge: "bg-orange-100 text-orange-700" },
+  { bg: "bg-cyan-50",   border: "border-cyan-100",   text: "text-cyan-700",   badge: "bg-cyan-100 text-cyan-700" },
+];
 
 function KPI({ icon: Icon, label, value, sub, iconBg, iconColor }: {
   icon: any; label: string; value: string; sub?: string; iconBg: string; iconColor: string;
@@ -35,6 +42,14 @@ function KPI({ icon: Icon, label, value, sub, iconBg, iconColor }: {
   );
 }
 
+interface PartnerBreakdown {
+  partnerId: string;
+  partnerName: string;
+  partnerPercentage: number;
+  totalShare: number;
+  recordCount: number;
+}
+
 export default function AdminProfit() {
   const { t } = useAdminLang();
   const [dateFrom, setDateFrom] = useState("");
@@ -42,6 +57,9 @@ export default function AdminProfit() {
   const [activeFilter, setActiveFilter] = useState<"all" | "month" | "custom">("all");
 
   const { data: records = [], isLoading } = useQuery<ProfitRecord[]>({ queryKey: ["/api/profit"] });
+  const { data: partnersBreakdown = [], isLoading: loadingPartners } = useQuery<PartnerBreakdown[]>({
+    queryKey: ["/api/profit/partners-breakdown"],
+  });
 
   const thisMonth = () => {
     const now = new Date();
@@ -71,6 +89,25 @@ export default function AdminProfit() {
   const totalPartner   = filtered.reduce((s, r) => s + parseFloat(r.partnerShare as string || "0"), 0);
   const totalOwner     = filtered.reduce((s, r) => s + parseFloat(r.ownerShare as string || "0"), 0);
   const margin = totalRevenue > 0 ? ((totalNetProfit / totalRevenue) * 100).toFixed(1) : "0";
+
+  // Filter partners breakdown by date-filtered records
+  const filteredPartnersBreakdown = useMemo(() => {
+    if (!dateFrom && !dateTo) return partnersBreakdown;
+    const byPartner: Record<string, PartnerBreakdown> = {};
+    for (const r of filtered) {
+      const pid = (r as any).partnerId || "__none__";
+      const pname = (r as any).partnerName || "Sans partenaire";
+      const pct = parseFloat((r as any).partnerPercentage) || 33.33;
+      const share = parseFloat(r.partnerShare as string) || 0;
+      if (!byPartner[pid]) byPartner[pid] = { partnerId: pid, partnerName: pname, partnerPercentage: pct, totalShare: 0, recordCount: 0 };
+      byPartner[pid].totalShare += share;
+      byPartner[pid].recordCount += 1;
+    }
+    return Object.values(byPartner);
+  }, [filtered, dateFrom, dateTo, partnersBreakdown]);
+
+  // Real partners only (exclude __none__)
+  const realPartners = filteredPartnersBreakdown.filter(p => p.partnerId !== "__none__");
 
   return (
     <AdminLayout>
@@ -119,10 +156,46 @@ export default function AdminProfit() {
           {isLoading ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />) : <>
             <KPI icon={DollarSign} label={t("total_revenue")} value={formatCurrency(totalRevenue)} sub={`${filtered.length} ${t("nav_orders")}`} iconBg="bg-emerald-50" iconColor="text-emerald-600" />
             <KPI icon={TrendingUp} label={t("net_profit")} value={formatCurrency(totalNetProfit)} sub={`${t("margin")} ${margin}%`} iconBg="bg-teal-50" iconColor="text-teal-600" />
-            <KPI icon={Users} label={t("partner_share")} value={formatCurrency(totalPartner)} sub="33.33%" iconBg="bg-pink-50" iconColor="text-pink-600" />
-            <KPI icon={Users} label={t("owner_share")} value={formatCurrency(totalOwner)} sub="66.67%" iconBg="bg-indigo-50" iconColor="text-indigo-600" />
+            <KPI icon={Users} label={t("partner_share")} value={formatCurrency(totalPartner)} sub={realPartners.length > 0 ? `${realPartners.length} partenaire(s)` : "33.33%"} iconBg="bg-pink-50" iconColor="text-pink-600" />
+            <KPI icon={Users} label={t("owner_share")} value={formatCurrency(totalOwner)} sub="Part propriétaire" iconBg="bg-indigo-50" iconColor="text-indigo-600" />
           </>}
         </div>
+
+        {/* Partners Breakdown */}
+        {(loadingPartners || realPartners.length > 0) && (
+          <div className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+            <h3 className="text-gray-800 text-sm font-bold flex items-center gap-2 mb-4 pb-2.5 border-b border-gray-100">
+              <Handshake className="w-4 h-4 text-violet-600" />
+              Répartition par partenaire
+            </h3>
+            {loadingPartners ? (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-lg" />)}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {realPartners.map((p, idx) => {
+                  const col = PARTNER_COLORS[idx % PARTNER_COLORS.length];
+                  return (
+                    <div key={p.partnerId} className={`${col.bg} border ${col.border} rounded-xl p-3`} data-testid={`card-partner-${p.partnerId}`}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-black text-xs ${col.badge}`}>
+                          {p.partnerName.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-xs font-bold truncate ${col.text}`}>{p.partnerName}</p>
+                          <p className="text-gray-400 text-[10px]">{p.partnerPercentage}%</p>
+                        </div>
+                      </div>
+                      <p className={`text-lg font-black ${col.text}`}>{formatCurrency(p.totalShare)}</p>
+                      <p className="text-gray-400 text-[10px] mt-0.5">{p.recordCount} commande(s)</p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Summary */}
@@ -154,14 +227,35 @@ export default function AdminProfit() {
                   </div>
                   <span className="text-teal-700 font-black">{formatCurrency(totalNetProfit)}</span>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="p-2.5 bg-pink-50 border border-pink-100 rounded-lg text-center">
-                    <p className="text-pink-600 text-[10px] font-semibold mb-1">{t("partner_share")}</p>
-                    <p className="text-pink-700 font-black text-sm">{formatCurrency(totalPartner)}</p>
-                  </div>
-                  <div className="p-2.5 bg-indigo-50 border border-indigo-100 rounded-lg text-center">
-                    <p className="text-indigo-600 text-[10px] font-semibold mb-1">{t("owner_share")}</p>
-                    <p className="text-indigo-700 font-black text-sm">{formatCurrency(totalOwner)}</p>
+                <div className="space-y-1.5">
+                  {realPartners.length > 0 ? (
+                    realPartners.map((p, idx) => {
+                      const col = PARTNER_COLORS[idx % PARTNER_COLORS.length];
+                      return (
+                        <div key={p.partnerId} className={`flex items-center justify-between p-2.5 ${col.bg} border ${col.border} rounded-lg`}>
+                          <div>
+                            <p className={`text-[10px] font-semibold ${col.text}`}>{p.partnerName}</p>
+                            <p className="text-gray-400 text-[9px]">{p.partnerPercentage}%</p>
+                          </div>
+                          <p className={`font-black text-sm ${col.text}`}>{formatCurrency(p.totalShare)}</p>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="p-2.5 bg-pink-50 border border-pink-100 rounded-lg text-center">
+                        <p className="text-pink-600 text-[10px] font-semibold mb-1">{t("partner_share")}</p>
+                        <p className="text-pink-700 font-black text-sm">{formatCurrency(totalPartner)}</p>
+                      </div>
+                      <div className="p-2.5 bg-indigo-50 border border-indigo-100 rounded-lg text-center">
+                        <p className="text-indigo-600 text-[10px] font-semibold mb-1">{t("owner_share")}</p>
+                        <p className="text-indigo-700 font-black text-sm">{formatCurrency(totalOwner)}</p>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between p-2.5 bg-indigo-50 border border-indigo-100 rounded-lg text-xs">
+                    <span className="text-indigo-700 font-semibold">{t("owner_share")}</span>
+                    <span className="text-indigo-700 font-black">{formatCurrency(totalOwner)}</span>
                   </div>
                 </div>
               </div>
@@ -193,13 +287,17 @@ export default function AdminProfit() {
                         <th className="text-start p-3 font-semibold hidden md:table-cell">{t("cost_col")}</th>
                         <th className="text-start p-3 font-semibold hidden lg:table-cell">{t("expenses_col")}</th>
                         <th className="text-start p-3 font-semibold">{t("net_profit_col")}</th>
+                        <th className="text-start p-3 font-semibold hidden sm:table-cell">Partenaire</th>
                         <th className="text-start p-3 font-semibold hidden sm:table-cell">{t("partner_col")}</th>
                         <th className="text-start p-3 font-semibold hidden md:table-cell">{t("owner_col")}</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {filtered.map(r => {
+                      {filtered.map((r, idx) => {
                         const np = parseFloat(r.netProfit as string);
+                        const pname = (r as any).partnerName as string | null;
+                        const pIdx = pname ? realPartners.findIndex(p => p.partnerName === pname) : -1;
+                        const col = pIdx >= 0 ? PARTNER_COLORS[pIdx % PARTNER_COLORS.length] : null;
                         return (
                           <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50/70 transition-colors" data-testid={`row-profit-${r.id}`}>
                             <td className="p-3 font-mono text-gray-400">{shortId(r.orderId)}</td>
@@ -221,6 +319,13 @@ export default function AdminProfit() {
                                 {formatCurrency(np)}
                               </span>
                             </td>
+                            <td className="p-3 hidden sm:table-cell">
+                              {pname && col ? (
+                                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${col.badge}`}>{pname}</span>
+                              ) : (
+                                <span className="text-gray-300 text-[10px]">—</span>
+                              )}
+                            </td>
                             <td className="p-3 text-pink-600 hidden sm:table-cell">{formatCurrency(parseFloat(r.partnerShare as string))}</td>
                             <td className="p-3 text-indigo-600 hidden md:table-cell">{formatCurrency(parseFloat(r.ownerShare as string))}</td>
                           </tr>
@@ -234,6 +339,7 @@ export default function AdminProfit() {
                           {totalExpenses > 0 ? `− ${formatCurrency(totalExpenses)}` : "—"}
                         </td>
                         <td className="p-3 text-teal-700">{formatCurrency(totalNetProfit)}</td>
+                        <td className="p-3 hidden sm:table-cell">—</td>
                         <td className="p-3 text-pink-600 hidden sm:table-cell">{formatCurrency(totalPartner)}</td>
                         <td className="p-3 text-indigo-600 hidden md:table-cell">{formatCurrency(totalOwner)}</td>
                       </tr>

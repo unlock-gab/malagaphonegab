@@ -1081,10 +1081,9 @@ export class DatabaseStorage implements IStorage {
 
       const items = await this.getOrderItems(orderId);
 
-      // Fix 5: Revenue = product sale only (subtotal), delivery fee is a pass-through cost to shipper
+      // Revenue = product sale only (subtotal), delivery fee is a pass-through cost to shipper
       const totalCollected = parseFloat(order.total as string) || 0;
       const deliveryCost = parseFloat(order.deliveryPrice as string) || 0;
-      // Revenue from products only — delivery fee goes entirely to the delivery company
       const revenue = totalCollected - deliveryCost;
 
       // Product cost from orderItems snapshot; fallback for single-product orders
@@ -1108,8 +1107,35 @@ export class DatabaseStorage implements IStorage {
 
       const grossProfit = revenue - productCost;
       const netProfit = grossProfit - orderExpenses;
-      const partnerShare = netProfit * 0.3333;
-      const ownerShare = netProfit * 0.6667;
+
+      // Resolve partner from the purchase linked to the first item's product
+      let resolvedPartnerId: string | null = null;
+      let resolvedPartnerName: string | null = null;
+      let resolvedPartnerPct: number = 33.33; // default fallback
+
+      // Try to find the purchase that supplied the products in this order
+      const allPurchases = await this.getPurchases();
+      const productIds = items.length > 0
+        ? items.map(i => i.productId).filter(Boolean)
+        : order.productId ? [order.productId] : [];
+
+      if (productIds.length > 0) {
+        // Find most recent purchase containing any of these products that has a partner
+        const purchasesWithPartner = allPurchases.filter(p => p.partnerId && p.partnerName);
+        for (const pur of purchasesWithPartner.reverse()) {
+          const purItems = await this.getPurchaseItems(pur.id);
+          const hasMatch = purItems.some(pi => pi.productId && productIds.includes(pi.productId));
+          if (hasMatch) {
+            resolvedPartnerId = pur.partnerId ?? null;
+            resolvedPartnerName = pur.partnerName ?? null;
+            resolvedPartnerPct = parseFloat(pur.partnerPercentage as string) || 33.33;
+            break;
+          }
+        }
+      }
+
+      const partnerShare = netProfit * (resolvedPartnerPct / 100);
+      const ownerShare = netProfit * (1 - resolvedPartnerPct / 100);
 
       await this.createProfitRecord({
         orderId,
@@ -1120,6 +1146,9 @@ export class DatabaseStorage implements IStorage {
         netProfit: netProfit.toFixed(2),
         partnerShare: partnerShare.toFixed(2),
         ownerShare: ownerShare.toFixed(2),
+        partnerId: resolvedPartnerId,
+        partnerName: resolvedPartnerName,
+        partnerPercentage: resolvedPartnerPct.toFixed(2),
       });
     } catch (e) {
       console.error("[profit] Failed to create profit snapshot:", e);

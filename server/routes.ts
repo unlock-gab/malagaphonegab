@@ -746,6 +746,25 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json([...enriched, ...serviceEntries]);
   });
 
+  // Partners breakdown: sum of partnerShare grouped by partner
+  app.get("/api/profit/partners-breakdown", requireAdmin, async (_req, res) => {
+    const records = await storage.getProfitRecords();
+    const byPartner: Record<string, { partnerId: string; partnerName: string; partnerPercentage: number; totalShare: number; recordCount: number }> = {};
+
+    for (const r of records) {
+      const pid = (r.partnerId as string) || "__none__";
+      const pname = (r.partnerName as string) || "Sans partenaire";
+      const pct = parseFloat(r.partnerPercentage as string) || 33.33;
+      const share = parseFloat(r.partnerShare as string) || 0;
+      if (!byPartner[pid]) {
+        byPartner[pid] = { partnerId: pid, partnerName: pname, partnerPercentage: pct, totalShare: 0, recordCount: 0 };
+      }
+      byPartner[pid].totalShare += share;
+      byPartner[pid].recordCount += 1;
+    }
+    res.json(Object.values(byPartner));
+  });
+
   // ==================== CONFIRMATEURS ====================
 
   app.get("/api/confirmateurs", requireAdmin, async (_req, res) => {

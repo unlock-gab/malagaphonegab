@@ -336,45 +336,50 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const handleLogout = useCallback(async () => { await logout(); navigate("/admin/login"); }, [logout, navigate]);
 
   // ── Idle timeout: 4 minutes (240s). Warning at 30s remaining ──
-  const IDLE_TIMEOUT = 240; // seconds
-  const WARN_AT     = 30;   // seconds before logout
+  const IDLE_TIMEOUT = 240;
+  const WARN_AT      = 30;
 
   const [idleWarning, setIdleWarning] = useState(false);
   const [countdown,   setCountdown]   = useState(WARN_AT);
-  const idleTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const countTimer   = useRef<ReturnType<typeof setInterval> | null>(null);
+  const idleTimer      = useRef<ReturnType<typeof setTimeout>  | null>(null);
+  const countTimer     = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isWarningRef   = useRef(false); // mirrors idleWarning but readable inside closures
+  const handleLogoutRef = useRef(handleLogout);
+  useEffect(() => { handleLogoutRef.current = handleLogout; }, [handleLogout]);
 
-  const clearTimers = () => {
+  const clearTimers = useCallback(() => {
     if (idleTimer.current)  { clearTimeout(idleTimer.current);  idleTimer.current  = null; }
     if (countTimer.current) { clearInterval(countTimer.current); countTimer.current = null; }
-  };
+  }, []);
 
   const resetIdle = useCallback(() => {
-    if (idleWarning) return; // don't reset while warning is showing
+    if (isWarningRef.current) return;
     clearTimers();
     idleTimer.current = setTimeout(() => {
+      isWarningRef.current = true;
       setIdleWarning(true);
       setCountdown(WARN_AT);
       countTimer.current = setInterval(() => {
-        setCountdown(prev => {
-          if (prev <= 1) {
-            clearInterval(countTimer.current!);
-            countTimer.current = null;
-            handleLogout();
-            return 0;
-          }
-          return prev - 1;
-        });
+        setCountdown(prev => (prev > 0 ? prev - 1 : 0));
       }, 1000);
     }, (IDLE_TIMEOUT - WARN_AT) * 1000);
-  }, [idleWarning, handleLogout]);
+  }, [clearTimers]);
 
-  const stayConnected = () => {
+  // Trigger logout when countdown hits 0
+  useEffect(() => {
+    if (idleWarning && countdown === 0) {
+      clearTimers();
+      handleLogoutRef.current();
+    }
+  }, [idleWarning, countdown, clearTimers]);
+
+  const stayConnected = useCallback(() => {
     clearTimers();
+    isWarningRef.current = false;
     setIdleWarning(false);
     setCountdown(WARN_AT);
     resetIdle();
-  };
+  }, [clearTimers, resetIdle]);
 
   useEffect(() => {
     const events = ["mousemove", "keydown", "mousedown", "touchstart", "scroll", "click"];
@@ -385,7 +390,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       events.forEach(e => window.removeEventListener(e, handler));
       clearTimers();
     };
-  }, [resetIdle]);
+  }, [resetIdle, clearTimers]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex" dir={dir}>

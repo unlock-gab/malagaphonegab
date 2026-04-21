@@ -1188,6 +1188,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         cashierName: req.session.name ?? null,
         cashierUsername: req.session.username ?? null,
       });
+      logOp(
+        "service_sale",
+        "service-sales",
+        sale.id,
+        `Vente service: ${sale.serviceName}${sale.customerName ? ` — ${sale.customerName}` : ""}`,
+        sale.amount,
+        req.session.username ?? null,
+      );
       res.status(201).json(sale);
     } catch (e: any) { res.status(400).json({ message: e.message }); }
   });
@@ -1575,11 +1583,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           const order = await storage.getOrder(op.recordId);
           if (!order) throw new Error("Commande introuvable");
           if (["returned", "cancelled"].includes(order.status)) throw new Error("La commande est déjà annulée ou retournée");
-          if (["new", "confirmed"].includes(order.status)) {
-            await storage.updateOrder(op.recordId, { status: "cancelled" });
-          } else {
-            await storage.updateOrderStatus(op.recordId, "returned");
-          }
+          // Always use "returned" so updateOrderStatus handles stock restoration + profit deletion automatically
+          await storage.updateOrderStatus(op.recordId, "returned");
+          // Ensure profit record is removed (updateOrderStatus deletes it, this is a safety net)
           await storage.deleteProfitRecordByOrderId(op.recordId);
           break;
         }
@@ -1683,6 +1689,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         case "partner_delete": {
           if (!meta.id) throw new Error("Données de restauration manquantes");
           await storage.restorePartner(meta);
+          break;
+        }
+        case "service_sale": {
+          const ok = await storage.deleteServiceSale(op.recordId);
+          if (!ok) throw new Error("Vente service introuvable ou déjà supprimée");
           break;
         }
         default:

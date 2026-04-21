@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Undo2, Clock, ShoppingCart, Package, Warehouse, RotateCcw, ArrowLeftRight, AlertTriangle, X, Check, Tag, Cpu, Building2, Wallet, Wrench, Users } from "lucide-react";
+import { Undo2, Clock, ShoppingCart, Package, Warehouse, RotateCcw, ArrowLeftRight, AlertTriangle, X, Check, Tag, Cpu, Building2, Wallet, Wrench, Users, Scissors } from "lucide-react";
 import { useAdminLang } from "@/context/AdminLangContext";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -48,6 +48,7 @@ function opIcon(type: string) {
     case "after_sale_create": return <Wrench className="w-3.5 h-3.5 text-gray-600" />;
     case "partner_create":
     case "partner_delete": return <Users className="w-3.5 h-3.5 text-cyan-500" />;
+    case "service_sale": return <Scissors className="w-3.5 h-3.5 text-purple-500" />;
     default: return <Clock className="w-3.5 h-3.5 text-gray-400" />;
   }
 }
@@ -75,6 +76,7 @@ function opModuleLabel(type: string): string {
     case "after_sale_create": return "SAV";
     case "partner_create":
     case "partner_delete": return "Partenaires";
+    case "service_sale": return "Services";
     default: return type;
   }
 }
@@ -122,6 +124,8 @@ function undoDescription(op: OperationHistory): string {
       return "Le partenaire sera définitivement supprimé.";
     case "partner_delete":
       return "Le partenaire supprimé sera restauré.";
+    case "service_sale":
+      return "La vente de service sera définitivement supprimée et son montant retiré des recettes.";
     default:
       return "Cette opération sera annulée.";
   }
@@ -152,6 +156,8 @@ export default function RetourButton() {
       queryClient.invalidateQueries({ queryKey: ["/api/purchases/payments-summary"] });
       queryClient.invalidateQueries({ queryKey: ["/api/profit"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/service-sales"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       setConfirmOp(null);
       setOpen(false);
     },

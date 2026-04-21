@@ -8,11 +8,15 @@ import {
   TrendingUp, Boxes, Home, Receipt, ChevronRight, BarChart3, Shield, Zap,
   Languages, FileText, Handshake, RotateCcw, Wrench, UserCheck, CreditCard,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { useAdminLang } from "@/context/AdminLangContext";
 import { ORDER_STATUSES } from "@shared/schema";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 function buildNavSections(t: (k: any) => string) {
   return [
@@ -329,7 +333,59 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       ? t("nav_orders")
       : navSections.flatMap(s => s.items).find(n => n.href === location)?.label || t("nav_dashboard");
 
-  const handleLogout = async () => { await logout(); navigate("/admin/login"); };
+  const handleLogout = useCallback(async () => { await logout(); navigate("/admin/login"); }, [logout, navigate]);
+
+  // ── Idle timeout: 4 minutes (240s). Warning at 30s remaining ──
+  const IDLE_TIMEOUT = 240; // seconds
+  const WARN_AT     = 30;   // seconds before logout
+
+  const [idleWarning, setIdleWarning] = useState(false);
+  const [countdown,   setCountdown]   = useState(WARN_AT);
+  const idleTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const countTimer   = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const clearTimers = () => {
+    if (idleTimer.current)  { clearTimeout(idleTimer.current);  idleTimer.current  = null; }
+    if (countTimer.current) { clearInterval(countTimer.current); countTimer.current = null; }
+  };
+
+  const resetIdle = useCallback(() => {
+    if (idleWarning) return; // don't reset while warning is showing
+    clearTimers();
+    idleTimer.current = setTimeout(() => {
+      setIdleWarning(true);
+      setCountdown(WARN_AT);
+      countTimer.current = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(countTimer.current!);
+            countTimer.current = null;
+            handleLogout();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }, (IDLE_TIMEOUT - WARN_AT) * 1000);
+  }, [idleWarning, handleLogout]);
+
+  const stayConnected = () => {
+    clearTimers();
+    setIdleWarning(false);
+    setCountdown(WARN_AT);
+    resetIdle();
+  };
+
+  useEffect(() => {
+    const events = ["mousemove", "keydown", "mousedown", "touchstart", "scroll", "click"];
+    const handler = () => resetIdle();
+    events.forEach(e => window.addEventListener(e, handler, { passive: true }));
+    resetIdle();
+    return () => {
+      events.forEach(e => window.removeEventListener(e, handler));
+      clearTimers();
+    };
+  }, [resetIdle]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex" dir={dir}>
@@ -395,6 +451,43 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         <main className="p-4 sm:p-6 min-h-[calc(100vh-3rem)]">{children}</main>
       </div>
+
+      {/* Idle timeout warning dialog */}
+      <Dialog open={idleWarning} onOpenChange={() => {}}>
+        <DialogContent className="max-w-sm text-center" onInteractOutside={e => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex flex-col items-center gap-3">
+              <div className="w-14 h-14 rounded-full bg-amber-50 border-2 border-amber-200 flex items-center justify-center">
+                <LogOut className="w-6 h-6 text-amber-500" />
+              </div>
+              <span className="text-base font-bold text-gray-800">
+                Déconnexion automatique
+              </span>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-3">
+            <p className="text-sm text-gray-500 mb-4">
+              Aucune activité détectée. Vous serez déconnecté dans :
+            </p>
+            <div className="w-16 h-16 rounded-full bg-amber-500 flex items-center justify-center mx-auto shadow-md">
+              <span className="text-2xl font-black text-white" data-testid="idle-countdown">
+                {countdown}
+              </span>
+            </div>
+            <p className="text-xs text-gray-400 mt-3">secondes</p>
+          </div>
+          <DialogFooter className="justify-center gap-2 sm:justify-center">
+            <Button variant="outline" onClick={handleLogout} data-testid="button-logout-now"
+              className="text-xs border-gray-200 text-gray-500 hover:text-red-600">
+              Se déconnecter
+            </Button>
+            <Button onClick={stayConnected} data-testid="button-stay-connected"
+              className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-5">
+              Rester connecté
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

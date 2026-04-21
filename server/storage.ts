@@ -1210,6 +1210,7 @@ export class DatabaseStorage implements IStorage {
       recentMovements,
       recentPurchases,
       allExpenses,
+      allServiceSales,
     ] = await Promise.all([
       db.select({ id: products.id, stock: products.stock, minStock: products.minStock, name: products.name,
         price: products.price, costPrice: products.costPrice, image: products.image,
@@ -1221,6 +1222,7 @@ export class DatabaseStorage implements IStorage {
       db.select().from(inventoryMovements).orderBy(desc(inventoryMovements.createdAt)).limit(8),
       db.select().from(purchases).orderBy(desc(purchases.createdAt)).limit(5),
       db.select().from(expenses),
+      db.select({ id: serviceSales.id, amount: serviceSales.amount, createdAt: serviceSales.createdAt }).from(serviceSales),
     ]);
 
     const totalProducts = allProducts.length;
@@ -1228,15 +1230,17 @@ export class DatabaseStorage implements IStorage {
     const lowStockCount = lowStockProducts.length;
     const newOrdersCount = allOrders.filter(o => o.status === "new").length;
 
-    // Revenue = product subtotal only (delivery fees excluded from chiffre d'affaires)
-    // Use profit records which already correctly exclude delivery from revenue
-    const totalRevenue = allProfitRecords.reduce((sum, r) => sum + parseFloat(r.revenue as string || "0"), 0);
+    // Revenue = product sales + service sales (delivery fees excluded)
+    const productRevenue = allProfitRecords.reduce((sum, r) => sum + parseFloat(r.revenue as string || "0"), 0);
+    const serviceRevenue = allServiceSales.reduce((sum, s) => sum + parseFloat(s.amount as string || "0"), 0);
+    const totalRevenue = productRevenue + serviceRevenue;
 
     // General expenses (not linked to a specific order) must be deducted from total profit
     const generalExpenses = allExpenses.filter(e => !e.relatedOrderId);
     const generalExpensesTotal = generalExpenses.reduce((sum, e) => sum + parseFloat(e.amount as string || "0"), 0);
 
-    const grossNetProfit = allProfitRecords.reduce((sum, p) => sum + parseFloat(p.netProfit as string || "0"), 0);
+    // Service sales are 100% margin (cost=0), so they count fully as net profit
+    const grossNetProfit = allProfitRecords.reduce((sum, p) => sum + parseFloat(p.netProfit as string || "0"), 0) + serviceRevenue;
     const netProfit = grossNetProfit - generalExpensesTotal;
     const partnerShare = netProfit * 0.3333;
     const ownerShare = netProfit * 0.6667;
@@ -1257,6 +1261,15 @@ export class DatabaseStorage implements IStorage {
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
       if (!monthlyMap[key]) monthlyMap[key] = { revenue: 0, profit: 0 };
       monthlyMap[key].profit += parseFloat(p.netProfit as string || "0");
+    }
+    // Include service sales in monthly revenue + profit (100% margin)
+    for (const s of allServiceSales) {
+      const d = new Date(s.createdAt!);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      if (!monthlyMap[key]) monthlyMap[key] = { revenue: 0, profit: 0 };
+      const amt = parseFloat(s.amount as string || "0");
+      monthlyMap[key].revenue += amt;
+      monthlyMap[key].profit  += amt;
     }
     // Deduct general expenses from their respective month's profit
     for (const e of generalExpenses) {

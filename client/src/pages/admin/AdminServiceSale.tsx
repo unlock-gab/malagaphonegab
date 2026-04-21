@@ -49,7 +49,7 @@ const PAYMENT_LABEL: Record<string, string> = {
 
 function fmt(n: string | number | null | undefined) {
   const v = parseFloat(String(n ?? 0));
-  return isNaN(v) ? "0.00" : v.toFixed(2);
+  return (isNaN(v) ? "0.00" : new Intl.NumberFormat("fr-FR", { style: "decimal", maximumFractionDigits: 2 }).format(v)) + " DA";
 }
 
 export default function AdminServiceSale() {
@@ -190,7 +190,7 @@ export default function AdminServiceSale() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="amount">Montant (MAD) *</Label>
+                  <Label htmlFor="amount">Montant (DA) *</Label>
                   <Input
                     id="amount"
                     data-testid="input-amount"
@@ -264,14 +264,14 @@ export default function AdminServiceSale() {
           <Card className="bg-emerald-50 border-emerald-100">
             <CardContent className="p-4">
               <p className="text-xs text-emerald-500 font-medium mb-1">Chiffre d'affaires</p>
-              <p className="text-2xl font-bold text-emerald-700" data-testid="stat-total-revenue">{fmt(totalRevenue)} MAD</p>
+              <p className="text-2xl font-bold text-emerald-700" data-testid="stat-total-revenue">{fmt(totalRevenue)}</p>
             </CardContent>
           </Card>
           <Card className="bg-blue-50 border-blue-100 col-span-2 md:col-span-1">
             <CardContent className="p-4">
               <p className="text-xs text-blue-500 font-medium mb-1">Panier moyen</p>
               <p className="text-2xl font-bold text-blue-700" data-testid="stat-avg">
-                {filtered.length ? fmt(totalRevenue / filtered.length) : "0.00"} MAD
+                {filtered.length ? fmt(totalRevenue / filtered.length) : "0,00 DA"}
               </p>
             </CardContent>
           </Card>
@@ -333,7 +333,7 @@ export default function AdminServiceSale() {
                       </div>
                       <div className="flex items-center gap-3 flex-shrink-0">
                         <span className="font-bold text-emerald-700 text-base" data-testid={`text-amount-${sale.id}`}>
-                          {fmt(sale.amount)} MAD
+                          {fmt(sale.amount)}
                         </span>
                         {isAdmin && (
                           <Button

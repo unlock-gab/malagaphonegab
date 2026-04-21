@@ -23,14 +23,16 @@ function formatCurrency(v: number) {
 }
 function formatDate(d: string | null | undefined) {
   if (!d) return "—";
-  return new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric" }).format(new Date(d));
+  const date = new Date(d);
+  const datePart = new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(date);
+  return datePart;
 }
 function formatDateTime(d: string | null | undefined) {
   if (!d) return "—";
-  return new Intl.DateTimeFormat("fr-FR", {
-    day: "numeric", month: "short", year: "numeric",
-    hour: "2-digit", minute: "2-digit",
-  }).format(new Date(d));
+  const date = new Date(d);
+  const datePart = new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(date);
+  const timePart = new Intl.DateTimeFormat("fr-FR", { hour: "2-digit", minute: "2-digit" }).format(date);
+  return `${datePart} · ${timePart}`;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
@@ -1411,7 +1413,7 @@ export default function AdminPurchases() {
                   <tr className="bg-gray-50 border-b border-gray-100 text-gray-500 text-xs">
                     <th className="text-right p-3 font-semibold">Fournisseur</th>
                     <th className="text-right p-3 font-semibold w-24 hidden sm:table-cell">Référence</th>
-                    <th className="text-right p-3 font-semibold w-28 hidden md:table-cell">Date</th>
+                    <th className="text-right p-3 font-semibold w-36 hidden md:table-cell">Date / Heure</th>
                     <th className="text-right p-3 font-semibold w-28">Total</th>
                     <th className="text-right p-3 font-semibold w-24 hidden md:table-cell">Payé</th>
                     <th className="text-right p-3 font-semibold w-24 hidden md:table-cell">Restant</th>
@@ -1466,7 +1468,12 @@ export default function AdminPurchases() {
                           </div>
                         </td>
                         <td className="p-3 text-right text-gray-400 text-xs font-mono hidden sm:table-cell w-24 whitespace-nowrap">{pur.referenceNumber ?? "—"}</td>
-                        <td className="p-3 text-right text-gray-400 text-xs hidden md:table-cell w-28 whitespace-nowrap">{formatDate(pur.purchaseDate?.toString())}</td>
+                        <td className="p-3 text-right text-gray-400 text-xs hidden md:table-cell w-36 whitespace-nowrap">
+                          <div className="flex flex-col items-end gap-0.5">
+                            <span>{formatDate(pur.purchaseDate?.toString())}</span>
+                            {pur.createdAt && <span className="text-[10px] text-gray-400">{new Intl.DateTimeFormat("fr-FR", { hour: "2-digit", minute: "2-digit" }).format(new Date(pur.createdAt.toString()))}</span>}
+                          </div>
+                        </td>
                         <td className="p-3 text-right w-28 whitespace-nowrap">
                           <span className="text-blue-700 font-bold text-sm">{formatCurrency(purTotal)}</span>
                         </td>

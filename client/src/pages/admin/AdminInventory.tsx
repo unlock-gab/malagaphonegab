@@ -23,7 +23,10 @@ function formatCurrency(v: number) {
 }
 function formatDate(d: string | null | undefined) {
   if (!d) return "—";
-  return new Intl.DateTimeFormat("fr-DZ", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(d));
+  const date = new Date(d);
+  const datePart = new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(date);
+  const timePart = new Intl.DateTimeFormat("fr-FR", { hour: "2-digit", minute: "2-digit" }).format(date);
+  return `${datePart} · ${timePart}`;
 }
 
 type StockFilter = "all" | "healthy" | "low" | "out";

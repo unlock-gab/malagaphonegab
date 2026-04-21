@@ -27,7 +27,10 @@ function formatCurrency(v: number) {
 }
 function formatDate(d: string | null | undefined) {
   if (!d) return "—";
-  return new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(d));
+  const date = new Date(d);
+  const datePart = new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(date);
+  const timePart = new Intl.DateTimeFormat("fr-FR", { hour: "2-digit", minute: "2-digit" }).format(date);
+  return `${datePart} · ${timePart}`;
 }
 function shortId(id: string) { return "#" + id.slice(-6).toUpperCase(); }
 
@@ -572,7 +575,7 @@ export default function AdminOrders() {
                     <th className="text-right p-3 font-semibold hidden xl:table-cell">Mode paiement</th>
                     <th className="text-right p-3 font-semibold hidden lg:table-cell">Statut paiement</th>
                     <th className="text-center p-3 font-semibold">Statut</th>
-                    <th className="text-right p-3 font-semibold hidden md:table-cell">Date</th>
+                    <th className="text-right p-3 font-semibold hidden md:table-cell">Date / Heure</th>
                     <th className="text-center p-3 font-semibold w-24">Actions</th>
                   </tr>
                 </thead>

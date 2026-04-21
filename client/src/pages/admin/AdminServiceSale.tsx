@@ -47,6 +47,13 @@ const PAYMENT_LABEL: Record<string, string> = {
   other: "Autre",
 };
 
+function formatDate(d: string | null | undefined) {
+  if (!d) return "";
+  const date = new Date(d);
+  const datePart = new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(date);
+  const timePart = new Intl.DateTimeFormat("fr-FR", { hour: "2-digit", minute: "2-digit" }).format(date);
+  return `${datePart} · ${timePart}`;
+}
 function fmt(n: string | number | null | undefined) {
   const v = parseFloat(String(n ?? 0));
   return (isNaN(v) ? "0.00" : new Intl.NumberFormat("fr-FR", { style: "decimal", maximumFractionDigits: 2 }).format(v)) + " DA";
@@ -324,7 +331,7 @@ export default function AdminServiceSale() {
                           {sale.customerPhone && <span>📞 {sale.customerPhone}</span>}
                           {sale.cashierName && <span>Caissier: {sale.cashierName}</span>}
                           {sale.createdAt && (
-                            <span>{new Date(sale.createdAt).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                            <span>🕐 {formatDate(sale.createdAt.toString())}</span>
                           )}
                         </div>
                         {sale.notes && (

@@ -295,6 +295,24 @@ app.use((req, res, next) => {
         created_by TEXT,
         created_at TIMESTAMP DEFAULT NOW()
       );
+      CREATE TABLE IF NOT EXISTS invoice_templates (
+        id VARCHAR PRIMARY KEY,
+        category_id VARCHAR,
+        category_name VARCHAR NOT NULL DEFAULT 'Défaut',
+        company_name TEXT NOT NULL DEFAULT 'MALAGA PHONE',
+        company_phone TEXT NOT NULL DEFAULT '',
+        company_address TEXT NOT NULL DEFAULT 'الجزائر',
+        header_text TEXT NOT NULL DEFAULT '',
+        footer_text TEXT NOT NULL DEFAULT 'شكراً لتعاملكم مع MALAGA PHONE',
+        warranty_text TEXT NOT NULL DEFAULT '',
+        terms_text TEXT NOT NULL DEFAULT '',
+        show_logo BOOLEAN NOT NULL DEFAULT TRUE,
+        is_default BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      ALTER TABLE profit_records ADD COLUMN IF NOT EXISTS partner_id VARCHAR;
+      ALTER TABLE profit_records ADD COLUMN IF NOT EXISTS partner_name TEXT;
+      ALTER TABLE profit_records ADD COLUMN IF NOT EXISTS partner_percentage NUMERIC(5,2);
     `);
     console.log("[db] Critical tables & columns verified ✓");
   } catch (e) {

@@ -1000,13 +1000,17 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // ==================== INVOICE TEMPLATES ====================
 
   app.get("/api/invoice-templates", requireAdmin, async (_req, res) => {
-    res.json(await storage.getInvoiceTemplates());
+    try {
+      res.json(await storage.getInvoiceTemplates());
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
   });
 
   app.get("/api/invoice-templates/by-category/:categoryId", async (req, res) => {
-    const catId = req.params.categoryId === "default" ? null : req.params.categoryId;
-    const tpl = await storage.getInvoiceTemplateByCategoryId(catId);
-    res.json(tpl || null);
+    try {
+      const catId = req.params.categoryId === "default" ? null : req.params.categoryId;
+      const tpl = await storage.getInvoiceTemplateByCategoryId(catId);
+      res.json(tpl || null);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
   });
 
   app.post("/api/invoice-templates", requireAdmin, async (req, res) => {
@@ -1017,15 +1021,19 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.patch("/api/invoice-templates/:id", requireAdmin, async (req, res) => {
-    const tpl = await storage.updateInvoiceTemplate(req.params.id, req.body);
-    if (!tpl) return res.status(404).json({ message: "Template introuvable" });
-    res.json(tpl);
+    try {
+      const tpl = await storage.updateInvoiceTemplate(req.params.id, req.body);
+      if (!tpl) return res.status(404).json({ message: "Template introuvable" });
+      res.json(tpl);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
   });
 
   app.delete("/api/invoice-templates/:id", requireAdmin, async (req, res) => {
-    const ok = await storage.deleteInvoiceTemplate(req.params.id);
-    if (!ok) return res.status(404).json({ message: "Template introuvable" });
-    res.json({ success: true });
+    try {
+      const ok = await storage.deleteInvoiceTemplate(req.params.id);
+      if (!ok) return res.status(404).json({ message: "Template introuvable" });
+      res.json({ success: true });
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
   });
 
   // ── Purchase Payments (Versements) ───────────────────────────────────────────

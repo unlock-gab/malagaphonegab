@@ -481,7 +481,11 @@ export default function AdminInvoices() {
       toast({ title: t("success"), description: "Template de facture enregistré." });
       setEditing(null);
     },
-    onError: () => toast({ title: t("error"), variant: "destructive" }),
+    onError: (e: any) => toast({
+      title: "Erreur d'enregistrement",
+      description: e?.message ?? "Impossible d'enregistrer le template.",
+      variant: "destructive",
+    }),
   });
 
   const deleteMutation = useMutation({

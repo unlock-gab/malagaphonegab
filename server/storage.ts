@@ -1246,10 +1246,28 @@ export class DatabaseStorage implements IStorage {
         category: products.category, featured: products.featured, published: products.published,
         condition: products.condition, productType: products.productType }).from(products),
       db.select({ status: orders.status, total: orders.total, createdAt: orders.createdAt }).from(orders),
-      db.select().from(profitRecords),
-      db.select().from(orders).orderBy(desc(orders.createdAt)).limit(5),
-      db.select().from(inventoryMovements).orderBy(desc(inventoryMovements.createdAt)).limit(8),
-      db.select().from(purchases).orderBy(desc(purchases.createdAt)).limit(5),
+      db.select({
+        id: profitRecords.id,
+        orderId: profitRecords.orderId,
+        revenue: profitRecords.revenue,
+        productCost: profitRecords.productCost,
+        netProfit: profitRecords.netProfit,
+        createdAt: profitRecords.createdAt,
+      }).from(profitRecords),
+      db.select({
+        id: orders.id, customerName: orders.customerName, customerPhone: orders.customerPhone,
+        total: orders.total, status: orders.status, wilaya: orders.wilaya,
+        source: orders.source, createdAt: orders.createdAt,
+      }).from(orders).orderBy(desc(orders.createdAt)).limit(5),
+      db.select({
+        id: inventoryMovements.id, productName: inventoryMovements.productName,
+        type: inventoryMovements.type, quantity: inventoryMovements.quantity,
+        reference: inventoryMovements.reference, createdAt: inventoryMovements.createdAt,
+      }).from(inventoryMovements).orderBy(desc(inventoryMovements.createdAt)).limit(8),
+      db.select({
+        id: purchases.id, supplierName: purchases.supplierName,
+        total: purchases.total, status: purchases.status, createdAt: purchases.createdAt,
+      }).from(purchases).orderBy(desc(purchases.createdAt)).limit(5),
       db.select().from(expenses),
       db.select({ id: serviceSales.id, amount: serviceSales.amount, createdAt: serviceSales.createdAt }).from(serviceSales),
     ]);

@@ -73,7 +73,7 @@ function CreateCreditModal({ open, onClose }: { open: boolean; onClose: () => vo
     mutationFn: (data: typeof form) => apiRequest("POST", "/api/client-credits", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/client-credits"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
       toast({ title: "Crédit créé avec succès" });
       setForm({ customerName: "", customerPhone: "", originalAmount: "", notes: "" });
       onClose();
@@ -143,7 +143,7 @@ function CreditDetailModal({ credit, onClose }: { credit: ClientCredit; onClose:
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/client-credits"] });
       queryClient.invalidateQueries({ queryKey: ["/api/client-credits", credit.id, "versements"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
       toast({ title: "Versement enregistré" });
       setPayForm({ amount: "", paymentMethod: "cash", note: "" });
       setShowPayForm(false);
@@ -155,7 +155,7 @@ function CreditDetailModal({ credit, onClose }: { credit: ClientCredit; onClose:
     mutationFn: () => apiRequest("PATCH", `/api/client-credits/${credit.id}/cancel`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/client-credits"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
       toast({ title: "Crédit annulé" });
       onClose();
     },

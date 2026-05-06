@@ -313,6 +313,16 @@ app.use((req, res, next) => {
       ALTER TABLE profit_records ADD COLUMN IF NOT EXISTS partner_id VARCHAR;
       ALTER TABLE profit_records ADD COLUMN IF NOT EXISTS partner_name TEXT;
       ALTER TABLE profit_records ADD COLUMN IF NOT EXISTS partner_percentage NUMERIC(5,2);
+      ALTER TABLE orders ADD COLUMN IF NOT EXISTS stock_deducted BOOLEAN NOT NULL DEFAULT FALSE;
+      ALTER TABLE orders ADD COLUMN IF NOT EXISTS stock_restored BOOLEAN NOT NULL DEFAULT FALSE;
+      ALTER TABLE orders ADD COLUMN IF NOT EXISTS phone_unit_id VARCHAR;
+      ALTER TABLE orders ADD COLUMN IF NOT EXISTS return_reason TEXT;
+      ALTER TABLE orders ADD COLUMN IF NOT EXISTS return_condition TEXT;
+      ALTER TABLE orders ADD COLUMN IF NOT EXISTS return_notes TEXT;
+      ALTER TABLE orders ADD COLUMN IF NOT EXISTS return_at TIMESTAMP;
+      ALTER TABLE orders ADD COLUMN IF NOT EXISTS confirmateur_name TEXT;
+      ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_status TEXT NOT NULL DEFAULT 'pending';
+      ALTER TABLE orders ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'admin';
     `);
     console.log("[db] Critical tables & columns verified ✓");
   } catch (e) {

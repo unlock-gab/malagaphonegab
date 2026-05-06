@@ -792,7 +792,7 @@ export class DatabaseStorage implements IStorage {
     const product = await this.getProduct(productId);
     if (!product) return;
 
-    const isOut = type === "out" || type === "order_out" || type === "damaged_out";
+    const isOut = type === "out" || type === "order_out" || type === "damaged_out" || type === "supplier_return_out";
     const delta = isOut ? -Math.abs(quantity) : Math.abs(quantity);
     const newStock = Math.max(0, product.stock + delta);
 
